@@ -27,6 +27,7 @@ ENV/
 # Rust / WASM
 target/
 **/*.rs.bk
+*.wasm
 
 # Env / secrets
 .env
@@ -37,3 +38,21 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# pre-commit
+.pre-commit-cache/
+
+# Kiro / editor tooling
+.kimchi/
+
+# Logs
+*.log

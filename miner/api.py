@@ -16,10 +16,6 @@ Endpoints:
 from __future__ import annotations
 
 import os
-import sys
-
-# Add parent directory to path so we can import core
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

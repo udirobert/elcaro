@@ -19,10 +19,6 @@ Run:
 from __future__ import annotations
 
 import asyncio
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.middleware import ElcaroMiddleware
 from core import ContentType
@@ -115,10 +111,10 @@ class DemoAgent:
 
     async def retrieve_and_process(self, label: str, content: str, content_type: ContentType):
         """Simulate: retrieve content → scan with Elcaro → process if safe."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📥 Retrieving: {label}")
         print(f"   Content type: {content_type.value}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Scan through Elcaro middleware
         result = await self.middleware.scan(content, content_type)
@@ -140,14 +136,14 @@ class DemoAgent:
 
     def stats(self):
         total = self.processed + self.blocked
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("📊 Elcaro Demo Summary")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"   Total items retrieved:  {total}")
         print(f"   Passed safety check:    {self.processed}")
         print(f"   Blocked by Elcaro:      {self.blocked}")
         if total > 0:
-            print(f"   Block rate:             {self.blocked/total:.0%}")
+            print(f"   Block rate:             {self.blocked / total:.0%}")
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────

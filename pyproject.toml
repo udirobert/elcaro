@@ -4,19 +4,29 @@ version = "0.1.0"
 description = "IPI detection miner for the Telegraph Protocol"
 requires-python = ">=3.11"
 dependencies = [
+    "pydantic>=2.0.0",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.0.0",
     "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
+miner = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+]
+app = [
+    "httpx>=0.25.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
     "ruff>=0.5.0",
     "pre-commit>=3.7.0",
     "detect-secrets>=1.5.0",
+]
+all = [
+    "elcaro[miner,app,dev]",
 ]
 
 [tool.setuptools]
@@ -25,6 +35,7 @@ packages = ["core", "core.detectors"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+testpaths = ["tests"]
 
 
 [tool.ruff]
@@ -47,6 +58,10 @@ ignore = [
     "B008",  # function call in default arg — FastAPI uses this pattern
 ]
 
+[tool.ruff.format]
+exclude = ["*.md"]
+
 [tool.ruff.lint.per-file-ignores]
-"miner/tests/*" = ["S", "E501"]   # security checks and line length in tests
+"miner/tests/*" = ["S", "E501"]   # legacy path — kept for any stray files
+"tests/*" = ["S", "E501"]         # injection payloads are intentionally long strings
 "app/demo.py" = ["T201"]          # allow print() in the demo script
