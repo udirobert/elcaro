@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
+import { addToHistory } from "@/lib/history";
 import { ScanResult } from "./scan-result";
 import { ScanBeam } from "./scan-beam";
+import { ScanHistory } from "./scan-history";
 
 export function ScanForm() {
   const [content, setContent] = useState("");
@@ -14,6 +16,7 @@ export function ScanForm() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleScan() {
@@ -29,6 +32,8 @@ export function ScanForm() {
       setError(response.detail || response.error);
     } else {
       setResult(response);
+      addToHistory(content, contentType, response);
+      setHistoryRefresh((n) => n + 1);
     }
 
     setScanning(false);
@@ -53,6 +58,13 @@ export function ScanForm() {
         clearInterval(interval);
       }
     }, 8);
+  }
+
+  function loadFromHistory(entry: import("@/lib/history").HistoryEntry) {
+    setContent(entry.content);
+    setContentType(entry.content_type);
+    setResult(entry.response);
+    setError(null);
   }
 
   return (
@@ -127,6 +139,29 @@ export function ScanForm() {
           {scanning ? "Scanning..." : "Scan"}
         </motion.button>
       </div>
+
+      {/* Scan history */}
+      <ScanHistory onSelect={loadFromHistory} refreshKey={historyRefresh} />
+
+      {/* Loading state — visible below the textarea during scan */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 py-4"
+          >
+            <div className="relative w-5 h-5">
+              <div className="absolute inset-0 rounded-full border-2 border-border" />
+              <div className="absolute inset-0 rounded-full border-2 border-violet border-t-transparent animate-spin" />
+            </div>
+            <span className="text-sm text-ink-muted">
+              Analysing content for injection patterns...
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error */}
       <AnimatePresence>
