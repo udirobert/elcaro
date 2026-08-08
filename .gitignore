@@ -54,5 +54,8 @@ coverage.xml
 # Kiro / editor tooling
 .kimchi/
 
+# Local-only docs (not for public repo)
+docs/hackathon-tracker.md
+
 # Logs
 *.log
