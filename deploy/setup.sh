@@ -17,7 +17,7 @@
 set -euo pipefail
 
 DEPLOY_DIR="/home/linuxuser/elcaro"
-DOMAIN="${1:-api.elcaro.dev}"
+DOMAIN="${1:-api.elcaro.trustfall.xyz}"
 NGINX_PORT="8847"
 APP_PORT="8848"
 
@@ -49,7 +49,7 @@ echo "→ Installing nginx config..."
 NGINX_CONF="/etc/nginx/sites-available/elcaro"
 
 # Replace domain in config
-sed "s/api.elcaro.dev/$DOMAIN/g" deploy/nginx.conf | sudo tee "$NGINX_CONF" > /dev/null
+sed "s/api.elcaro.trustfall.xyz/$DOMAIN/g" deploy/nginx.conf | sudo tee "$NGINX_CONF" > /dev/null
 
 # Enable site
 if [ ! -L "/etc/nginx/sites-enabled/elcaro" ]; then

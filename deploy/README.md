@@ -20,8 +20,9 @@ GitHub repo is connected directly to Netlify. Every push to `main` auto-deploys.
 
 **Required setup (one-time in Netlify dashboard):**
 1. Site settings → Build → Base directory: `app/web`
-2. Site settings → Environment variables:
-   - `ELCARO_MINER_URL` = `https://your-domain.com`
+2. Site settings → Domain management → Add custom domain: `elcaro.trustfall.xyz`
+3. Site settings → Environment variables:
+   - `ELCARO_MINER_URL` = `https://api.elcaro.trustfall.xyz`
 
 ## Miner API (VPS)
 
@@ -60,10 +61,15 @@ bash deploy/setup.sh your-domain.com
 
 ### Cloudflare setup
 
-1. DNS → Add A record: `api.elcaro.dev` → your VPS IP
+1. DNS → Add A record: `api.elcaro.trustfall.xyz` → `144.202.117.160` (VPS IP)
 2. Proxy status: **Proxied** (orange cloud)
 3. SSL/TLS → Origin Rules → set origin port to `8847` for this hostname
    (or use a Cloudflare Workers route if needed)
+
+### Netlify DNS (for frontend)
+
+1. DNS → Add CNAME record: `elcaro.trustfall.xyz` → your Netlify site URL (e.g. `your-site.netlify.app`)
+2. Proxy status: **DNS only** (grey cloud) — Netlify handles its own HTTPS
 
 ### Daily operations
 

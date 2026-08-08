@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description:
     "Detect indirect prompt injection in content retrieved by AI agents. Scan emails, search results, documents, and web pages before your agent processes them.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://elcaro.dev"
+    process.env.NEXT_PUBLIC_APP_URL || "https://elcaro.trustfall.xyz"
   ),
   openGraph: {
     title: "Elcaro — see what your agent can't",
