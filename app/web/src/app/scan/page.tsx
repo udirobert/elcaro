@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { ScanForm } from "@/components/scan-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Scan",
+  description:
+    "Paste any content and scan it for indirect prompt injection patterns.",
+};
 
 export default function ScanPage() {
   return (

@@ -9,20 +9,49 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Elcaro — see what your agent can't",
+  title: {
+    default: "Elcaro — see what your agent can't",
+    template: "%s · Elcaro",
+  },
   description:
-    "Indirect prompt injection detection for AI agents. Scan content before your agent processes it.",
+    "Detect indirect prompt injection in content retrieved by AI agents. Scan emails, search results, documents, and web pages before your agent processes them.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://elcaro.dev"
+  ),
   openGraph: {
     title: "Elcaro — see what your agent can't",
     description:
-      "Detect hidden instructions in content retrieved by AI agents.",
+      "Prompt injection detection for autonomous agents. Six technique classes. Sub-10ms response. Open source.",
     type: "website",
+    siteName: "Elcaro",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Elcaro — see what your agent can't",
+    description:
+      "Detect hidden instructions in content your AI agent retrieves.",
+    creator: "@udirobert",
+  },
+  keywords: [
+    "prompt injection",
+    "indirect prompt injection",
+    "AI safety",
+    "agent security",
+    "content scanning",
+    "LLM security",
+    "Telegraph Protocol",
+  ],
+  authors: [{ name: "udirobert", url: "https://github.com/udirobert" }],
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${mono.variable}`}>
+    <html lang="en" className={mono.variable}>
       <head>
         <link
           href="https://api.fontshare.com/v2/css?f=satoshi@400,500,700,900&display=swap"
