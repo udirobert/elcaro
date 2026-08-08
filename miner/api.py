@@ -65,6 +65,10 @@ MINER_INFO = {
 }
 
 
+# ── Detection engine (module-level singleton — regex compiled once) ──────────────
+
+_engine = IpiDetectionEngine()
+
 # ── Endpoints ───────────────────────────────────────────────────────────────────
 
 
@@ -90,9 +94,7 @@ async def scan(request: ScanRequest) -> ScanResponse:
 
     This is the primary endpoint the Telegraph protocol routes requests to.
     """
-    engine = IpiDetectionEngine()
-    result = engine.scan(request)
-    return result
+    return _engine.scan(request)
 
 
 @app.post("/v1/infer", response_model=ScanResponse)
@@ -102,7 +104,7 @@ async def infer(request: ScanRequest) -> ScanResponse:
     Some Telegraph miners expose /v1/infer as the standard inference endpoint.
     This is an alias for /scan.
     """
-    return await scan(request)
+    return _engine.scan(request)
 
 
 # ── Run ─────────────────────────────────────────────────────────────────────────

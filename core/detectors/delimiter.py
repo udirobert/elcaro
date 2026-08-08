@@ -33,10 +33,25 @@ FAKE_DELIMITER_PATTERNS = [
 ]
 
 # Conversation-turn spoofing — fabricated Assistant:/User: turns in retrieved content
+# Requires an imperative verb within the next 100 chars to reduce FAQ/tutorial false positives
+_IMPERATIVE_VERBS_TURN_SPOOF = (
+    r"(?:send|forward|exec(?:ute)?|run|call|install|delete|reset|approve|"
+    r"grant|change|update|modify|set(?!\s+up)|create|add|remove|wipe|ignore|disregard|override)"
+)
 TURN_SPOOFING_PATTERNS = [
-    (r"\b(?:Assistant|AI|Bot|GPT|Claude|LLM)\s*:\s*", 0.8, "assistant_turn_spoof"),
-    (r"\bUser\s*:\s*", 0.6, "user_turn_spoof"),  # lower — could be quoting
-    (r"\b(?:System|Developer|Admin)\s*:\s*", 0.85, "system_turn_spoof"),
+    (
+        r"\b(?:Assistant|AI|Bot|GPT|Claude|LLM)\s*:\s*"
+        r"(?:I\s+(?:will|must|shall|am\s+going\s+to|need\s+to)\s+).{0,80}?"
+        + _IMPERATIVE_VERBS_TURN_SPOOF,
+        0.8,
+        "assistant_turn_spoof",
+    ),
+    (r"\bUser\s*:\s*", 0.5, "user_turn_spoof"),  # lower — very common in quoting
+    (
+        r"\b(?:System|Developer|Admin)\s*:\s*.{0,100}?" + _IMPERATIVE_VERBS_TURN_SPOOF,
+        0.85,
+        "system_turn_spoof",
+    ),
 ]
 
 # Forwarded message spoofing (common in email-based injection)

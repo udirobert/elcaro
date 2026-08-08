@@ -61,7 +61,8 @@ IMPERATIVE_ACTION_PATTERNS = [
         r"\b(?:please|you\s+(?:should|must|need to|have to)|kindly)\s+"
         r"(?:send|forward|exec(?:ute)?|run|call|install|delete|reset|approve|"
         r"grant|change|update|modify|set|create|add|remove|wipe|share|export|"
-        r"download|upload|post|publish|submit|transfer|copy)\b",
+        r"download|upload|post|publish|submit|transfer|copy)\b"
+        r"(?!\s+(?:me|us|him|her|them|my|our|your|the\s+team|everyone)\b)",
         0.6,
         "imperative_action",
     ),
