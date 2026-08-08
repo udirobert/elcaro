@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
@@ -9,6 +9,10 @@ import { addToHistory } from "@/lib/history";
 import { ScanResult } from "./scan-result";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
+
+// Motion tokens — consistent across the app
+const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 export function ScanForm() {
   const [content, setContent] = useState("");
@@ -18,6 +22,14 @@ export function ScanForm() {
   const [error, setError] = useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const shakeControls = useAnimation();
+
+  const triggerShake = useCallback(async () => {
+    await shakeControls.start({
+      x: [0, -6, 5, -4, 3, -1, 0],
+      transition: { duration: 0.4, ease: "easeInOut" },
+    });
+  }, [shakeControls]);
 
   async function handleScan() {
     if (!content.trim()) return;
@@ -30,6 +42,7 @@ export function ScanForm() {
 
     if (isError(response)) {
       setError(response.detail || response.error);
+      triggerShake();
     } else {
       setResult(response);
       addToHistory(content, contentType, response);
@@ -43,11 +56,10 @@ export function ScanForm() {
     const example = EXAMPLES[index];
     setResult(null);
     setError(null);
-
-    // Type the content in character by character
     setContent("");
     setContentType(example.content_type);
 
+    // Type in character by character — gives a sense of the content arriving
     let i = 0;
     const chars = example.content;
     const interval = setInterval(() => {
@@ -67,10 +79,12 @@ export function ScanForm() {
     setError(null);
   }
 
+  const hasContent = content.trim().length > 0;
+
   return (
-    <div className="space-y-8">
-      {/* The content area — the main stage */}
-      <div className="relative">
+    <div className="space-y-6">
+      {/* The content area */}
+      <motion.div className="relative" animate={shakeControls}>
         {/* Scanning beam overlay */}
         <AnimatePresence>{scanning && <ScanBeam />}</AnimatePresence>
 
@@ -78,17 +92,28 @@ export function ScanForm() {
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.metaKey && hasContent && !scanning) {
+              e.preventDefault();
+              handleScan();
+            }
+          }}
           placeholder="Paste content here..."
-          className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet transition-colors placeholder:text-ink-faint"
+          className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet/50 focus:ring-1 focus:ring-violet/20 transition-all duration-200 placeholder:text-ink-faint"
           style={{ fontVariantLigatures: "none" }}
         />
 
-        {/* Content type — subtle, inline */}
-        <div className="absolute bottom-4 right-4 flex items-center gap-2">
+        {/* Content type — subtle, bottom-right */}
+        <motion.div
+          className="absolute bottom-4 right-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: hasContent ? 1 : 0.5 }}
+          transition={{ duration: 0.2 }}
+        >
           <select
             value={contentType}
             onChange={(e) => setContentType(e.target.value as ContentType)}
-            className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet cursor-pointer"
+            className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet/50 cursor-pointer transition-colors"
           >
             {CONTENT_TYPES.map((ct) => (
               <option key={ct.value} value={ct.value}>
@@ -96,95 +121,114 @@ export function ScanForm() {
               </option>
             ))}
           </select>
-        </div>
-      </div>
+        </motion.div>
+
+        {/* Keyboard shortcut hint — appears when content is present */}
+        <AnimatePresence>
+          {hasContent && !scanning && !result && (
+            <motion.span
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="absolute bottom-4 left-6 text-[10px] text-ink-faint font-mono"
+            >
+              ⌘ Enter to scan
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Actions row */}
       <div className="flex items-center justify-between gap-4">
-        {/* Examples — small, understated */}
+        {/* Examples */}
         <div className="flex flex-wrap gap-1.5">
           {EXAMPLES.map((example, i) => (
-            <button
+            <motion.button
               key={i}
               onClick={() => loadExample(i)}
-              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all hover:scale-105 active:scale-95 ${
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
                 example.is_injection
-                  ? "text-dangerous bg-dangerous-bg hover:text-dangerous"
-                  : "text-safe bg-safe-bg hover:text-safe"
+                  ? "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
+                  : "text-safe/70 bg-safe-bg hover:text-safe"
               }`}
+              whileTap={{ scale: 0.92 }}
+              transition={SPRING}
             >
               {example.label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
         {/* Scan button */}
         <motion.button
           onClick={handleScan}
-          disabled={scanning || !content.trim()}
-          className="px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          animate={
-            !scanning && content.trim()
-              ? { scale: [1, 1.02, 1] }
-              : { scale: 1 }
-          }
-          transition={{
-            repeat: !scanning && content.trim() ? Infinity : 0,
-            duration: 3,
-            ease: "easeInOut",
-          }}
+          disabled={scanning || !hasContent}
+          className="relative px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
+          whileHover={hasContent && !scanning ? { scale: 1.03 } : {}}
+          whileTap={hasContent && !scanning ? { scale: 0.96 } : {}}
+          transition={SPRING}
         >
-          {scanning ? "Scanning..." : "Scan"}
+          {/* Button content — morphs between states */}
+          <AnimatePresence mode="wait">
+            {scanning ? (
+              <motion.span
+                key="scanning"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2"
+              >
+                <motion.span
+                  className="w-3 h-3 rounded-full border-2 border-canvas/40 border-t-canvas"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+                />
+                Scanning
+              </motion.span>
+            ) : (
+              <motion.span
+                key="idle"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                Scan
+              </motion.span>
+            )}
+          </AnimatePresence>
         </motion.button>
       </div>
 
       {/* Scan history */}
       <ScanHistory onSelect={loadFromHistory} refreshKey={historyRefresh} />
 
-      {/* Loading state — visible below the textarea during scan */}
+      {/* Error — with shake on the textarea */}
       <AnimatePresence>
-        {scanning && (
+        {error && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="flex items-center gap-3 py-4"
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="flex items-start gap-2 text-sm text-dangerous"
           >
-            <div className="relative w-5 h-5">
-              <div className="absolute inset-0 rounded-full border-2 border-border" />
-              <div className="absolute inset-0 rounded-full border-2 border-violet border-t-transparent animate-spin" />
-            </div>
-            <span className="text-sm text-ink-muted">
-              Analysing content for injection patterns...
-            </span>
+            <span className="shrink-0 mt-0.5">×</span>
+            <span>{error}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Error */}
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="text-sm text-dangerous"
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      {/* Results — the content transforms */}
+      {/* Results */}
       <AnimatePresence mode="wait">
         {result && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.45, ease: EASE_OUT }}
           >
             <ScanResult result={result} content={content} />
           </motion.div>
