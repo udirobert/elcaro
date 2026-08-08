@@ -2,55 +2,76 @@
 
 ## Overview
 
-The Elcaro app is an agent content screener — a middleware that wraps any AI agent's retrieval pipeline and pre-filters content through the Elcaro miner before the agent processes it. Track 3 opens ~Aug 31, 2026 and is judged on users acquired, usage/adoption, creativity, and X engagement.
+The Elcaro app is the product surface for an IPI content safety service. It
+provides a web interface for scanning content, viewing detection results, and
+integrating Elcaro into agent workflows. Built with Next.js (App Router) and
+deployed on Vercel, it calls the Python miner API (Track 1) for all detection
+logic.
 
-The app has two roles:
-1. A genuine Track 3 submission in its own right (useful to other developers)
-2. The primary driver of request volume to the Track 1 miner (supporting Track 1 ranking)
+The app serves dual purposes:
+1. **Hackathon submission** — a polished interactive demo for Kiro (Aug 23) and Telegraph Track 3 (~Aug 31)
+2. **Product foundation** — the architecture supports evolution into a real SaaS tool with user accounts, dashboards, billing, and developer docs
 
 ## Functional requirements
 
-### FR-1 Middleware core
-- FR-1.1 `ElcaroMiddleware.scan(content, content_type, context)` MUST return a `ScanResult` indicating whether content is safe or quarantined
-- FR-1.2 Three quarantine modes MUST be supported: `"replace"` (substitute quarantine notice), `"block"` (return empty string), `"warn"` (prepend warning, pass content through)
-- FR-1.3 The middleware MUST support both local engine mode (`use_local_engine=True`) and remote miner mode (HTTP call to `ELCARO_MINER_URL`)
-- FR-1.4 `ScanResult.is_safe()` MUST return `True` if and only if `risk_score < risk_threshold`
-- FR-1.5 `ScanResult` MUST expose: `original_content`, `safe_content`, `risk_score`, `risk_level`, `flagged_techniques`, `indicators`, `quarantined`, `reason`
-- FR-1.6 The configurable `risk_threshold` MUST default to 0.5 (suspicious level)
+### FR-1 Landing page (`/`)
+- FR-1.1 The landing page MUST communicate what Elcaro does, why it matters, and how to try it within 5 seconds of loading
+- FR-1.2 A clear CTA MUST link to the scan page (`/scan`)
+- FR-1.3 Open Graph metadata MUST be set for good link previews on X/social (title, description, image)
+- FR-1.4 The page MUST be server-rendered (RSC) for fast initial load and SEO
 
-### FR-2 Demo agent
-- FR-2.1 `app/demo.py` MUST demonstrate end-to-end middleware usage: retrieve → scan → act or block
-- FR-2.2 The demo MUST include at least 3 injection examples (covering different technique classes) and at least 2 clean examples
-- FR-2.3 The demo MUST run with zero configuration using the local engine: `python app/demo.py`
-- FR-2.4 The demo output MUST clearly show: content label, risk score, risk level, techniques flagged, quarantine decision, and what the agent "sees" (safe_content)
+### FR-2 Scan page (`/scan`)
+- FR-2.1 A text area MUST accept arbitrary content for scanning
+- FR-2.2 A dropdown MUST allow selection of content type (email, search_result, webpage, document, code, chat_message)
+- FR-2.3 A scan button MUST submit the content to `/api/scan` and display results
+- FR-2.4 Results MUST display: risk score (numeric + visual bar), risk level (badge), flagged techniques (pill badges), and full indicators list
+- FR-2.5 Each indicator MUST show: technique name, confidence percentage, matched text (highlighted), and explanation
+- FR-2.6 A quarantine decision MUST be shown: "Safe to process" or "Would be quarantined" with the reason
+- FR-2.7 "Try an example" buttons MUST pre-populate the textarea with at least 3 injection examples and 2 clean examples
+- FR-2.8 A loading state MUST be shown during the scan request (animated orb or similar)
+- FR-2.9 The scan page MUST work on mobile (responsive layout)
 
-### FR-3 Adoption surface
-- FR-3.1 The middleware MUST be usable as a drop-in by other developers with minimal setup
-- FR-3.2 Installation MUST require only `pip install httpx` (for remote mode) or no extra deps (local mode)
-- FR-3.3 The `ELCARO_MINER_URL` environment variable MUST be the only configuration needed to point at the live miner
-- FR-3.4 The middleware MUST work with any async Python agent framework (LangChain, OpenAI Agents SDK, plain asyncio)
+### FR-3 API proxy (`/api/scan`)
+- FR-3.1 A Next.js Route Handler MUST proxy POST requests to the Python miner's `/scan` endpoint
+- FR-3.2 The miner URL MUST be configured via `ELCARO_MINER_URL` environment variable (never exposed to the client)
+- FR-3.3 The proxy MUST return the full `ScanResponse` JSON from the miner
+- FR-3.4 On miner error (timeout, 5xx, unreachable), the proxy MUST return a structured error response (not crash)
+- FR-3.5 The proxy MUST forward `content`, `content_type`, and `deep_analysis` fields from the client request
 
-### FR-4 Hosted demo (for Track 3 judging)
-- FR-4.1 A publicly accessible hosted demo MUST be available by ~Aug 31
-- FR-4.2 The hosted demo MUST call the live Elcaro miner (not the local engine) to drive real request volume
-- FR-4.3 The demo MUST allow a visitor to submit arbitrary content and see the detection result
-- FR-4.4 The demo MUST show the full `ScanResponse` (score, level, flagged techniques, indicators with explanations)
+### FR-4 Visual design
+- FR-4.1 Dark mode MUST be the default theme
+- FR-4.2 Light mode SHOULD be supported via system preference detection
+- FR-4.3 Risk level MUST be colour-coded: safe=green, low=blue, suspicious=amber, dangerous=red
+- FR-4.4 The design MUST feel professional and security-oriented (not playful or casual)
+- FR-4.5 Visual effects (orbs, beams, WebGL) SHOULD enhance without distracting
 
-### FR-5 Integration with live miner
-- FR-5.1 In remote mode, the middleware MUST call `POST /scan` on the deployed Elcaro miner (Track 1)
-- FR-5.2 Every request through the hosted demo MUST generate a real billable request to the Telegraph miner
-- FR-5.3 The middleware MUST handle miner API errors gracefully — if the miner is unreachable, fail open (pass content through) with a logged warning, not a hard crash
+### FR-5 Development workflow
+- FR-5.1 `npm run dev` (or equivalent) MUST start the Next.js dev server on port 3000
+- FR-5.2 The dev server MUST work with the Python miner running on `localhost:8000`
+- FR-5.3 A `.env.local.example` file MUST document all required environment variables
+- FR-5.4 The project MUST use TypeScript with strict mode
+- FR-5.5 ESLint and Prettier MUST be configured and pass before commits
+
+### FR-6 Deployment
+- FR-6.1 The app MUST deploy to Vercel with zero additional configuration beyond environment variables
+- FR-6.2 `ELCARO_MINER_URL` MUST be the only required environment variable for production
+- FR-6.3 The deployed app MUST serve over HTTPS
+- FR-6.4 Build time MUST be under 60 seconds on Vercel
 
 ## Non-functional requirements
 
-- NFR-1 The middleware is a library, not a service — no server process required to use it
-- NFR-2 The hosted demo must be publicly accessible without login
-- NFR-3 Remote mode HTTP calls MUST use `httpx.AsyncClient` with a 30s timeout
-- NFR-4 The middleware MUST NOT log or store the content it scans (privacy)
+- NFR-1 First Contentful Paint MUST be under 1.5 seconds on a 4G connection
+- NFR-2 The scan page MUST function without JavaScript for the initial render (progressive enhancement)
+- NFR-3 The app MUST not store or log user-submitted content (privacy)
+- NFR-4 All API calls from the browser go through `/api/scan` — the miner URL is never exposed client-side
+- NFR-5 The app MUST be accessible (WCAG 2.1 AA): keyboard navigable, screen reader compatible, sufficient contrast
+- NFR-6 The frontend MUST NOT contain any detection logic — all scanning is delegated to the Python miner
 
-## Out of scope for Track 3
+## Future requirements (not in scope for hackathon but architecture must not block)
 
-- Building a new agent framework — the middleware wraps existing agents
-- Handling non-text content (images, PDFs) — text extraction is the caller's responsibility
-- Real-time streaming content scanning — scan complete documents, not streaming chunks
-- User authentication on the hosted demo (open access for adoption)
+- User accounts and API key management
+- Scan history and usage dashboard
+- Batch scanning endpoint
+- Developer documentation page with code examples
+- Billing/subscription management
+- Team/organisation features

@@ -28,10 +28,20 @@ elcaro/
 │   ├── Cargo.toml              # elcaro-eval, cdylib+rlib, serde+serde_json deps
 │   ├── src/lib.rs              # Eval logic: TestCase corpus (A001–N005), evaluate/get_test_cases exports
 │   └── test_cases/             # (empty — corpus is hardcoded in lib.rs)
-├── app/                        # Track 3 — Agent-facing content screener
-│   ├── middleware.py           # ElcaroMiddleware: scan(), quarantine modes, local/remote engine
+├── app/                        # Track 3 — Agent-facing content screener + web UI
+│   ├── web/                    # Next.js application (TypeScript, Tailwind, App Router)
+│   │   ├── src/
+│   │   │   ├── app/            # App Router: pages, layouts, API routes
+│   │   │   ├── components/     # React components (scan-form, result, indicators, etc.)
+│   │   │   └── lib/            # Shared utilities (api client, constants, types)
+│   │   ├── public/             # Static assets (OG image, favicon)
+│   │   ├── next.config.ts
+│   │   ├── tailwind.config.ts
+│   │   ├── package.json
+│   │   └── .env.local.example  # ELCARO_MINER_URL=http://localhost:8000
+│   ├── middleware.py           # Python middleware: ElcaroMiddleware (library integration)
 │   ├── demo.py                 # DemoAgent: end-to-end middleware demo with 6 sample payloads
-│   └── requirements.txt        # httpx
+│   └── requirements.txt        # httpx (Python middleware only)
 ├── docs/
 │   ├── hackathon-tracker.md    # Timeline, judging criteria, strategy
 │   └── technique-reference.md  # IPI taxonomy reference (A–F, scoring model, content-type weights)
@@ -98,29 +108,36 @@ The corpus (`TEST_CASES`) is a `&[TestCase]` of `&'static str` — hardcoded at 
 ## Key data flow
 
 ```
+Browser (Next.js on Vercel)
+      │
+      ▼
+/api/scan Route Handler              ← app/web/src/app/api/scan/route.ts
+      │
+      │  HTTP POST (proxied)
+      ▼
+miner/api.py (/scan)                 ← Track 1 miner (Railway/Fly.io)
+      │
+      ▼
+IpiDetectionEngine.scan()            ← core/taxonomy.py
+      │
+      ├─ Run detectors A–F
+      ├─ _compute_score(indicators)
+      ├─ × content_type weight
+      └─ × combination multipliers
+      │
+      ▼
+ScanResponse → JSON back to browser
+
+
+Python middleware path (library integration, no browser):
+
 External content
       │
       ▼
-ElcaroMiddleware.scan()          ← app/middleware.py (Track 3)
+ElcaroMiddleware.scan()              ← app/middleware.py
       │
       ├─ use_local_engine=True → IpiDetectionEngine.scan()   ← core/taxonomy.py
-      └─ use_local_engine=False → HTTP POST /scan            ← miner/api.py (Track 1)
-                                         │
-                                         ▼
-                                  IpiDetectionEngine.scan()
-                                         │
-                              ┌──────────┴──────────┐
-                              │  Run detectors A–F  │
-                              └──────────┬──────────┘
-                                         │
-                              _compute_score(indicators)
-                              × content_type weight
-                              × combination multipliers
-                                         │
-                                         ▼
-                                    ScanResponse
-                           (risk_score, risk_level,
-                            flagged_techniques, indicators)
+      └─ use_local_engine=False → HTTP POST /scan            ← miner/api.py
 ```
 
 ## What goes where — decision guide
@@ -129,9 +146,13 @@ ElcaroMiddleware.scan()          ← app/middleware.py (Track 3)
 |---|---|
 | A new detection pattern for an existing technique class | The relevant `core/detectors/X.py` |
 | A new technique class (G, H, ...) | New file `core/detectors/X.py`, register in `core/taxonomy.py`, add to `TechniqueClass` enum in `core/schemas.py` |
-| A new API endpoint | `miner/api.py` |
+| A new miner API endpoint | `miner/api.py` |
 | A new request/response field | `core/schemas.py` |
 | A new test case for the WASM eval corpus | `eval/src/lib.rs` in `TEST_CASES` |
-| A new Python test | `miner/tests/test_detection.py` |
+| A new Python test | `tests/test_detection.py` |
 | A new quarantine behaviour | `app/middleware.py` in `_apply_quarantine` |
 | LLM second-pass implementation | `core/llm_classifier.py` |
+| A new frontend page | `app/web/src/app/<route>/page.tsx` |
+| A new frontend component | `app/web/src/components/<name>.tsx` |
+| A new frontend API route | `app/web/src/app/api/<route>/route.ts` |
+| Frontend environment config | `app/web/.env.local` (never committed) |
