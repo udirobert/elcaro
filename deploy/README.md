@@ -3,76 +3,93 @@
 ## Architecture
 
 ```
-┌─────────────┐         ┌──────────────────┐
-│   Netlify   │ ──────▶ │      VPS         │
-│  (Next.js)  │  proxy  │  (Python miner)  │
-│  app/web/   │         │  miner/api.py    │
-└─────────────┘         └──────────────────┘
+┌──────────┐       ┌────────────┐       ┌────────────────────┐
+│  Browser │──────▶│ Cloudflare │──────▶│       VPS          │
+│          │ HTTPS │  (proxy)   │ :8847 │  nginx → :8848     │
+└──────────┘       └────────────┘       │  (uvicorn/PM2)     │
+                                        └────────────────────┘
+┌──────────┐
+│ Netlify  │  (frontend calls /api/scan which proxies to the VPS)
+│ Next.js  │
+└──────────┘
 ```
 
 ## Frontend (Netlify)
 
-The GitHub repo is connected directly to Netlify. Every push to `main` triggers
-a deploy automatically.
+GitHub repo is connected directly to Netlify. Every push to `main` auto-deploys.
 
 **Required setup (one-time in Netlify dashboard):**
 1. Site settings → Build → Base directory: `app/web`
-2. Site settings → Environment variables → Add:
-   - `ELCARO_MINER_URL` = `https://your-domain.com` (your VPS URL)
+2. Site settings → Environment variables:
+   - `ELCARO_MINER_URL` = `https://your-domain.com`
 
 ## Miner API (VPS)
 
-### Quick deploy
+### Prerequisites
 
-SSH into your VPS as root and run:
+Your VPS already has: Python 3.12, nginx, PM2, Cloudflare DNS.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/udirobert/elcaro/main/deploy/setup.sh | bash -s your-domain.com
-```
-
-Or clone and run manually:
+### Deploy
 
 ```bash
-git clone https://github.com/udirobert/elcaro.git /opt/elcaro
-cd /opt/elcaro
+# SSH in as linuxuser
+ssh your-vps
+
+# Clone (first time)
+git clone https://github.com/udirobert/elcaro.git ~/elcaro
+cd ~/elcaro
+
+# Deploy
 bash deploy/setup.sh your-domain.com
 ```
 
 ### What the script does
 
-1. Installs Python 3.12, Caddy, git
-2. Creates a `deploy` user (non-root, hardened)
-3. Clones the repo to `/opt/elcaro`
-4. Creates a virtualenv and installs dependencies
-5. Installs and starts the systemd service
-6. Configures Caddy as reverse proxy with automatic HTTPS
+1. Creates a Python virtualenv and installs deps
+2. Runs a quick smoke test (pytest)
+3. Installs nginx server block (port 8847 → proxy to 8848)
+4. Starts uvicorn via PM2 on port 8848
+5. Verifies the health endpoint
 
-### Manual management
+### Ports
+
+| Port | Bound to | Purpose |
+|---|---|---|
+| 8847 | nginx (public-facing) | Cloudflare connects here |
+| 8848 | uvicorn (localhost only) | The actual miner process |
+
+### Cloudflare setup
+
+1. DNS → Add A record: `api.elcaro.dev` → your VPS IP
+2. Proxy status: **Proxied** (orange cloud)
+3. SSL/TLS → Origin Rules → set origin port to `8847` for this hostname
+   (or use a Cloudflare Workers route if needed)
+
+### Daily operations
 
 ```bash
 # View logs
-journalctl -u elcaro-miner -f
+pm2 logs elcaro-miner
 
-# Restart after a code change
-cd /opt/elcaro && git pull && sudo systemctl restart elcaro-miner
+# Restart
+pm2 restart elcaro-miner
 
-# Check status
-systemctl status elcaro-miner
-curl https://your-domain.com/health
-curl https://your-domain.com/metrics
+# Update code + restart
+cd ~/elcaro && git pull && .venv/bin/pip install -e ".[miner]" -q && pm2 restart elcaro-miner
+
+# Check metrics
+curl http://127.0.0.1:8848/metrics
+
+# Status
+pm2 show elcaro-miner
 ```
 
 ### Files
 
 | File | Purpose |
 |---|---|
-| `elcaro-miner.service` | systemd unit — runs uvicorn, auto-restarts, security-hardened |
-| `Caddyfile` | Reverse proxy config — automatic HTTPS, security headers, logging |
-| `setup.sh` | One-shot deployment script for a fresh VPS |
-
-### Requirements
-
-- Ubuntu 22.04+ or Debian 12+
-- Domain with DNS A record pointing to the VPS IP
-- Ports 80 and 443 open (for Caddy/HTTPS)
-- ~256MB RAM minimum
+| `ecosystem.config.cjs` | PM2 process config — port, env, restart policy, memory limit |
+| `nginx.conf` | nginx server block — reverse proxy with WebSocket support |
+| `setup.sh` | One-shot deploy script |
+| `Caddyfile` | Not used on this VPS (kept for alternative deployments) |
+| `elcaro-miner.service` | Not used on this VPS (systemd alternative if PM2 isn't available) |

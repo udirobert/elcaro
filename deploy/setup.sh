@@ -1,122 +1,118 @@
 #!/bin/bash
 # Elcaro Miner — VPS deployment script
-# Run on a fresh Ubuntu/Debian VPS with: bash deploy/setup.sh
+# Run on the VPS as linuxuser: bash deploy/setup.sh
 #
-# Prerequisites:
-#   - Domain pointing to VPS IP (for Caddy HTTPS)
-#   - SSH access as root or sudo user
+# This VPS uses: nginx (reverse proxy) + PM2 (process manager) + Cloudflare (HTTPS)
 #
 # This script:
-#   1. Creates a deploy user
-#   2. Installs Python 3.12, Caddy, and git
-#   3. Clones the repo
-#   4. Sets up the virtualenv and installs deps
-#   5. Installs the systemd service and Caddy config
-#   6. Starts everything
+#   1. Sets up the Python virtualenv
+#   2. Installs the nginx config
+#   3. Starts the miner via PM2
+#
+# Prerequisites:
+#   - Repo cloned to /home/linuxuser/elcaro
+#   - Python 3.12, nginx, and PM2 already installed
+#   - Cloudflare DNS configured for your domain → VPS IP (proxy enabled, port 8847)
 
 set -euo pipefail
 
+DEPLOY_DIR="/home/linuxuser/elcaro"
 DOMAIN="${1:-api.elcaro.dev}"
-REPO="https://github.com/udirobert/elcaro.git"
-DEPLOY_DIR="/opt/elcaro"
-DEPLOY_USER="deploy"
+NGINX_PORT="8847"
+APP_PORT="8848"
 
 echo "=== Elcaro Miner Deployment ==="
-echo "Domain: $DOMAIN"
+echo "Domain:     $DOMAIN"
+echo "Nginx port: $NGINX_PORT (Cloudflare connects here)"
+echo "App port:   $APP_PORT (uvicorn binds here)"
 echo ""
 
-# ── System packages ────────────────────────────────────────────────────────────
-
-echo "→ Installing system packages..."
-apt-get update -qq
-apt-get install -y -qq python3.12 python3.12-venv python3-pip git curl
-
-# ── Caddy ──────────────────────────────────────────────────────────────────────
-
-if ! command -v caddy &> /dev/null; then
-    echo "→ Installing Caddy..."
-    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-    apt-get update -qq
-    apt-get install -y -qq caddy
-fi
-
-# ── Deploy user ────────────────────────────────────────────────────────────────
-
-if ! id "$DEPLOY_USER" &>/dev/null; then
-    echo "→ Creating deploy user..."
-    useradd -r -m -s /bin/bash "$DEPLOY_USER"
-fi
-
-# ── Clone / pull repo ──────────────────────────────────────────────────────────
-
-if [ -d "$DEPLOY_DIR" ]; then
-    echo "→ Pulling latest..."
-    cd "$DEPLOY_DIR"
-    git pull --ff-only
-else
-    echo "→ Cloning repo..."
-    git clone "$REPO" "$DEPLOY_DIR"
-fi
-
-chown -R "$DEPLOY_USER:$DEPLOY_USER" "$DEPLOY_DIR"
+cd "$DEPLOY_DIR"
 
 # ── Python environment ─────────────────────────────────────────────────────────
 
 echo "→ Setting up Python environment..."
-cd "$DEPLOY_DIR"
-sudo -u "$DEPLOY_USER" python3.12 -m venv .venv
-sudo -u "$DEPLOY_USER" .venv/bin/pip install -e ".[miner]" --quiet
+if [ ! -d ".venv" ]; then
+    python3.12 -m venv .venv
+fi
+.venv/bin/pip install -e ".[miner]" --quiet
+echo "✓ Python deps installed"
 
-# ── Systemd service ────────────────────────────────────────────────────────────
+# ── Verify the engine works ────────────────────────────────────────────────────
 
-echo "→ Installing systemd service..."
-cp deploy/elcaro-miner.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable elcaro-miner
-systemctl restart elcaro-miner
+echo "→ Running quick smoke test..."
+.venv/bin/python -m pytest tests/ -q --no-header 2>/dev/null && echo "✓ Tests pass" || echo "⚠ Tests failed (continuing anyway)"
 
-# Wait for it to start
-sleep 2
-if systemctl is-active --quiet elcaro-miner; then
-    echo "✓ Miner service running"
+# ── nginx config ───────────────────────────────────────────────────────────────
+
+echo "→ Installing nginx config..."
+NGINX_CONF="/etc/nginx/sites-available/elcaro"
+
+# Replace domain in config
+sed "s/api.elcaro.dev/$DOMAIN/g" deploy/nginx.conf | sudo tee "$NGINX_CONF" > /dev/null
+
+# Enable site
+if [ ! -L "/etc/nginx/sites-enabled/elcaro" ]; then
+    sudo ln -s "$NGINX_CONF" /etc/nginx/sites-enabled/elcaro
+fi
+
+# Test and reload
+if sudo nginx -t 2>/dev/null; then
+    sudo systemctl reload nginx
+    echo "✓ nginx configured and reloaded"
 else
-    echo "✗ Miner service failed to start — check: journalctl -u elcaro-miner"
+    echo "✗ nginx config test failed — check: sudo nginx -t"
     exit 1
 fi
 
-# ── Caddy config ──────────────────────────────────────────────────────────────
+# ── PM2 ────────────────────────────────────────────────────────────────────────
 
-echo "→ Configuring Caddy for $DOMAIN..."
-# Replace domain in Caddyfile
-sed "s/api.elcaro.dev/$DOMAIN/g" deploy/Caddyfile > /etc/caddy/Caddyfile
-mkdir -p /var/log/caddy
+echo "→ Starting miner via PM2..."
 
-systemctl restart caddy
+# Stop existing instance if running
+pm2 delete elcaro-miner 2>/dev/null || true
 
-sleep 3
-if systemctl is-active --quiet caddy; then
-    echo "✓ Caddy running — HTTPS will be provisioned automatically"
+# Start fresh
+pm2 start deploy/ecosystem.config.cjs
+pm2 save
+
+# Wait and verify
+sleep 2
+if pm2 show elcaro-miner | grep -q "online"; then
+    echo "✓ Miner running on port $APP_PORT"
 else
-    echo "✗ Caddy failed — check: journalctl -u caddy"
+    echo "✗ Miner failed to start — check: pm2 logs elcaro-miner"
     exit 1
 fi
 
 # ── Verify ─────────────────────────────────────────────────────────────────────
 
 echo ""
+echo "→ Testing endpoint..."
+RESPONSE=$(curl -s http://127.0.0.1:$APP_PORT/health)
+if echo "$RESPONSE" | grep -q "healthy"; then
+    echo "✓ Health check passed: $RESPONSE"
+else
+    echo "✗ Health check failed: $RESPONSE"
+    exit 1
+fi
+
+echo ""
 echo "=== Deployment complete ==="
 echo ""
-echo "  Miner API:  https://$DOMAIN"
-echo "  Health:     https://$DOMAIN/health"
-echo "  Metrics:    https://$DOMAIN/metrics"
+echo "  Local:    http://127.0.0.1:$APP_PORT"
+echo "  Nginx:    http://$(hostname -I | awk '{print $1}'):$NGINX_PORT"
+echo "  Public:   https://$DOMAIN (via Cloudflare)"
 echo ""
-echo "  Logs:       journalctl -u elcaro-miner -f"
-echo "  Restart:    sudo systemctl restart elcaro-miner"
-echo "  Update:     cd /opt/elcaro && git pull && sudo systemctl restart elcaro-miner"
+echo "  Health:   curl https://$DOMAIN/health"
+echo "  Metrics:  curl https://$DOMAIN/metrics"
+echo "  Scan:     curl -X POST https://$DOMAIN/scan -H 'Content-Type: application/json' -d '{\"content\": \"SYSTEM: test\", \"content_type\": \"email\"}'"
+echo ""
+echo "  Logs:     pm2 logs elcaro-miner"
+echo "  Restart:  pm2 restart elcaro-miner"
+echo "  Update:   cd $DEPLOY_DIR && git pull && .venv/bin/pip install -e '.[miner]' -q && pm2 restart elcaro-miner"
 echo ""
 echo "  Next steps:"
-echo "  1. Verify: curl https://$DOMAIN/health"
+echo "  1. Ensure Cloudflare DNS A record for $DOMAIN → $(hostname -I | awk '{print $1}') (proxied, port $NGINX_PORT)"
 echo "  2. Set ELCARO_MINER_URL=https://$DOMAIN in Netlify environment variables"
 echo "  3. Trigger a Netlify redeploy"
