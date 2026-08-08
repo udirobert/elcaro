@@ -59,3 +59,9 @@ docs/hackathon-tracker.md
 
 # Logs
 *.log
+
+
+# Node.js (app/web)
+node_modules/
+.next/
+app/web/.env.local
