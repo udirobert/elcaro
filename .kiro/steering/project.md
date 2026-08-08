@@ -59,7 +59,7 @@ The self-reinforcing loop: Track 3 app drives real request volume to the Track 1
 
 ## Technical registration flow (Track 1 critical path)
 
-1. Deploy miner to a public URL (e.g. Railway, Fly.io, Render)
+1. Deploy miner to VPS (reverse proxy + HTTPS via Caddy/nginx + Let's Encrypt)
 2. Set `api.base_url` in `miner/config.yaml`
 3. Pin `config.yaml` to IPFS via Pinata
 4. Register on Base Sepolia at [integrate.telegraphprotocol.com](https://integrate.telegraphprotocol.com)

@@ -62,29 +62,51 @@ r"\b(?:Assistant|AI|Bot|GPT|Claude|LLM)\s*:\s*.{0,100}?(?:send|forward|exec|run|
 
 ## Deployment design
 
-### Recommended platform: Railway
+### Platform: VPS with reverse proxy
 
-Railway is the simplest path for a Python FastAPI app with no cold starts, persistent process, and a stable HTTPS URL on the free tier.
+The miner runs as a systemd service (or docker container) behind a reverse proxy
+(Caddy recommended — automatic HTTPS, zero config). The VPS provides full control,
+no cold starts, and a stable HTTPS URL.
 
+**Caddy config (recommended — automatic HTTPS via Let's Encrypt):**
 ```
-# Procfile (create in miner/)
-web: uvicorn api:app --host 0.0.0.0 --port $PORT
+elcaro.yourdomain.com {
+    reverse_proxy localhost:8000
+}
 ```
 
-The app already reads `PORT` from the environment. No other changes needed.
+**Start command:**
+```bash
+uvicorn miner.api:app --host 127.0.0.1 --port 8000
+```
 
-Alternative: Fly.io (more control), Render (free tier has cold starts — avoid for a service being benchmarked on latency).
+**Systemd service (example):**
+```ini
+[Unit]
+Description=Elcaro Miner API
+After=network.target
+
+[Service]
+User=deploy
+WorkingDirectory=/opt/elcaro
+ExecStart=/opt/elcaro/.venv/bin/uvicorn miner.api:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+Environment=PORT=8000
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Alternative: `docker compose` with the same setup containerised.
 
 ### Directory structure for deployment
 
-The miner needs `core/` to be importable. The `sys.path.insert` in `api.py` handles this when running from the `miner/` directory. For Railway/Fly deployment, the start command must be run from the repo root:
+The miner needs `core/` to be importable. Install with `pip install -e .` on the VPS and run from the repo root:
 
 ```
-# From repo root
-uvicorn miner.api:app --host 0.0.0.0 --port $PORT
+uvicorn miner.api:app --host 127.0.0.1 --port 8000
 ```
-
-This requires removing the `sys.path.insert` hack and ensuring `core` is importable as a package (it already is via `pyproject.toml`). Install with `pip install -e .` in the deployment environment.
 
 ### Environment variables for deployment
 

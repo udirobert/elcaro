@@ -115,7 +115,7 @@ Browser (Next.js on Vercel)
       │
       │  HTTP POST (proxied)
       ▼
-miner/api.py (/scan)                 ← Track 1 miner (Railway/Fly.io)
+miner/api.py (/scan)                 ← Track 1 miner (VPS)
       │
       ▼
 IpiDetectionEngine.scan()            ← core/taxonomy.py

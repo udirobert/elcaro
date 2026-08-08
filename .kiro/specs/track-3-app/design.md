@@ -46,7 +46,7 @@ the detector architecture. It stays in Python because:
 The frontend calls the Python miner via HTTP (same as any other consumer).
 In development, the miner runs on `localhost:8000` and the Next.js dev server
 runs on `localhost:3000`. In production, the miner is deployed separately
-(Railway/Fly.io) and the frontend calls it via environment variable.
+(VPS) and the frontend calls it via environment variable.
 
 ## Directory structure
 
@@ -193,7 +193,7 @@ This means:
 
 ```
 ┌─────────────┐         ┌──────────────────┐
-│   Vercel    │ ──────▶ │  Railway/Fly.io  │
+│   Vercel    │ ──────▶ │    VPS           │
 │  (Next.js)  │  HTTP   │  (Python miner)  │
 │  app/web/   │         │  miner/api.py    │
 └─────────────┘         └──────────────────┘
@@ -206,7 +206,7 @@ This means:
 ```
 
 - **Vercel**: hosts the Next.js frontend, free tier, automatic HTTPS, preview deploys
-- **Railway/Fly.io**: hosts the Python miner API (Track 1), stable URL
+- **VPS**: hosts the Python miner API (Track 1), stable URL, HTTPS via reverse proxy (Caddy/nginx + Let's Encrypt)
 - Connection: `ELCARO_MINER_URL` environment variable on Vercel points to the miner
 
 ## Evolution path (post-hackathon)

@@ -40,8 +40,10 @@ Track 1 opens Aug 17. Today is Aug 8. Use Aug 8–16 to complete all pre-launch 
 ## Phase 2 — Deployment (complete by Aug 17)
 
 - [ ] **2.1 Choose and set up deployment platform**
-  - Recommended: Railway (no cold starts, stable URL, free tier)
-  - Create account, connect GitHub repo
+  - Deploy to VPS (already provisioned)
+  - Set up reverse proxy (Caddy or nginx) with HTTPS (Let's Encrypt)
+  - Set up process manager (systemd service or docker compose)
+  - Start command: `uvicorn miner.api:app --host 127.0.0.1 --port 8000`
 
 - [ ] **2.2 Create `Procfile` in repo root**
   ```
