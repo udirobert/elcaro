@@ -17,30 +17,50 @@ export function ScanResult({ result, content }: ScanResultProps) {
 
   return (
     <div className="space-y-10">
-      {/* Risk meter — the headline */}
+      {/* Risk meter — the headline number */}
       <RiskMeter score={result.risk_score} level={result.risk_level} latencyMs={result.latency_ms} />
+
+      {/* Summary — one sentence, human-readable */}
+      {result.summary && (
+        <motion.p
+          className="text-base text-ink-muted leading-relaxed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          {result.summary}
+        </motion.p>
+      )}
 
       {/* The content with inline highlights */}
       {result.indicators.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-xs font-medium text-ink-muted uppercase tracking-widest">
-            Detected patterns
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-ink-faint uppercase tracking-widest">
+            Evidence
           </p>
-
           <InlineHighlight content={content} indicators={result.indicators} />
         </div>
       )}
 
-      {/* Indicator annotations — margin notes style */}
+      {/* Indicator annotations — threat cards */}
       {result.indicators.length > 0 && (
-        <div className="stagger-children space-y-3">
-          {result.indicators.map((indicator, i) => (
-            <IndicatorAnnotation key={`${indicator.technique_name}-${i}`} indicator={indicator} index={i} />
-          ))}
+        <div className="space-y-4">
+          <p className="text-xs font-medium text-ink-faint uppercase tracking-widest">
+            Findings ({result.indicators.length})
+          </p>
+          <div className="space-y-4">
+            {result.indicators.map((indicator, i) => (
+              <IndicatorAnnotation
+                key={`${indicator.technique_name}-${i}`}
+                indicator={indicator}
+                index={i}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Verdict — minimal, clear */}
+      {/* Verdict */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

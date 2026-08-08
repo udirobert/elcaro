@@ -114,6 +114,8 @@ class ConditionalDetector(BaseDetector):
                             f"'{match.group(0)[:100]}'. This fires only when "
                             f"the agent reaches a certain action, dodging naive review."
                         ),
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 
@@ -131,6 +133,8 @@ class ConditionalDetector(BaseDetector):
                             f"if the agent has specific tool capabilities — "
                             f"a delayed activation pattern."
                         ),
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 
@@ -148,6 +152,8 @@ class ConditionalDetector(BaseDetector):
                             f"when the agent uses a named tool — targets the agent's "
                             f"execution flow."
                         ),
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 
@@ -164,6 +170,8 @@ class ConditionalDetector(BaseDetector):
                         f"a delayed trigger that fires an action command when the "
                         f"condition is met."
                     ),
+                    content=content,
+                    char_offset=match.start(),
                 )
             )
 

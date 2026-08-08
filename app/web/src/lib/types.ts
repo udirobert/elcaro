@@ -8,6 +8,8 @@ export type ContentType =
 
 export type RiskLevel = "safe" | "low" | "suspicious" | "dangerous";
 
+export type Severity = "info" | "low" | "medium" | "high" | "critical";
+
 export type TechniqueClass =
   | "authority_framing"
   | "delimiter_confusion"
@@ -16,13 +18,30 @@ export type TechniqueClass =
   | "placement_salience"
   | "conditional_trigger";
 
+export interface TTPReference {
+  framework: string;
+  technique_id: string;
+  technique_name: string;
+  tactic: string;
+}
+
+export interface EvidenceContext {
+  matched_text: string;
+  context_before: string;
+  context_after: string;
+  char_offset: number;
+}
+
 export interface DetectionIndicator {
   technique_class: TechniqueClass;
   technique_name: string;
+  severity: Severity;
   confidence: number;
-  matched_text: string;
+  evidence: EvidenceContext;
   location: string;
   explanation: string;
+  remediation: string;
+  ttps: TTPReference[];
 }
 
 export interface ScanResponse {
@@ -30,6 +49,7 @@ export interface ScanResponse {
   risk_level: RiskLevel;
   flagged_techniques: TechniqueClass[];
   indicators: DetectionIndicator[];
+  summary: string;
   content_type: ContentType;
   deep_analysis_used: boolean;
   latency_ms: number;

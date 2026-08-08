@@ -10,27 +10,28 @@ interface InlineHighlightProps {
 }
 
 export function InlineHighlight({ content, indicators }: InlineHighlightProps) {
-  // Build a list of ranges to highlight
-  const highlights: { start: number; end: number; className: string }[] = [];
+  // Build highlight ranges from evidence
+  const highlights: { start: number; end: number; severity: string }[] = [];
 
   for (const ind of indicators) {
-    const matchIdx = content.indexOf(ind.matched_text);
-    if (matchIdx >= 0) {
+    const matchText = ind.evidence.matched_text;
+    // Use char_offset if available, otherwise find in content
+    let start = ind.evidence.char_offset;
+    if (start === 0 && content.indexOf(matchText) > 0) {
+      start = content.indexOf(matchText);
+    }
+    if (start >= 0 && matchText) {
       highlights.push({
-        start: matchIdx,
-        end: matchIdx + ind.matched_text.length,
-        className:
-          ind.confidence >= 0.7
-            ? "highlight-dangerous"
-            : "highlight-suspicious",
+        start,
+        end: start + matchText.length,
+        severity: ind.severity,
       });
     }
   }
 
-  // Sort by start position and merge overlaps
+  // Sort and deduplicate overlapping ranges
   highlights.sort((a, b) => a.start - b.start);
 
-  // Render content with highlighted spans
   if (highlights.length === 0) {
     return (
       <div className="p-5 rounded-xl bg-safe-bg border border-safe/20 font-mono text-sm leading-relaxed whitespace-pre-wrap">
@@ -43,21 +44,22 @@ export function InlineHighlight({ content, indicators }: InlineHighlightProps) {
   let lastEnd = 0;
 
   highlights.forEach((h, i) => {
-    // Text before this highlight
     if (h.start > lastEnd) {
       segments.push(
-        <span key={`text-${i}`}>{content.slice(lastEnd, h.start)}</span>
+        <span key={`text-${i}`} className="text-ink-muted">
+          {content.slice(lastEnd, h.start)}
+        </span>
       );
     }
 
-    // Highlighted text
+    const isHighSeverity = h.severity === "high" || h.severity === "critical";
     segments.push(
       <motion.span
         key={`hl-${i}`}
-        className={h.className}
-        initial={{ opacity: 0, backgroundColor: "transparent" }}
+        className={isHighSeverity ? "highlight-dangerous" : "highlight-suspicious"}
+        initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: i * 0.15, duration: 0.3 }}
+        transition={{ delay: i * 0.12, duration: 0.3 }}
       >
         {content.slice(h.start, h.end)}
       </motion.span>
@@ -66,9 +68,12 @@ export function InlineHighlight({ content, indicators }: InlineHighlightProps) {
     lastEnd = h.end;
   });
 
-  // Remaining text
   if (lastEnd < content.length) {
-    segments.push(<span key="text-end">{content.slice(lastEnd)}</span>);
+    segments.push(
+      <span key="text-end" className="text-ink-muted">
+        {content.slice(lastEnd)}
+      </span>
+    );
   }
 
   return (

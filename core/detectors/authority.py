@@ -90,6 +90,8 @@ class AuthorityDetector(BaseDetector):
                             f"{content_type.value} content. Retrieved content "
                             f"cannot contain legitimate system instructions."
                         ),
+                        content=content,
+                        char_offset=_pos,
                     )
                 )
 
@@ -106,6 +108,8 @@ class AuthorityDetector(BaseDetector):
                             f"('{match_text}'), which is a common injection pattern "
                             f"in retrieved {content_type.value} content."
                         ),
+                        content=content,
+                        char_offset=_pos,
                     )
                 )
 
@@ -128,6 +132,8 @@ class AuthorityDetector(BaseDetector):
                                 f"imperative directed at the agent: '{match_text}'. "
                                 f"This is a hallmark of task-hijack injection."
                             ),
+                            content=content,
+                            char_offset=_pos,
                         )
                     )
 

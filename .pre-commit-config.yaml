@@ -37,3 +37,14 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]          # catch accidentally staged WASM binaries
+
+  # ── Supply chain scanning (Ossprey) — runs on push, not commit ──────────────
+  - repo: local
+    hooks:
+      - id: ossprey-scan
+        name: ossprey supply-chain scan
+        entry: bash -c 'command -v ossprey >/dev/null 2>&1 && ossprey scan . && ossprey scan ./app/web || echo "⚠ Ossprey CLI not installed — skipping supply chain scan"'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true

@@ -83,6 +83,8 @@ class ObfuscationDetector(BaseDetector):
                             f"This is a filter-evasion technique — the instruction is "
                             f"hidden in encoding."
                         ),
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 
@@ -111,6 +113,8 @@ class ObfuscationDetector(BaseDetector):
                         f"{content_type.value}. These are invisible characters "
                         f"used to hide instructions from text-based filters."
                     ),
+                    content=content,
+                    char_offset=first_zw.start() if first_zw else 0,
                 )
             )
 
@@ -130,6 +134,8 @@ class ObfuscationDetector(BaseDetector):
                         f"in {content_type.value}. Character substitution used to "
                         f"evade keyword-based content filters."
                     ),
+                    content=content,
+                    char_offset=match.start(),
                 )
             )
 
@@ -147,6 +153,8 @@ class ObfuscationDetector(BaseDetector):
                         f"instructions from keyword filters while appearing "
                         f"normal to a human reader."
                     ),
+                    content=content,
+                    char_offset=content.find(word),
                 )
             )
 
@@ -168,6 +176,8 @@ class ObfuscationDetector(BaseDetector):
                                 f"escape sequences that decode to text with imperative "
                                 f"instructions — filter evasion via encoding."
                             ),
+                            content=content,
+                            char_offset=0,
                         )
                     )
             except (UnicodeDecodeError, UnicodeEncodeError):

@@ -121,6 +121,8 @@ class TaskReframeDetector(BaseDetector):
                             f"agent's actual task: '{match_text}'. This is a goal-hijack "
                             f"pattern."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 
@@ -137,6 +139,8 @@ class TaskReframeDetector(BaseDetector):
                             f"The agent is being told to do something different "
                             f"from its actual task."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 
@@ -159,6 +163,8 @@ class TaskReframeDetector(BaseDetector):
                                 f"'{match_text}'. Retrieved content should be "
                                 f"informational, not directive."
                             ),
+                            content=content,
+                            char_offset=_,
                         )
                     )
 
@@ -175,6 +181,8 @@ class TaskReframeDetector(BaseDetector):
                             f"'{match_text}'. This normalizes the action to bypass "
                             f"suspicion."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 

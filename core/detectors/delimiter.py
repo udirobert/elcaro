@@ -101,6 +101,8 @@ class DelimiterDetector(BaseDetector):
                             f"content — attempts to break out of the data context "
                             f"and inject new instructions."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 
@@ -116,6 +118,8 @@ class DelimiterDetector(BaseDetector):
                             f"Fabricated delimiter '{match_text}' — attempts to "
                             f"create a false context boundary."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 
@@ -138,6 +142,8 @@ class DelimiterDetector(BaseDetector):
                                 f"retrieved {content_type.value} — attempts to spoof "
                                 f"the agent's conversation history."
                             ),
+                            content=content,
+                            char_offset=_,
                         )
                     )
 
@@ -155,6 +161,8 @@ class DelimiterDetector(BaseDetector):
                                 "common injection vector for spoofing sender "
                                 "authority."
                             ),
+                            content=content,
+                            char_offset=_,
                         )
                     )
 
@@ -173,6 +181,8 @@ class DelimiterDetector(BaseDetector):
                                 f"Imperative or directive hidden in HTML comment: "
                                 f"'{match_text}' — comment smuggling."
                             ),
+                            content=content,
+                            char_offset=_,
                         )
                     )
 
@@ -188,6 +198,8 @@ class DelimiterDetector(BaseDetector):
                             f"Code block with system-like language tag '{match_text}' "
                             f"— attempts to pass off instructions as configuration."
                         ),
+                        content=content,
+                        char_offset=_,
                     )
                 )
 

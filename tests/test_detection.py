@@ -287,7 +287,12 @@ def test_response_has_indicators(engine):
     )
     assert len(result.indicators) > 0
     assert all(ind.explanation for ind in result.indicators)
-    assert all(ind.matched_text for ind in result.indicators)
+    assert all(ind.evidence.matched_text for ind in result.indicators)
+    # Verify enriched fields
+    assert all(ind.severity for ind in result.indicators)
+    assert all(ind.remediation for ind in result.indicators)
+    assert all(len(ind.ttps) > 0 for ind in result.indicators)
+    assert result.summary != ""
 
 
 def test_latency_is_reasonable(engine):

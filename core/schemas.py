@@ -2,6 +2,10 @@
 
 These models are used by both the miner API (Track 1) and the app middleware
 (Track 3) to ensure a consistent interface.
+
+Design principle: every finding must be explainable, evidenced, and actionable.
+Inspired by Ossprey's threat card model — we never just say "bad"; we say why,
+show the evidence, map to a framework, and suggest what to do.
 """
 
 from __future__ import annotations
@@ -48,24 +52,118 @@ class RiskLevel(StrEnum):
     DANGEROUS = "dangerous"
 
 
+class Severity(StrEnum):
+    """Per-indicator severity (distinct from overall risk level).
+
+    Maps to how dangerous this specific pattern is in isolation.
+    """
+
+    INFO = "info"  # Weak signal — notable but not actionable alone
+    LOW = "low"  # Minor risk — contributes to score but unlikely malicious alone
+    MEDIUM = "medium"  # Moderate risk — warrants review
+    HIGH = "high"  # Strong indicator — likely malicious
+    CRITICAL = "critical"  # Near-certain injection — immediate action required
+
+
+# ── TTP mapping ────────────────────────────────────────────────────────────────
+
+
+class TTPReference(BaseModel):
+    """Tactic/Technique/Procedure reference for a finding.
+
+    Maps Elcaro findings to the MITRE ATLAS framework (AI-specific TTPs)
+    and our own Elcaro taxonomy for patterns ATLAS doesn't cover.
+    """
+
+    framework: str = Field(
+        ...,
+        description="Reference framework: 'mitre_atlas' or 'elcaro'",
+    )
+    technique_id: str = Field(
+        ...,
+        description="Technique identifier (e.g. 'AML.T0051' for ATLAS, 'ELC-A01' for Elcaro)",
+    )
+    technique_name: str = Field(
+        ...,
+        description="Human-readable technique name",
+    )
+    tactic: str = Field(
+        ...,
+        description="The tactic this technique supports (e.g. 'Initial Access', 'Exfiltration')",
+    )
+
+
 # ── Detection results ──────────────────────────────────────────────────────────
 
 
+class EvidenceContext(BaseModel):
+    """The evidence behind a detection — the actual content that triggered it.
+
+    Shows the matched text with surrounding context so a human reviewer
+    can see exactly what was flagged without reading the full document.
+    """
+
+    matched_text: str = Field(
+        ...,
+        description="The exact text that triggered the pattern match",
+    )
+    context_before: str = Field(
+        default="",
+        description="Up to 100 chars of content before the match for context",
+    )
+    context_after: str = Field(
+        default="",
+        description="Up to 100 chars of content after the match for context",
+    )
+    char_offset: int = Field(
+        default=0,
+        description="Character offset of the match from the start of the content",
+    )
+
+
 class DetectionIndicator(BaseModel):
-    """A single pattern match from a detector."""
+    """A single finding from a detector — the threat card.
+
+    Modelled after Ossprey's threat card: severity, evidence, TTPs,
+    explanation, and remediation. Every finding must be explainable
+    and actionable.
+    """
 
     technique_class: TechniqueClass
     technique_name: str = Field(
-        ..., description="Human-readable name of the specific pattern detected"
+        ..., description="Specific pattern identifier (e.g. 'authority:system_voice_marker')"
+    )
+    severity: Severity = Field(
+        default=Severity.MEDIUM,
+        description="How dangerous this specific indicator is in isolation",
     )
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="How confident the detector is (0–1)"
     )
-    matched_text: str = Field(..., description="The text snippet that triggered the match")
-    location: str = Field(
-        ..., description="Where in the content the match was found (body, metadata, etc.)"
+    evidence: EvidenceContext = Field(
+        ...,
+        description="The matched text with surrounding context",
     )
-    explanation: str = Field(..., description="Why this is suspicious")
+    location: str = Field(
+        ..., description="Where in the content the match was found (body, metadata, tail, etc.)"
+    )
+    explanation: str = Field(
+        ..., description="Human-readable explanation of why this is suspicious"
+    )
+    remediation: str = Field(
+        default="Review and remove the flagged content before processing.",
+        description="Recommended action to address this finding",
+    )
+    ttps: list[TTPReference] = Field(
+        default_factory=list,
+        description="MITRE ATLAS or Elcaro TTP mappings for this finding",
+    )
+
+    # Backwards compatibility: expose matched_text at top level
+    @property
+    def matched_text(self) -> str:
+        """Convenience accessor for the matched text."""
+        return self.evidence.matched_text
 
 
 # ── API request/response ──────────────────────────────────────────────────────
@@ -90,7 +188,11 @@ class ScanRequest(BaseModel):
 
 
 class ScanResponse(BaseModel):
-    """Response from the IPI detection scan."""
+    """Response from the IPI detection scan.
+
+    Structured to support both quick programmatic decisions (risk_score + risk_level)
+    and deep human review (indicators with evidence, TTPs, and remediation).
+    """
 
     risk_score: float = Field(
         ..., ge=0.0, le=1.0, description="Overall injection risk score (0=safe, 1=dangerous)"
@@ -102,7 +204,11 @@ class ScanResponse(BaseModel):
     )
     indicators: list[DetectionIndicator] = Field(
         default_factory=list,
-        description="Detailed list of detection indicators",
+        description="Detailed threat cards for each finding",
+    )
+    summary: str = Field(
+        default="",
+        description="One-sentence human-readable summary of the scan result",
     )
     content_type: ContentType = Field(..., description="The content type that was scanned")
     deep_analysis_used: bool = Field(

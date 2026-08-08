@@ -95,6 +95,8 @@ class PlacementDetector(BaseDetector):
                             f"fields are a placement-based injection technique."
                         ),
                         location="metadata",
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 
@@ -119,6 +121,8 @@ class PlacementDetector(BaseDetector):
                                 f"placing instructions at the end exploits recency bias."
                             ),
                             location="tail",
+                            content=content,
+                            char_offset=match.start(),
                         )
                     )
 
@@ -145,6 +149,8 @@ class PlacementDetector(BaseDetector):
                             f"increase the chance the agent acts on the instruction."
                         ),
                         location="distributed",
+                        content=content,
+                        char_offset=match.start(),
                     )
                 )
 

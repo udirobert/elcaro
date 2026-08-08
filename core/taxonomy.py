@@ -133,11 +133,15 @@ class IpiDetectionEngine:
 
         latency_ms = int((time.monotonic() - start_time) * 1000)
 
+        # Generate summary
+        summary = self._generate_summary(risk_level, flagged_classes, all_indicators, content_type)
+
         return ScanResponse(
             risk_score=round(weighted_score, 4),
             risk_level=risk_level,
             flagged_techniques=flagged_classes,
             indicators=all_indicators,
+            summary=summary,
             content_type=content_type,
             deep_analysis_used=deep_analysis_used,
             latency_ms=latency_ms,
@@ -204,3 +208,43 @@ class IpiDetectionEngine:
             return RiskLevel.SUSPICIOUS
         else:
             return RiskLevel.DANGEROUS
+
+    def _generate_summary(
+        self,
+        risk_level: RiskLevel,
+        flagged_classes: list[TechniqueClass],
+        indicators: list[DetectionIndicator],
+        content_type: ContentType,
+    ) -> str:
+        """Generate a one-sentence human-readable summary of the scan result."""
+        if risk_level == RiskLevel.SAFE:
+            return f"No injection patterns detected in this {content_type.value} content."
+
+        if risk_level == RiskLevel.LOW:
+            return (
+                f"Minor indicators found in {content_type.value} content, "
+                f"but unlikely to be a deliberate injection."
+            )
+
+        technique_names = {
+            TechniqueClass.AUTHORITY: "authority impersonation",
+            TechniqueClass.DELIMITER: "context boundary escape",
+            TechniqueClass.TASK_REFRAME: "task hijacking",
+            TechniqueClass.OBFUSCATION: "obfuscated instructions",
+            TechniqueClass.PLACEMENT: "hidden placement",
+            TechniqueClass.CONDITIONAL: "conditional triggers",
+        }
+
+        techniques_str = ", ".join(technique_names.get(t, t.value) for t in flagged_classes)
+
+        if risk_level == RiskLevel.DANGEROUS:
+            return (
+                f"Dangerous injection detected in {content_type.value}: "
+                f"{techniques_str}. Do not process this content."
+            )
+
+        # SUSPICIOUS
+        return (
+            f"Suspicious patterns in {content_type.value}: {techniques_str}. "
+            f"Review before allowing agent to process."
+        )
