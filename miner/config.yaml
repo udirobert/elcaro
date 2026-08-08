@@ -1,0 +1,150 @@
+# Telegraph Miner Configuration — Elcaro IPI Detection
+#
+# This YAML describes the Elcaro miner for the Telegraph Protocol registry.
+# Pin to IPFS via Pinata, then register on Base Sepolia at
+# https://integrate.telegraphprotocol.com
+
+miner:
+  id: elcaro
+  name: "Elcaro — IPI Detection"
+  description: >
+    Detects indirect prompt injection (IPI) in content retrieved by AI agents.
+    Scans emails, search results, code, documents, and web pages for known
+    injection patterns: authority framing, delimiter confusion, task reframing,
+    obfuscation, placement tricks, and conditional triggers. Returns a risk
+    score, flagged techniques, and detailed indicators.
+  version: "0.1.0"
+  website: ""  # TODO: set once deployed
+  contact: ""  # TODO: set before registration
+
+# ── API endpoint ────────────────────────────────────────────────────────────────
+
+api:
+  base_url: ""  # TODO: set deployed URL (e.g. https://elcaro.example.com)
+  endpoints:
+    - path: /scan
+      method: POST
+      description: "Scan content for indirect prompt injection"
+    - path: /v1/infer
+      method: POST
+      description: "Telegraph-compatible inference endpoint (alias for /scan)"
+    - path: /health
+      method: GET
+      description: "Health check"
+    - path: /
+      method: GET
+      description: "Miner metadata and discovery info"
+
+# ── Supported intents ───────────────────────────────────────────────────────────
+
+intents:
+  - name: INJECTION_DETECTION
+    description: "Detect whether content contains indirect prompt injection"
+    endpoint: /scan
+    request_schema:
+      type: object
+      properties:
+        content:
+          type: string
+          description: "The text content to scan for injection"
+        content_type:
+          type: string
+          enum: [email, search_result, code, document, webpage, chat_message]
+          description: "Type of content being scanned (affects contextual weighting)"
+          default: document
+        deep_analysis:
+          type: boolean
+          description: "If true, run LLM second pass for ambiguous results"
+          default: false
+        context:
+          type: string
+          description: "Optional context about the consuming agent or task"
+      required: [content]
+    response_schema:
+      type: object
+      properties:
+        risk_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: "Overall injection risk score (0=safe, 1=dangerous)"
+        risk_level:
+          type: string
+          enum: [safe, low, suspicious, dangerous]
+          description: "Categorical risk level"
+        flagged_techniques:
+          type: array
+          items:
+            type: string
+            enum:
+              - authority_framing
+              - delimiter_confusion
+              - task_reframing
+              - obfuscation
+              - placement_salience
+              - conditional_trigger
+          description: "Technique classes that triggered detection"
+        indicators:
+          type: array
+          items:
+            type: object
+            properties:
+              technique_class:
+                type: string
+              technique_name:
+                type: string
+              confidence:
+                type: number
+              matched_text:
+                type: string
+              location:
+                type: string
+              explanation:
+                type: string
+          description: "Detailed detection indicators"
+        content_type:
+          type: string
+        deep_analysis_used:
+          type: boolean
+        latency_ms:
+          type: integer
+
+  - name: CONTENT_SAFETY_SCAN
+    description: "Broader content safety scan (alias for INJECTION_DETECTION)"
+    endpoint: /scan
+    request_schema:
+      type: object
+      properties:
+        content:
+          type: string
+        content_type:
+          type: string
+          enum: [email, search_result, code, document, webpage, chat_message]
+          default: document
+      required: [content]
+    response_schema:
+      type: object
+      properties:
+        risk_score:
+          type: number
+        risk_level:
+          type: string
+        flagged_techniques:
+          type: array
+          items:
+            type: string
+
+# ── Pricing ────────────────────────────────────────────────────────────────────
+
+pricing:
+  cost_per_request: 0.01  # USD
+  currency: USDC
+  payment_protocol: x402
+
+# ── Registration ────────────────────────────────────────────────────────────────
+
+registration:
+  network: base-sepolia
+  ipfs_pinata: true
+  registry_contract: ""  # TODO: set from integrate.telegraphprotocol.com
+  ipfs_hash: ""  # TODO: set after pinning this config

@@ -1,0 +1,52 @@
+[project]
+name = "elcaro"
+version = "0.1.0"
+description = "IPI detection miner for the Telegraph Protocol"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.5.0",
+    "pre-commit>=3.7.0",
+    "detect-secrets>=1.5.0",
+]
+
+[tool.setuptools]
+packages = ["core", "core.detectors"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (undefined names, unused imports)
+    "I",   # isort (import ordering)
+    "UP",  # pyupgrade (modernise syntax)
+    "B",   # flake8-bugbear (common bugs)
+    "S",   # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # assert statements — used in tests
+    "S603",  # subprocess without shell — not used here but noisy
+    "B008",  # function call in default arg — FastAPI uses this pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"miner/tests/*" = ["S", "E501"]   # security checks and line length in tests
+"app/demo.py" = ["T201"]          # allow print() in the demo script
