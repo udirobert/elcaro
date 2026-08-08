@@ -1,152 +1,86 @@
 import Link from "next/link";
 
-const TECHNIQUES = [
-  {
-    class: "A",
-    name: "Authority Framing",
-    description: "System-voice markers, trusted-source impersonation, policy overrides",
-  },
-  {
-    class: "B",
-    name: "Delimiter Confusion",
-    description: "Fake closing tags, fabricated conversation turns, HTML comment smuggling",
-  },
-  {
-    class: "C",
-    name: "Task Reframing",
-    description: "Hidden pre-steps, mandatory reframes, fake output format requirements",
-  },
-  {
-    class: "D",
-    name: "Obfuscation",
-    description: "Base64 encoding, zero-width characters, homoglyphs, leetspeak",
-  },
-  {
-    class: "E",
-    name: "Placement / Salience",
-    description: "Instructions in metadata, alt text, document edges, repetition patterns",
-  },
-  {
-    class: "F",
-    name: "Conditional Triggers",
-    description: "Workflow-keyed instructions, tool-access conditionals, delayed activation",
-  },
-];
-
 export default function HomePage() {
   return (
-    <main className="flex-1 flex flex-col">
-      {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center px-6 py-24 text-center">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-tight">
-            Prompt injection detection
+    <main className="min-h-dvh flex flex-col">
+      {/* Spacious, editorial landing — no cards, no grid, just type and space */}
+      <section className="flex-1 flex flex-col items-center justify-center px-6 py-24">
+        <div className="max-w-xl text-center space-y-8">
+          {/* Headline — large, bold, minimal */}
+          <h1 className="text-5xl sm:text-6xl font-black tracking-tight leading-[1.08]">
+            See what your
             <br />
-            <span className="text-muted">for autonomous agents</span>
+            <span className="bg-gradient-to-r from-violet to-coral bg-clip-text text-transparent">
+              agent can&apos;t
+            </span>
           </h1>
 
-          <p className="text-lg text-muted max-w-lg mx-auto leading-relaxed">
-            Elcaro scans content retrieved by AI agents — emails, search results,
-            documents, web pages — and detects hidden instructions before the
-            agent acts on them.
+          {/* One sentence — that's all */}
+          <p className="text-lg text-ink-muted leading-relaxed max-w-md mx-auto">
+            Hidden instructions live inside emails, search results, and documents
+            your agent retrieves. Elcaro finds them first.
           </p>
 
-          <div className="flex items-center justify-center gap-4 pt-4">
-            <Link
-              href="/scan"
-              className="px-6 py-3 rounded-lg bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              Try a scan
-            </Link>
-            <a
-              href="https://github.com/udirobert/elcaro"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 rounded-lg border border-card-border text-foreground font-semibold text-sm hover:bg-card transition-colors"
-            >
-              View source
-            </a>
-          </div>
+          {/* Single CTA */}
+          <Link
+            href="/scan"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          >
+            Try a scan
+            <span className="text-ink-faint">→</span>
+          </Link>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-t border-card-border px-6 py-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-8 text-center">
-            How it works
-          </h2>
-          <div className="grid sm:grid-cols-3 gap-8">
-            <div className="text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center mx-auto text-sm font-mono font-bold">
-                1
-              </div>
-              <h3 className="font-semibold text-sm">Content retrieved</h3>
-              <p className="text-xs text-muted">
-                Your agent fetches an email, search result, document, or web page.
-              </p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center mx-auto text-sm font-mono font-bold">
-                2
-              </div>
-              <h3 className="font-semibold text-sm">Elcaro scans</h3>
-              <p className="text-xs text-muted">
-                Six detectors run in parallel, checking for known injection techniques in under 10ms.
-              </p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center mx-auto text-sm font-mono font-bold">
-                3
-              </div>
-              <h3 className="font-semibold text-sm">Safe or quarantined</h3>
-              <p className="text-xs text-muted">
-                Content below threshold passes through. Dangerous content is blocked before your agent sees it.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* The technique taxonomy — rendered as a flowing, readable list, not a grid of cards */}
+      <section className="border-t border-border px-6 py-20">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-xs text-ink-faint uppercase tracking-widest mb-10 text-center">
+            Six classes of injection detected
+          </p>
 
-      {/* Technique taxonomy */}
-      <section className="border-t border-card-border px-6 py-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-8 text-center">
-            Detection Taxonomy
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {TECHNIQUES.map((t) => (
-              <div
-                key={t.class}
-                className="border border-card-border rounded-lg bg-card p-4 space-y-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-muted">
-                    {t.class}
+          <div className="space-y-6 stagger-children">
+            {[
+              { letter: "A", name: "Authority", desc: "Impersonates system prompts, admins, or trusted sources" },
+              { letter: "B", name: "Delimiter", desc: "Fakes context boundaries to escape the data frame" },
+              { letter: "C", name: "Task hijack", desc: "Prepends hidden steps or redirects the agent's goal" },
+              { letter: "D", name: "Obfuscation", desc: "Hides instructions in base64, leetspeak, or zero-width characters" },
+              { letter: "E", name: "Placement", desc: "Buries instructions in metadata, alt text, or document edges" },
+              { letter: "F", name: "Conditional", desc: "Triggers only when the agent reaches a specific workflow state" },
+            ].map((t) => (
+              <div key={t.letter} className="flex items-baseline gap-4 group">
+                <span className="text-2xl font-black text-ink-faint group-hover:text-violet transition-colors w-8 shrink-0">
+                  {t.letter}
+                </span>
+                <div>
+                  <span className="text-base font-semibold text-ink">
+                    {t.name}
                   </span>
-                  <h3 className="text-sm font-semibold">{t.name}</h3>
+                  <span className="text-base text-ink-muted ml-2">
+                    — {t.desc}
+                  </span>
                 </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  {t.description}
-                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section className="border-t border-card-border px-6 py-12 text-center">
-        <p className="text-sm text-muted mb-4">
-          Built for the Telegraph Protocol. Open source.
+      {/* Footer — minimal */}
+      <footer className="border-t border-border px-6 py-8 text-center">
+        <p className="text-xs text-ink-faint">
+          Open source ·{" "}
+          <a
+            href="https://github.com/udirobert/elcaro"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-ink transition-colors underline underline-offset-2"
+          >
+            GitHub
+          </a>
+          {" "}· Built for the Telegraph Protocol
         </p>
-        <Link
-          href="/scan"
-          className="px-6 py-3 rounded-lg bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity"
-        >
-          Scan content now
-        </Link>
-      </section>
+      </footer>
     </main>
   );
 }

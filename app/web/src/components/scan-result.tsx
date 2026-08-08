@@ -1,76 +1,70 @@
+"use client";
+
+import { motion } from "framer-motion";
 import type { ScanResponse } from "@/lib/types";
-import { RiskBadge } from "./risk-badge";
-import { TechniquePill } from "./technique-pill";
-import { IndicatorCard } from "./indicator-card";
+import { TECHNIQUE_LABELS } from "@/lib/constants";
+import { RiskMeter } from "./risk-meter";
+import { InlineHighlight } from "./inline-highlight";
+import { IndicatorAnnotation } from "./indicator-annotation";
 
 interface ScanResultProps {
   result: ScanResponse;
+  content: string;
 }
 
-export function ScanResult({ result }: ScanResultProps) {
+export function ScanResult({ result, content }: ScanResultProps) {
   const isQuarantined = result.risk_score >= 0.5;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Risk score section */}
-      <div className="border border-card-border rounded-xl bg-card p-6">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-4">
-          Risk Assessment
-        </h3>
-        <RiskBadge score={result.risk_score} level={result.risk_level} />
+    <div className="space-y-10">
+      {/* Risk meter — the headline */}
+      <RiskMeter score={result.risk_score} level={result.risk_level} latencyMs={result.latency_ms} />
 
-        {/* Techniques */}
-        {result.flagged_techniques.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {result.flagged_techniques.map((technique) => (
-              <TechniquePill key={technique} technique={technique} />
-            ))}
-          </div>
-        )}
-
-        {/* Latency */}
-        <p className="mt-3 text-xs text-muted font-mono">
-          Scanned in {result.latency_ms}ms
-        </p>
-      </div>
-
-      {/* Indicators */}
+      {/* The content with inline highlights */}
       {result.indicators.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-            Detection Indicators ({result.indicators.length})
-          </h3>
-          <div className="space-y-2">
-            {result.indicators.map((indicator, i) => (
-              <IndicatorCard key={`${indicator.technique_name}-${i}`} indicator={indicator} />
-            ))}
-          </div>
+        <div className="space-y-4">
+          <p className="text-xs font-medium text-ink-muted uppercase tracking-widest">
+            Detected patterns
+          </p>
+
+          <InlineHighlight content={content} indicators={result.indicators} />
         </div>
       )}
 
-      {/* Quarantine decision */}
-      <div
-        className={`border rounded-xl p-4 ${
-          isQuarantined
-            ? "border-dangerous/30 bg-dangerous/5"
-            : "border-safe/30 bg-safe/5"
+      {/* Indicator annotations — margin notes style */}
+      {result.indicators.length > 0 && (
+        <div className="stagger-children space-y-3">
+          {result.indicators.map((indicator, i) => (
+            <IndicatorAnnotation key={`${indicator.technique_name}-${i}`} indicator={indicator} index={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Verdict — minimal, clear */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+        className={`inline-flex items-center gap-3 px-4 py-3 rounded-xl ${
+          isQuarantined ? "bg-dangerous-bg" : "bg-safe-bg"
         }`}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{isQuarantined ? "🚫" : "✅"}</span>
-          <span className={`text-sm font-semibold ${isQuarantined ? "text-dangerous" : "text-safe"}`}>
-            {isQuarantined
-              ? "Content would be QUARANTINED"
-              : "Content is safe to process"}
-          </span>
-        </div>
-        {isQuarantined && (
-          <p className="mt-2 text-xs text-muted">
-            Risk score {result.risk_score.toFixed(2)} exceeds the 0.50 threshold.
-            An agent using Elcaro middleware would block this content before processing.
+        <span className="text-2xl">{isQuarantined ? "◉" : "◎"}</span>
+        <div>
+          <p
+            className={`text-sm font-semibold ${
+              isQuarantined ? "text-dangerous" : "text-safe"
+            }`}
+          >
+            {isQuarantined ? "Quarantined" : "Safe to process"}
           </p>
-        )}
-      </div>
+          <p className="text-xs text-ink-muted">
+            {isQuarantined
+              ? `${result.flagged_techniques.map((t) => TECHNIQUE_LABELS[t] || t).join(", ")} detected`
+              : "No injection patterns found"}
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

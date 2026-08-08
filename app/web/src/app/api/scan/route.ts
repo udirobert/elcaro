@@ -27,12 +27,12 @@ export async function POST(request: Request) {
     const data = await minerResponse.json();
     return NextResponse.json(data);
   } catch (err) {
-    // Fail open — return safe response if miner is unreachable
     console.error("Elcaro miner unreachable:", err);
     return NextResponse.json(
       {
         error: "Scanner unavailable",
-        detail: "The detection engine is currently unreachable. Please try again.",
+        detail:
+          "The detection engine is currently unreachable. Please try again.",
       },
       { status: 503 }
     );

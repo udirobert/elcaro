@@ -1,61 +1,124 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --safe: #10b981;
-  --low: #3b82f6;
-  --suspicious: #f59e0b;
-  --dangerous: #ef4444;
-  --card: #141414;
-  --card-border: #262626;
-  --muted: #737373;
+@font-face {
+  font-family: "Satoshi";
+  src: url("https://api.fontshare.com/v2/css?f=satoshi@400,500,700,900&display=swap");
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-safe: var(--safe);
-  --color-low: var(--low);
-  --color-suspicious: var(--suspicious);
-  --color-dangerous: var(--dangerous);
-  --color-card: var(--card);
-  --color-card-border: var(--card-border);
-  --color-muted: var(--muted);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: #FAFAF8;
+  --color-ink: #1A1A18;
+  --color-ink-muted: #6B6B68;
+  --color-ink-faint: #A3A3A0;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E8E4;
+  --color-border-strong: #D4D4D0;
+
+  --color-safe: #1A8A7A;
+  --color-safe-bg: #E6F7F4;
+  --color-low: #2563EB;
+  --color-low-bg: #EEF4FF;
+  --color-suspicious: #D4860A;
+  --color-suspicious-bg: #FFF8EB;
+  --color-dangerous: #E5533D;
+  --color-dangerous-bg: #FEF1EF;
+
+  --color-violet: #7C3AED;
+  --color-coral: #F97066;
+  --color-teal: #14B8A6;
+
+  --font-display: "Satoshi", system-ui, sans-serif;
+  --font-body: "Satoshi", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
+::selection {
+  background: #7C3AED20;
+  color: var(--color-ink);
 }
 
-@keyframes spin-slow {
+/* Scanning sweep animation */
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes fade-up {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.animate-pulse-ring {
-  animation: pulse-ring 1.5s ease-out infinite;
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
 }
 
-.animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
+@keyframes count-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-sweep {
+  animation: sweep 1.2s ease-in-out;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-count-in {
+  animation: count-in 0.3s ease-out both;
+}
+
+/* Staggered children */
+.stagger-children > * {
+  animation: fade-up 0.35s ease-out both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+
+/* Highlighted text (for inline flagging) */
+.highlight-dangerous {
+  background: linear-gradient(to bottom, transparent 60%, #E5533D30 60%);
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background 0.3s ease;
+}
+
+.highlight-suspicious {
+  background: linear-gradient(to bottom, transparent 60%, #D4860A25 60%);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.highlight-safe {
+  background: linear-gradient(to bottom, transparent 60%, #1A8A7A20 60%);
+  border-radius: 2px;
+  padding: 0 2px;
 }

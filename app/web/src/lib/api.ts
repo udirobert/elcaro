@@ -20,7 +20,8 @@ export async function scanContent(
   } catch (err) {
     return {
       error: "Network error",
-      detail: err instanceof Error ? err.message : "Could not reach the scanner",
+      detail:
+        err instanceof Error ? err.message : "Could not reach the scanner",
     };
   }
 }

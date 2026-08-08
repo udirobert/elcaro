@@ -1,32 +1,24 @@
-import { ScanForm } from "@/components/scan-form";
 import Link from "next/link";
+import { ScanForm } from "@/components/scan-form";
 
 export default function ScanPage() {
   return (
-    <main className="flex-1 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-card-border">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            elcaro
-          </Link>
-          <span className="text-xs text-muted font-mono">
-            IPI Detection Engine
-          </span>
-        </div>
+    <main className="min-h-dvh flex flex-col">
+      {/* Minimal header */}
+      <header className="px-6 py-5 flex items-center justify-between">
+        <Link
+          href="/"
+          className="text-sm font-bold tracking-tight text-ink hover:text-violet transition-colors"
+        >
+          elcaro
+        </Link>
+        <span className="text-xs text-ink-faint font-mono">
+          v0.1
+        </span>
       </header>
 
-      {/* Content */}
-      <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">Content Scanner</h1>
-          <p className="mt-2 text-sm text-muted">
-            Paste any content below to scan it for indirect prompt injection.
-            The detection engine analyses the text for known IPI technique
-            patterns and returns a risk assessment.
-          </p>
-        </div>
-
+      {/* Main content — generous space, the textarea is the hero */}
+      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8">
         <ScanForm />
       </div>
     </main>

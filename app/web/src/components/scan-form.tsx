@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
-import { ThinkingOrb } from "./thinking-orb";
 import { ScanResult } from "./scan-result";
+import { ScanBeam } from "./scan-beam";
 
 export function ScanForm() {
   const [content, setContent] = useState("");
   const [contentType, setContentType] = useState<ContentType>("email");
-  const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleScan() {
     if (!content.trim()) return;
 
-    setLoading(true);
+    setScanning(true);
     setResult(null);
     setError(null);
 
@@ -29,34 +31,52 @@ export function ScanForm() {
       setResult(response);
     }
 
-    setLoading(false);
+    setScanning(false);
   }
 
   function loadExample(index: number) {
     const example = EXAMPLES[index];
-    setContent(example.content);
-    setContentType(example.content_type);
     setResult(null);
     setError(null);
+
+    // Type the content in character by character
+    setContent("");
+    setContentType(example.content_type);
+
+    let i = 0;
+    const chars = example.content;
+    const interval = setInterval(() => {
+      if (i < chars.length) {
+        setContent(chars.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 8);
   }
 
   return (
-    <div className="space-y-6">
-      {/* Input area */}
-      <div className="space-y-4">
+    <div className="space-y-8">
+      {/* The content area — the main stage */}
+      <div className="relative">
+        {/* Scanning beam overlay */}
+        <AnimatePresence>{scanning && <ScanBeam />}</AnimatePresence>
+
         <textarea
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Paste content to scan for prompt injection..."
-          className="w-full h-40 p-4 rounded-xl bg-card border border-card-border text-foreground placeholder:text-muted font-mono text-sm resize-y focus:outline-none focus:border-foreground/30 transition-colors"
+          placeholder="Paste content here..."
+          className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet transition-colors placeholder:text-ink-faint"
+          style={{ fontVariantLigatures: "none" }}
         />
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Content type selector */}
+        {/* Content type — subtle, inline */}
+        <div className="absolute bottom-4 right-4 flex items-center gap-2">
           <select
             value={contentType}
             onChange={(e) => setContentType(e.target.value as ContentType)}
-            className="px-4 py-2.5 rounded-lg bg-card border border-card-border text-foreground text-sm focus:outline-none focus:border-foreground/30"
+            className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet cursor-pointer"
           >
             {CONTENT_TYPES.map((ct) => (
               <option key={ct.value} value={ct.value}>
@@ -64,53 +84,77 @@ export function ScanForm() {
               </option>
             ))}
           </select>
-
-          {/* Scan button */}
-          <button
-            onClick={handleScan}
-            disabled={loading || !content.trim()}
-            className="px-6 py-2.5 rounded-lg bg-foreground text-background font-semibold text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-          >
-            {loading ? "Scanning..." : "Scan"}
-          </button>
         </div>
       </div>
 
-      {/* Example buttons */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted uppercase tracking-wider font-semibold">
-          Try an example
-        </p>
-        <div className="flex flex-wrap gap-2">
+      {/* Actions row */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Examples — small, understated */}
+        <div className="flex flex-wrap gap-1.5">
           {EXAMPLES.map((example, i) => (
             <button
               key={i}
               onClick={() => loadExample(i)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all hover:scale-105 active:scale-95 ${
                 example.is_injection
-                  ? "border-dangerous/30 text-dangerous/80 hover:bg-dangerous/10"
-                  : "border-safe/30 text-safe/80 hover:bg-safe/10"
+                  ? "text-dangerous bg-dangerous-bg hover:text-dangerous"
+                  : "text-safe bg-safe-bg hover:text-safe"
               }`}
             >
-              {example.is_injection ? "⚠ " : "✓ "}
               {example.label}
             </button>
           ))}
         </div>
+
+        {/* Scan button */}
+        <motion.button
+          onClick={handleScan}
+          disabled={scanning || !content.trim()}
+          className="px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          animate={
+            !scanning && content.trim()
+              ? { scale: [1, 1.02, 1] }
+              : { scale: 1 }
+          }
+          transition={{
+            repeat: !scanning && content.trim() ? Infinity : 0,
+            duration: 3,
+            ease: "easeInOut",
+          }}
+        >
+          {scanning ? "Scanning..." : "Scan"}
+        </motion.button>
       </div>
 
-      {/* Loading state */}
-      {loading && <ThinkingOrb />}
+      {/* Error */}
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="text-sm text-dangerous"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
-      {/* Error state */}
-      {error && (
-        <div className="border border-dangerous/30 bg-dangerous/5 rounded-xl p-4">
-          <p className="text-sm text-dangerous">{error}</p>
-        </div>
-      )}
-
-      {/* Results */}
-      {result && <ScanResult result={result} />}
+      {/* Results — the content transforms */}
+      <AnimatePresence mode="wait">
+        {result && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <ScanResult result={result} content={content} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
