@@ -57,6 +57,36 @@ The rule-based primary layer is a structural advantage: while LLM miners average
 
 The self-reinforcing loop: Track 3 app drives real request volume to the Track 1 miner, improving ranking metrics used by Track 2 scoring. Building all three tracks is a deliberate strategy.
 
+### Go-to-market wedge: email-processing agents
+
+**Contrarian thesis:** AI agents are being deployed without any runtime content
+safety layer. The industry focuses on model alignment while ignoring that the
+data pipeline is the actual attack surface. Prompt injection is a content
+scanning problem, not a prompt engineering problem.
+
+**The wedge is email.** Email is the highest-risk content type (untrusted sender,
+structured enough to carry injection reliably, real-world consequences). The
+use case is explainable in one sentence: "We scan emails before your agent reads
+them."
+
+**Strategy:**
+1. Find one team running an email-handling agent (customer support, inbox assistant, sales automation)
+2. Offer free scanning of their email pipeline
+3. Collect evidence: X emails scanned, Y injections caught, Z false positives
+4. Use that data to win both hackathons (proof of real value, not a demo)
+5. Expand from email → search results → documents → all content
+
+**From wedge to platform:**
+- Email → search results (same buyer, different source)
+- Search results → documents (same buyer, different source)
+- Documents → all content (now you're the platform)
+
+**Monopoly dynamics (Thiel framework):**
+- 10x better than the alternative (the alternative is nothing — no dedicated runtime scanner exists)
+- Data network effect: every scan improves pattern detection
+- Integration lock-in: once in the retrieval pipeline, hard to remove
+- Trust: security products are bought on reputation; first mover builds it
+
 ## Technical registration flow (Track 1 critical path)
 
 1. Deploy miner to VPS (reverse proxy + HTTPS via Caddy/nginx + Let's Encrypt)

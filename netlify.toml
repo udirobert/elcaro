@@ -1,0 +1,26 @@
+# Netlify deployment configuration for the Next.js frontend.
+# The miner API runs on a separate VPS — set ELCARO_MINER_URL in Netlify
+# environment variables (Site settings → Environment variables).
+
+[build]
+  base = "app/web"
+  command = "npm run build"
+  publish = "app/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Next.js on Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect /api/* to Netlify Functions (handled by the Next.js plugin)
+# No manual redirect config needed — the plugin handles API routes.
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
