@@ -18,7 +18,7 @@
 
 - [x] Clone repo to `/home/linuxuser/elcaro`
 - [x] Python venv + deps installed
-- [x] 26 tests passing
+- [x] 54 tests passing
 - [x] PM2 running `elcaro-miner` on `127.0.0.1:8848`
 - [x] nginx proxying `:8847` → `:8848`
 - [x] Health check responding

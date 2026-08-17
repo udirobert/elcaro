@@ -91,23 +91,80 @@ intents:
             properties:
               technique_class:
                 type: string
+                enum:
+                  - authority_framing
+                  - delimiter_confusion
+                  - task_reframing
+                  - obfuscation
+                  - placement_salience
+                  - conditional_trigger
               technique_name:
                 type: string
+                description: "Specific pattern identifier (e.g. 'authority:system_voice_marker')"
+              severity:
+                type: string
+                enum: [info, low, medium, high, critical]
+                default: medium
               confidence:
                 type: number
-              matched_text:
-                type: string
+                minimum: 0.0
+                maximum: 1.0
+              evidence:
+                type: object
+                properties:
+                  matched_text:
+                    type: string
+                  context_before:
+                    type: string
+                    default: ""
+                  context_after:
+                    type: string
+                    default: ""
+                  char_offset:
+                    type: integer
+                    default: 0
+                required: [matched_text]
               location:
                 type: string
+                description: "Where in the content the match was found (body, metadata, tail, etc.)"
               explanation:
                 type: string
+              remediation:
+                type: string
+                default: "Review and remove the flagged content before processing."
+              ttps:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    framework:
+                      type: string
+                      description: "Reference framework: 'mitre_atlas' or 'elcaro'"
+                    technique_id:
+                      type: string
+                      description: "Technique identifier (e.g. 'AML.T0051', 'ELC-A01')"
+                    technique_name:
+                      type: string
+                    tactic:
+                      type: string
+                  required: [framework, technique_id, technique_name, tactic]
+            required: [technique_class, technique_name, confidence, evidence, location, explanation]
           description: "Detailed detection indicators"
+        summary:
+          type: string
+          default: ""
+          description: "One-sentence human-readable summary of the scan result"
         content_type:
           type: string
+          enum: [email, search_result, code, document, webpage, chat_message, system_prompt]
         deep_analysis_used:
           type: boolean
+          default: false
         latency_ms:
           type: integer
+          nullable: true
+          description: "Processing latency in milliseconds"
+      required: [risk_score, risk_level, content_type]
 
   - name: CONTENT_SAFETY_SCAN
     description: "Broader content safety scan (alias for INJECTION_DETECTION)"

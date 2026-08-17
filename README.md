@@ -92,7 +92,7 @@ Elcaro taxonomy for patterns ATLAS doesn't cover.
 
 ```
 ┌─────────────┐         ┌──────────────────┐
-│   Vercel    │ ──────▶ │      VPS         │
+│   Netlify   │ ──────▶ │      VPS         │
 │  (Next.js)  │  proxy  │  (Python miner)  │
 │  app/web/   │         │  miner/api.py    │
 └─────────────┘         └──────────────────┘
@@ -122,6 +122,26 @@ result = await middleware.scan(retrieved_content, ContentType.EMAIL)
 if result.is_safe():
     agent.process(result.safe_content)
 ```
+
+---
+
+## Deep analysis (optional LLM second pass)
+
+The rule-based engine is deterministic and runs in milliseconds. For borderline
+cases (risk score 0.3–0.7) you can request a semantic second pass from any
+OpenAI-compatible model:
+
+```bash
+export ELCARO_LLM_API_KEY=...            # required — without it the miner stays rules-only
+export ELCARO_LLM_BASE_URL=http://localhost:11434/v1   # optional (default: api.openai.com)
+export ELCARO_LLM_MODEL=llama3.1         # optional (default: gpt-4o-mini)
+```
+
+Then send `"deep_analysis": true` in the scan request. The LLM's verdict blends
+into the rule-based score (50/50, floored at half the rule score) — the rules
+always keep veto power, and a provider outage fails closed onto the rules
+(`deep_analysis_used` stays `false`). Without an API key the flag is a safe
+no-op.
 
 ---
 
@@ -162,7 +182,7 @@ in emails, search results, and documents). A secure agent deployment needs both.
 # Install everything
 pip install -e ".[all]"
 
-# Tests (26 passing)
+# Tests (54 passing)
 python -m pytest
 
 # Lint

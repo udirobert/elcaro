@@ -1,3 +1,0 @@
-# NOT USED — this VPS uses nginx + Cloudflare.
-# Kept for reference if deploying elsewhere with Caddy.
-# See deploy/nginx.conf for the actual config used.

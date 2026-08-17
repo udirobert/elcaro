@@ -9,11 +9,11 @@ processes content that passes the safety check.
 This demonstrates the Track 3 use case: an application built on top of the
 Elcaro Telegraph miner that drives real demand for IPI detection.
 
-Run:
-    python demo.py
+Run (from the repo root):
+    python -m app.demo
 
     # Or with a remote miner:
-    ELCARO_MINER_URL=https://your-miner.elcaro.dev python demo.py
+    ELCARO_MINER_URL=https://your-miner.elcaro.dev python -m app.demo
 """
 
 from __future__ import annotations

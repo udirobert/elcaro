@@ -6,6 +6,8 @@ with flagged techniques and indicators.
 
 Run locally:
     uvicorn miner.api:app --reload --port 8000
+    # or, from the repo root:
+    python miner/api.py   # PORT env var, default 8848
 
 Endpoints:
     GET  /health       — health check
@@ -212,7 +214,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "api:app",
+        "miner.api:app",
         host="127.0.0.1",
         port=int(os.environ.get("PORT", 8848)),
         reload=True,

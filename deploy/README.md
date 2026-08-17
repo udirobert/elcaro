@@ -97,5 +97,3 @@ pm2 show elcaro-miner
 | `ecosystem.config.cjs` | PM2 process config — port, env, restart policy, memory limit |
 | `nginx.conf` | nginx server block — reverse proxy with WebSocket support |
 | `setup.sh` | One-shot deploy script |
-| `Caddyfile` | Not used on this VPS (kept for alternative deployments) |
-| `elcaro-miner.service` | Not used on this VPS (systemd alternative if PM2 isn't available) |
