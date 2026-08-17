@@ -22,6 +22,7 @@ from core.detectors.delimiter import DelimiterDetector
 from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
 from core.detectors.task_reframe import TaskReframeDetector
+from core.llm_classifier import LlmClassifier
 from core.schemas import (
     ContentType,
     DetectionIndicator,
@@ -55,14 +56,32 @@ RISK_THRESHOLDS = {
 GRAY_ZONE_LOW = 0.3
 GRAY_ZONE_HIGH = 0.7
 
+# Sentinel distinguishing "no classifier argument given" (auto-configure from
+# env) from an explicit classifier=None (second pass forcibly disabled).
+_CLASSIFIER_UNSET = object()
+
+
+def _load_classifier_from_env() -> LlmClassifier | None:
+    """Build the LLM classifier from ELCARO_LLM_* env vars, if configured."""
+    return LlmClassifier.from_env()
+
 
 # ── Scoring engine ─────────────────────────────────────────────────────────────
 
 
 class IpiDetectionEngine:
-    """Orchestrates the A–F detectors and combines results into a risk score."""
+    """Orchestrates the A–F detectors and combines results into a risk score.
 
-    def __init__(self) -> None:
+    Args:
+        classifier: Optional :class:`LlmClassifier` for the deep-analysis
+            second pass. When omitted, one is built from ``ELCARO_LLM_*`` env
+            vars; if no API key is configured the second pass stays off and
+            ``deep_analysis_used`` is always False.
+        _CLASSIFIER_UNSET: sentinel — pass ``classifier=None`` explicitly to
+            force-disable the second pass regardless of env configuration.
+    """
+
+    def __init__(self, classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET) -> None:
         self.detectors = [
             AuthorityDetector(),
             DelimiterDetector(),
@@ -71,6 +90,9 @@ class IpiDetectionEngine:
             PlacementDetector(),
             ConditionalDetector(),
         ]
+        if classifier is _CLASSIFIER_UNSET:
+            classifier = _load_classifier_from_env()
+        self.classifier: LlmClassifier | None = classifier  # type: ignore[assignment]
 
     def scan(self, request: ScanRequest) -> ScanResponse:
         """Scan content for indirect prompt injection indicators.
@@ -119,17 +141,26 @@ class IpiDetectionEngine:
         # Determine risk level
         risk_level = self._risk_level(weighted_score)
 
-        # Check if deep analysis is needed or was requested
+        # Check if deep analysis is needed or was requested. The LLM second
+        # pass only runs when explicitly requested, the score is in the gray
+        # zone, and a classifier is configured (ELCARO_LLM_API_KEY). On any
+        # provider failure the classifier returns the rule score unchanged.
         deep_analysis_used = False
-        if request.deep_analysis and GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH:
-            # LLM second pass would go here — placeholder for now
-            # from core.llm_classifier import LlmClassifier
-            # classifier = LlmClassifier()
-            # llm_result = classifier.classify(content, all_indicators)
-            # weighted_score = llm_result.adjusted_score
-            # risk_level = self._risk_level(weighted_score)
-            # deep_analysis_used = True
-            pass
+        if (
+            request.deep_analysis
+            and GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH
+            and self.classifier is not None
+        ):
+            llm_result = self.classifier.classify(
+                content, content_type.value, all_indicators, weighted_score
+            )
+            # Only the LLM's verdict counts if it actually answered; a
+            # provider failure (confidence 0.0) is a silent no-op and the
+            # rule-based score stands.
+            if llm_result.confidence > 0.0:
+                weighted_score = llm_result.adjusted_score
+                risk_level = self._risk_level(weighted_score)
+                deep_analysis_used = True
 
         latency_ms = int((time.monotonic() - start_time) * 1000)
 

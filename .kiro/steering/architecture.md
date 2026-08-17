@@ -8,7 +8,7 @@ elcaro/
 │   ├── __init__.py             # Public API: IpiDetectionEngine, ScanRequest, ScanResponse, etc.
 │   ├── taxonomy.py             # IpiDetectionEngine orchestrator — runs detectors, scores, multipliers
 │   ├── schemas.py              # Pydantic models: ScanRequest, ScanResponse, DetectionIndicator, enums
-│   ├── llm_classifier.py       # Optional LLM second-pass classifier (stub — passthrough for now)
+│   ├── llm_classifier.py       # Optional LLM second-pass classifier (env-keyed via ELCARO_LLM_*, off by default)
 │   └── detectors/
 │       ├── __init__.py         # BaseDetector ABC + _find_all / _make_indicator helpers
 │       ├── authority.py        # Class A — system-voice / trusted-source spoofing

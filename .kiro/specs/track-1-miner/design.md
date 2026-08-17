@@ -140,12 +140,13 @@ GET  /              ← miner metadata / discovery
 
 The `ScanRequest` / `ScanResponse` schemas in `core/schemas.py` are the contract. Do not change field names or types — this would break the Telegraph protocol routing and the eval script's expected response shape.
 
-## Deep analysis stub behaviour
+## Deep analysis (implemented, optional)
 
-`deep_analysis=True` is accepted but currently returns the rule-based score unchanged. This is acceptable for the hackathon. The response correctly sets `deep_analysis_used: false`. Do not silently set it to `true`.
+`deep_analysis=True` runs a real LLM second pass when the score lands in the gray zone (0.3–0.7) **and** a classifier is configured via `ELCARO_LLM_API_KEY` (+ optional `ELCARO_LLM_BASE_URL`, `ELCARO_LLM_MODEL`, `ELCARO_LLM_TIMEOUT`). Without configuration the miner stays rules-only and `deep_analysis_used` is `false` — never silently `true`.
 
-If LLM second-pass is implemented before the deadline:
-- Use a local model (Ollama) for latency reasons — Telegraph benchmarks response time
-- The LLM's score adjusts (does not replace) the rule-based score
-- If LLM disagrees with a `dangerous` rule-based result, keep `dangerous`
-- See `core/llm_classifier.py` for the designed interface
+How the design constraints landed:
+- OpenAI-compatible endpoint; point `ELCARO_LLM_BASE_URL` at a local model (Ollama/vLLM) for latency — Telegraph benchmarks response time
+- The LLM's score adjusts (does not replace) the rule-based score: 50/50 blend floored at half the rule score
+- Rules keep veto power: the blend floor means the LLM cannot erase a rule finding, and gray-zone-only triggering means `dangerous` (≥0.7) results never get second-guessed
+- Provider failures fall back to the rule score with `deep_analysis_used: false`
+- See `core/llm_classifier.py` and `tests/test_deep_analysis.py`

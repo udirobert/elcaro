@@ -63,7 +63,7 @@ Final score is capped at 1.0.
 
 ### Gray zone (LLM second pass)
 
-When `deep_analysis=True` is requested AND `0.3 ≤ score ≤ 0.7`, the `LlmClassifier` is intended to run a semantic second pass. Currently a passthrough stub — the rule-based score is returned unchanged. The LLM's adjusted score modifies (does not replace) the rule-based score; if LLM says "safe" but rules say "dangerous", the rules win.
+When `deep_analysis=True` is requested AND `0.3 ≤ score ≤ 0.7`, the `LlmClassifier` runs a semantic second pass — **only when configured**. It activates iff `ELCARO_LLM_API_KEY` is set (plus optional `ELCARO_LLM_BASE_URL`, `ELCARO_LLM_MODEL`, `ELCARO_LLM_TIMEOUT`); without a key the miner stays purely rule-based and `deep_analysis_used` is always `false`. The LLM's verdict blends 50/50 into the rule score floored at half the rule score (`max(0.5*rule + 0.5*llm, 0.5*rule)`), so rules can never be talked down to zero; provider failures fall back to the rule score with `deep_analysis_used=false`. To force the second pass off regardless of env vars, construct `IpiDetectionEngine(classifier=None)`.
 
 ## Detector confidence guidelines
 

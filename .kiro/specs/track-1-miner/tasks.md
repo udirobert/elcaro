@@ -11,39 +11,38 @@ Track 1 opens Aug 17. Today is Aug 8. Use Aug 8–16 to complete all pre-launch 
 
 ## Phase 1 — Code fixes (complete before Aug 17)
 
-- [ ] **1.1 Fix engine singleton in `miner/api.py`**
-  - Move `IpiDetectionEngine()` to module level
-  - Apply to both `/scan` and `/v1/infer` handlers
-  - Verify: `python -m pytest miner/tests/ -v` still passes
-  - Verify: `test_latency_is_reasonable` still passes
+- [x] **1.1 Fix engine singleton in `miner/api.py`**
+  - `_engine = IpiDetectionEngine()` is module-level in `miner/api.py`
+  - Both `/scan` and `/v1/infer` share the singleton
+  - Verified: `python -m pytest tests/ -v` passes; `test_latency_is_reasonable` green
 
-- [ ] **1.2 Tighten "please [verb]" false-positive (Class C)**
-  - In `core/detectors/task_reframe.py`, reduce `imperative_action` confidence from 0.6 → 0.45, OR add negative lookahead to exclude person-directed objects ("me", "us", "him", "her", "them")
-  - Add test: `test_clean_please_send_email` — `"Please send me the report by Friday"` must score < 0.3
-  - Verify existing tests still pass
+- [x] **1.2 Tighten "please [verb]" false-positive (Class C)**
+  - `core/detectors/task_reframe.py` uses a negative lookahead excluding human-directed objects ("me", "us", "him", "her", "them")
+  - Test added and passing: `test_clean_please_send_email` scores < 0.3
+  - Existing tests still pass
 
-- [ ] **1.3 Narrow turn-spoofing false-positive (Class B)**
-  - In `core/detectors/delimiter.py`, require an imperative verb within 100 chars of `"Assistant:"` match
-  - Add test: `test_clean_faq_assistant_reference` — an FAQ page quoting `"Assistant: Sure, here's how you..."` must score < 0.3
-  - Verify existing tests still pass
+- [x] **1.3 Narrow turn-spoofing false-positive (Class B)**
+  - `core/detectors/delimiter.py` requires an imperative verb within a window of the `"Assistant:"` match
+  - Test added and passing: `test_clean_faq_assistant_reference` scores < 0.3
+  - Existing tests still pass
 
-- [ ] **1.4 Verify `deep_analysis_used` is always accurate**
-  - Confirm `deep_analysis=True` requests return `deep_analysis_used: false` (not silently true)
-  - Add test: `test_deep_analysis_stub_returns_false`
+- [x] **1.4 Verify `deep_analysis_used` is always accurate**
+  - `deep_analysis_used` is `true` only when a configured classifier actually answered; provider failures fall back to `false` with the rule score unchanged (never silently `true`)
+  - Since Aug 17 there is an optional real LLM second pass (env-keyed `ELCARO_LLM_*`, off by default); without configuration behavior is identically rules-only
+  - Tests: `test_deep_analysis_stub_returns_false` plus `tests/test_deep_analysis.py` (9 tests covering gray-zone triggering, fallback, rules floor)
 
-- [ ] **1.5 Run full test suite and confirm clean**
-  - `python -m pytest miner/tests/ -v`
-  - All tests green, no warnings
+- [x] **1.5 Run full test suite and confirm clean**
+  - `python -m pytest tests/ -v` — 54 passing, no warnings
+  - Includes new obfuscation coverage (`test_obfuscation.py`) and API-level coverage (`test_api.py`)
 
 ---
 
 ## Phase 2 — Deployment (complete by Aug 17)
 
-- [ ] **2.1 Choose and set up deployment platform**
-  - Deploy to VPS (already provisioned)
-  - Set up reverse proxy (Caddy or nginx) with HTTPS (Let's Encrypt)
-  - Set up process manager (systemd service or docker compose)
-  - Start command: `uvicorn miner.api:app --host 127.0.0.1 --port 8000`
+- [~] **2.1 Choose and set up deployment platform**
+  - VPS live: PM2 `elcaro-miner` on `127.0.0.1:8848`, nginx on `:8847` proxying (see `deploy/TODO.md` — Caddy/systemd abandoned in favor of nginx + PM2)
+  - Remaining: Cloudflare DNS (`api.elcaro.trustfall.xyz` A record + origin port rule) and Netlify env var — HTTPS terminates at Cloudflare, not Let's Encrypt
+  - Start command: `uvicorn miner.api:app --host 127.0.0.1 --port 8848` (via `deploy/ecosystem.config.cjs`)
 
 - [ ] **2.2 Create `Procfile` in repo root**
   ```
@@ -132,5 +131,5 @@ Track 1 is submission-ready when:
 - [ ] POST /scan returns correct risk scores for known injection payloads
 - [ ] Miner is registered on Base Sepolia and visible in Telegraph network
 - [ ] config.yaml has all TODO fields filled (base_url, ipfs_hash, registry_contract)
-- [ ] Full test suite passes: `python -m pytest miner/tests/ -v`
+- [x] Full test suite passes: `python -m pytest tests/ -v` (54 passing)
 - [ ] At least one X post published with engagement

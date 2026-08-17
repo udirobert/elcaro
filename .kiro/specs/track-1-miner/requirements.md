@@ -54,6 +54,6 @@ The miner MUST expose an HTTP endpoint that accepts a content payload and return
 
 ## Out of scope for Track 1
 
-- LLM second-pass implementation (stub is acceptable; `deep_analysis=True` may return rule-based score)
+- ~~LLM second-pass implementation~~ — implemented Aug 17 as an optional env-keyed classifier (`ELCARO_LLM_API_KEY`); without a key `deep_analysis=True` returns the rule-based score with `deep_analysis_used: false`
 - Authentication / API key gating (Telegraph handles payment via x402)
 - Rate limiting (handled at the platform/proxy level)
