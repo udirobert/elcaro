@@ -28,6 +28,37 @@ cargo build --target wasm32-unknown-unknown --release
 # Output: target/wasm32-unknown-unknown/release/elcaro_eval.wasm
 ```
 
+## Host ABI (WASM exports)
+
+The validator runtime calls the script with the pointer+length convention —
+Rust `&str`/`String` are fat pointers and are NOT valid cross-host ABI.
+The `cdylib` exports:
+
+| Export | Signature | Purpose |
+|--------|-----------|---------|
+| `elcaro_alloc` | `(len: usize) -> *mut u8` | Allocate a buffer for the host to write input JSON into |
+| `elcaro_dealloc` | `(ptr: *mut u8, len: usize)` | Free a buffer returned by this module |
+| `evaluate_ptr` | `(ptr: *const u8, len: usize, out_len: *mut usize) -> *mut u8` | Score miner responses JSON; result JSON length is written to `*out_len` |
+| `get_test_cases_ptr` | `(out_len: *mut usize) -> *mut u8` | Return the corpus JSON |
+| `test_case_count` | `() -> usize` | Number of test cases |
+
+Calling convention: the host calls `elcaro_alloc(input_len)`, writes the
+input JSON, calls `evaluate_ptr`, reads `*out_len` bytes from the returned
+pointer, then frees both buffers with `elcaro_dealloc`.
+
+The internal logic lives in plain `pub fn evaluate(&str) -> String` /
+`get_test_cases() -> String` (used by native tests and examples).
+
+## Self-score
+
+`cargo run --example self_score -- <responses.json>` feeds a JSON array of
+miner responses (matching the miner `/scan` response shape: `risk_score`,
+`risk_level`, `flagged_techniques`, `indicators`) through `evaluate()`.
+`cargo run --example get_cases` dumps the corpus JSON.
+As of the latest run, Elcaro's own engine scores **0.705** (detection 18/18,
+FPR 0.0, technique accuracy 0.684) — below the 0.8 target; misses are
+technique-level (A002, B001, B003, F001, E001).
+
 ## Test cases
 
 The test corpus (`src/lib.rs`) includes:

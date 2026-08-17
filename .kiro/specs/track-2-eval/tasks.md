@@ -13,24 +13,25 @@ Track 2 opens Aug 17 alongside Track 1. The WASM eval script should be submitted
 
 This is the highest-risk item. Get it wrong and the script silently scores zero.
 
-- [ ] **1.1 Find the Telegraph WASM eval ABI specification**
+- [~] **1.1 Find the Telegraph WASM eval ABI specification**
   - Check: hackathon.telegraphprotocol.com docs
   - Check: Telegraph Protocol GitHub repos for example eval scripts
   - Check: Telegraph Discord (early access channel) — ask directly what ABI the validator expects
-  - Document the answer here: `<!-- ABI: ___ -->`
+  - Document the answer here: `<!-- ABI: pointer+length convention (design.md Option A). Exports: elcaro_alloc(len) -> *mut u8, elcaro_dealloc(ptr, len), evaluate_ptr(ptr, len, out_len) -> *mut u8 (result JSON length written to *out_len), get_test_cases_ptr(out_len) -> *mut u8, test_case_count() -> usize. Host frees returned buffers with elcaro_dealloc. External confirmation from Telegraph runtime docs/Discord still pending. -->`
 
-- [ ] **1.2 Update `evaluate` function signature to match the verified ABI**
+- [x] **1.2 Update `evaluate` function signature to match the verified ABI**
+  - Done: `evaluate`/`get_test_cases` are now plain `pub fn`; host-callable pointer ABI (`elcaro_alloc`, `elcaro_dealloc`, `evaluate_ptr`, `get_test_cases_ptr`) added as `extern "C"` exports; native round-trip tests pass
   - If pointer+length: rewrite using `unsafe { std::slice::from_raw_parts(ptr, len) }`
   - If wasm-bindgen: add `wasm-bindgen` dependency to `Cargo.toml`, annotate with `#[wasm_bindgen]`
   - If `&str` is confirmed correct: document that explicitly and move on
   - Update `get_test_cases()` and `test_case_count()` if they also need ABI changes
 
-- [ ] **1.3 Verify `wasm32-unknown-unknown` target is installed**
+- [x] **1.3 Verify `wasm32-unknown-unknown` target is installed**
   ```bash
   rustup target add wasm32-unknown-unknown
   ```
 
-- [ ] **1.4 Test the build compiles cleanly**
+- [x] **1.4 Test the build compiles cleanly**
   ```bash
   cd eval
   cargo build --target wasm32-unknown-unknown --release

@@ -257,8 +257,7 @@ static TEST_CASES: &[TestCase] = &[
 ///
 /// In production, the Telegraph validator sends each test case to the miner,
 /// collects responses, and passes them to this eval function.
-#[no_mangle]
-pub extern "C" fn evaluate(miner_responses_json: &str) -> String {
+pub fn evaluate(miner_responses_json: &str) -> String {
     let responses: Vec<MinerResponse> = match serde_json::from_str(miner_responses_json) {
         Ok(r) => r,
         Err(_) => {
@@ -380,10 +379,114 @@ pub extern "C" fn evaluate(miner_responses_json: &str) -> String {
     serde_json::to_string(&result).unwrap_or_default()
 }
 
+
+// ── Host-callable WASM ABI (pointer + length convention) ─────────────────────
+//
+// The Telegraph validator runtime calls WASM exports with raw pointer/length
+// arguments — a Rust `&str`/`String` fat pointer is NOT a valid cross-host ABI
+// (silent mismatch would score zero). The functions below are the canonical
+// exports the validator should call:
+//
+//   - `elcaro_alloc(len)`       — host asks the module for a buffer of `len`
+//                                 bytes, writes the input JSON into it.
+//   - `elcaro_dealloc(ptr,len)` — host returns a buffer it was given.
+//   - `evaluate_ptr(ptr, len, out_len)` — reads the miner's responses JSON from
+//                                 `ptr`/`len`, scores them against the corpus,
+//                                 and returns a pointer to a newly allocated
+//                                 buffer holding the `EvalResult` JSON, with
+//                                 its length written to `*out_len`. The host
+//                                 must free the returned buffer with
+//                                 `elcaro_dealloc(ret_ptr, *out_len)`.
+//   - `get_test_cases_ptr(out_len)` — same pattern for the corpus JSON.
+//   - `test_case_count()`       — plain `usize`, valid ABI as-is.
+
+/// Allocate a buffer of `len` bytes and leak it so the host can write into it.
+/// The host must pass it back to `elcaro_dealloc` when done.
+#[no_mangle]
+pub extern "C" fn elcaro_alloc(len: usize) -> *mut u8 {
+    let mut buf: Vec<u8> = Vec::with_capacity(len);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+/// Free a buffer previously returned by `elcaro_alloc`, `evaluate_ptr`, or
+/// `get_test_cases_ptr`. `len` must match the allocation length.
+///
+/// # Safety
+/// `ptr` must have been allocated by this module with the given `len` and must
+/// not be used after this call.
+#[no_mangle]
+pub unsafe extern "C" fn elcaro_dealloc(ptr: *mut u8, len: usize) {
+    if !ptr.is_null() {
+        // SAFETY: per contract, ptr/len came from a Vec<u8> created here.
+        drop(Vec::from_raw_parts(ptr, 0, len));
+    }
+}
+
+/// Internal helper: run `f` on the UTF-8 input at `ptr`/`len`, serialize the
+/// resulting JSON into a freshly allocated buffer, and return it with the
+/// length written to `out_len`. On invalid input, returns an empty JSON string.
+///
+/// # Safety
+/// `ptr`/`len` must describe a readable region the host owns; `out_len` must
+/// be a valid writable pointer.
+unsafe fn run_with_string_output(
+    ptr: *const u8,
+    len: usize,
+    out_len: *mut usize,
+    f: impl FnOnce(&str) -> String,
+) -> *mut u8 {
+    let input = if ptr.is_null() || len == 0 {
+        ""
+    } else {
+        // SAFETY: per contract, the host guarantees ptr/len is readable for
+        // the duration of this call.
+        let bytes = std::slice::from_raw_parts(ptr, len);
+        match std::str::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
+    };
+
+    let output = f(input);
+    let mut buf = output.into_bytes();
+    let out_ptr = buf.as_mut_ptr();
+    let out_size = buf.len();
+    std::mem::forget(buf);
+
+    if !out_len.is_null() {
+        // SAFETY: per contract, out_len is writable.
+        *out_len = out_size;
+    }
+    out_ptr
+}
+
+/// Host-callable evaluate: reads the miner's responses JSON from `ptr`/`len`,
+/// returns a pointer to the `EvalResult` JSON (length written to `*out_len`).
+/// Free the returned buffer with `elcaro_dealloc(ptr, *out_len)`.
+///
+/// # Safety
+/// `ptr`/`len` must describe a readable region; `out_len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn evaluate_ptr(
+    ptr: *const u8,
+    len: usize,
+    out_len: *mut usize,
+) -> *mut u8 {
+    run_with_string_output(ptr, len, out_len, evaluate)
+}
+
+/// Host-callable get_test_cases: returns a pointer to the corpus JSON, with
+/// its length written to `*out_len`. Free with `elcaro_dealloc`.
+#[no_mangle]
+pub unsafe extern "C" fn get_test_cases_ptr(out_len: *mut usize) -> *mut u8 {
+    run_with_string_output(std::ptr::null(), 0, out_len, |_| get_test_cases())
+}
+
 /// Return the test corpus as JSON — the validator uses this to know
 /// what content to send to the miner.
-#[no_mangle]
-pub extern "C" fn get_test_cases() -> String {
+pub fn get_test_cases() -> String {
     serde_json::to_string(TEST_CASES).unwrap_or_default()
 }
 
@@ -456,5 +559,56 @@ mod tests {
         let json = get_test_cases();
         let cases: Vec<TestCaseOwned> = serde_json::from_str(&json).unwrap();
         assert!(!cases.is_empty());
+    }
+
+    #[test]
+    fn test_pointer_abi_round_trip() {
+        // Simulate the host: alloc a buffer via the module, write the input
+        // JSON into it, call evaluate_ptr, read the result back, and dealloc.
+        let responses: Vec<MinerResponse> = TEST_CASES
+            .iter()
+            .map(|t| MinerResponse {
+                risk_score: if t.is_injection { 0.9 } else { 0.1 },
+                risk_level: "x".to_string(),
+                flagged_techniques: t.expected_techniques.iter().map(|s| s.to_string()).collect(),
+                indicators: vec![],
+            })
+            .collect();
+        let input = serde_json::to_string(&responses).unwrap();
+        let input_bytes = input.as_bytes();
+        let input_len = input_bytes.len();
+
+        unsafe {
+            let in_ptr = elcaro_alloc(input_len);
+            assert!(!in_ptr.is_null());
+            std::ptr::copy_nonoverlapping(input_bytes.as_ptr(), in_ptr, input_len);
+
+            let mut out_len: usize = 0;
+            let out_ptr = evaluate_ptr(in_ptr, input_len, &mut out_len as *mut usize);
+            assert!(!out_ptr.is_null());
+            assert!(out_len > 0);
+
+            let out_slice = std::slice::from_raw_parts(out_ptr, out_len);
+            let out_str = std::str::from_utf8(out_slice).unwrap();
+            let eval: EvalResult = serde_json::from_str(out_str).unwrap();
+            assert!(eval.overall_score >= 0.8);
+            assert_eq!(eval.total_cases, TEST_CASES.len());
+
+            elcaro_dealloc(out_ptr, out_len);
+            elcaro_dealloc(in_ptr, input_len);
+        }
+    }
+
+    #[test]
+    fn test_get_test_cases_ptr_round_trip() {
+        unsafe {
+            let mut out_len: usize = 0;
+            let ptr = get_test_cases_ptr(&mut out_len as *mut usize);
+            assert!(!ptr.is_null());
+            let slice = std::slice::from_raw_parts(ptr, out_len);
+            let cases: Vec<TestCaseOwned> = serde_json::from_slice(slice).unwrap();
+            assert_eq!(cases.len(), TEST_CASES.len());
+            elcaro_dealloc(ptr, out_len);
+        }
     }
 }
