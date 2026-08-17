@@ -71,6 +71,20 @@ bash deploy/setup.sh your-domain.com
 1. DNS → Add CNAME record: `elcaro.trustfall.xyz` → your Netlify site URL (e.g. `your-site.netlify.app`)
 2. Proxy status: **DNS only** (grey cloud) — Netlify handles its own HTTPS
 
+### Verify a deployment
+
+`deploy/verify-live.sh` runs an 18-check smoke suite against a live miner
+(health, metadata, dangerous/clean/system_prompt payloads, `/v1/infer` alias,
+validation errors, metrics) plus frontend proxy checks through Netlify:
+
+```bash
+# After Cloudflare DNS is live, but before Netlify is wired:
+BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh
+
+# Full end-to-end check once the frontend env var + domain are set:
+bash deploy/verify-live.sh
+```
+
 ### Daily operations
 
 ```bash
@@ -97,3 +111,4 @@ pm2 show elcaro-miner
 | `ecosystem.config.cjs` | PM2 process config — port, env, restart policy, memory limit |
 | `nginx.conf` | nginx server block — reverse proxy with WebSocket support |
 | `setup.sh` | One-shot deploy script |
+| `verify-live.sh` | Post-deploy smoke suite (18 checks, miner + frontend proxy) |

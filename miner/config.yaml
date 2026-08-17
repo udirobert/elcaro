@@ -14,13 +14,13 @@ miner:
     obfuscation, placement tricks, and conditional triggers. Returns a risk
     score, flagged techniques, and detailed indicators.
   version: "0.1.0"
-  website: ""  # TODO: set once deployed
+  website: "https://elcaro.trustfall.xyz"
   contact: ""  # TODO: set before registration
 
 # ── API endpoint ────────────────────────────────────────────────────────────────
 
 api:
-  base_url: ""  # TODO: set deployed URL (e.g. https://elcaro.example.com)
+  base_url: "https://api.elcaro.trustfall.xyz"
   endpoints:
     - path: /scan
       method: POST
