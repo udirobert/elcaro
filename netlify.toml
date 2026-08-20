@@ -1,11 +1,16 @@
 # Netlify deployment configuration for the Next.js frontend.
 # The miner API runs on a separate VPS — set ELCARO_MINER_URL in Netlify
 # environment variables (Site settings → Environment variables).
+#
+# NOTE: `base` changes Netlify's working directory, so `command` and `publish`
+# are resolved RELATIVE TO `base` — do not prefix them with "app/web" again.
+# (A prior version had publish = "app/web/.next", which resolved to
+# app/web/app/web/.next and failed with "publish directory was not found".)
 
 [build]
   base = "app/web"
   command = "npm run build"
-  publish = "app/web/.next"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "22"
