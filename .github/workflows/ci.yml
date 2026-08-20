@@ -63,9 +63,18 @@ jobs:
       - name: Scan Python dependencies
         env:
           OSSPREY_API_KEY: ${{ secrets.OSSPREY_API_KEY }}
-        run: ossprey scan .
+        run: |
+          if [ -z "$OSSPREY_API_KEY" ]; then
+            echo "::warning::OSSPREY_API_KEY secret is not set — skipping supply chain scan. Add it with: gh secret set OSSPREY_API_KEY"
+            exit 0
+          fi
+          ossprey scan .
 
       - name: Scan Node.js dependencies
         env:
           OSSPREY_API_KEY: ${{ secrets.OSSPREY_API_KEY }}
-        run: ossprey scan ./app/web
+        run: |
+          if [ -z "$OSSPREY_API_KEY" ]; then
+            exit 0
+          fi
+          ossprey scan ./app/web
