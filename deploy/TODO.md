@@ -48,62 +48,76 @@ Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
 - [ ] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Pages env vars
 - [ ] Full E2E: `bash deploy/verify-live.sh`
 
-## Step 3 — Register the miner on Telegraph
+## Step 3 — Register the miner on Telegraph ✅ DONE (Aug 20, 2026)
 
-The upload artifact is **`miner/telegraph.yaml`**. `miner/config.yaml` is the
-internal capability reference, not the submission.
+**Registered and active.** `registrationId: 145`, on-chain tx
+[`0x79a908a6...c006f9d3f`](https://sepolia.basescan.org/tx/0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f),
+confirmed via `devnode.telegraphprotocol.com/api/miners/145`:
+`"activation_status":"active"`, `"rejection_reason":null`. Appears in the public
+catalog (`/api/miners`) with the correct schema, endpoint, and intents.
 
-Schema reference: <https://docs.telegraphprotocol.com> → `miners/yaml-config.md`.
+The upload artifact is **`miner/telegraph.yaml`**, but it is registered by URL,
+**not** by uploading through the console. `miner/config.yaml` is the internal
+capability reference, not the submission.
 
-### How Telegraph actually calls a miner
+### The first attempt failed — here's why, for next time
 
-Telegraph is a **passthrough proxy**, not an envelope protocol. `base_url` +
-`endpoints[].external_path` are forwarded the caller's body verbatim, and the
-miner's raw output is returned as `result`. So the flat `/scan` contract is what
-gets registered — there is no `{intent, params}` wrapper to implement.
+A first registration (`id 8848`, `registrationId 136`) was rejected on-chain.
+The node's own error: *"YAML hash mismatch: registered 81a0e5fb...,
+fetched 937a0b68... — the document at the registered URL is not the one
+committed on chain. This will NOT be retried."*
 
-- Auto-routed: `POST /engine/v1/ask {query, context}` — an LLM router classifies
-  the query to an Intent, picks a miner, and builds the body. `input_schema` is
-  documentation that guides it; the node does **not** enforce it.
-- Direct: `POST /engine/v1/ask/{id} {method, endpoint, payload}` — `payload`
-  becomes the request body.
+Root cause: **integrate.telegraphprotocol.com's "Import & Upload" step
+re-serialises an uploaded YAML before pinning it to IPFS** — strips comments,
+reflows some fields. The re-serialised bytes are semantically identical but
+hash differently, so a hash computed from the local file never matches what the
+node fetches from the pinned URL.
 
-### Pre-registration checks (registration is on-chain and cannot be edited)
+There is no `updateMiner` path for a `rejected` (never-activated) registration
+— Telegraph support confirmed only an active registration can be updated; a
+rejected one needs a fresh `registerMiner` call. Separately, the registering
+wallet was a passkey-based Base Account with no exportable key and mobile-only
+access, so `cast --browser` and basescan's Write Contract tab (both need an
+injected browser-extension wallet) weren't usable to fix it even if update had
+been possible.
 
-1. [ ] **`id` must be globally unused** — requests route on it; a clash is rejected.
-     `8848` was free when checked. Re-verify:
-     ```bash
-     curl -s https://devnode.telegraphprotocol.com/api/miners \
-       | python3 -c "import json,sys;print(sorted(int(m['id']) for m in json.load(sys.stdin) if str(m['id']).isdigit()))"
-     ```
-2. [ ] **Intents must be canonical** or `registerMiner` **reverts**. Declared:
-     `CONTENT_MODERATION` + `TEXT_CLASSIFICATION`, both verified canonical.
-     There is no `INJECTION_DETECTION` intent on the network. Re-verify:
-     ```bash
-     curl -s https://devnode.telegraphprotocol.com/engine/v1/intents
-     ```
-3. [ ] **`min_price_usdc` is immutable** after registration — changing it means
-     deregister + re-register. Currently `0.01`.
-4. [ ] Set your contact in `miner/config.yaml` → `miner.contact` (it becomes public)
+**Fix:** self-host the exact file over plain HTTPS instead of letting the
+console pin it — HTTPS is an explicitly supported hosting option, equal footing
+with IPFS (`docs.telegraphprotocol.com` → `miners/miner-registration.md`,
+Step 2). `GET /telegraph.yaml` on the miner now serves the repo file's raw
+bytes with no templating step, guarded by a byte-identity test in
+`tests/test_api.py` so this class of bug fails CI instead of failing on-chain.
 
-### Register
+**The lesson for any future update:** always compute the registration hash
+from the URL the node will actually fetch, never from a local file —
+```bash
+curl -s https://api.elcaro.trustfall.xyz/telegraph.yaml | sha256sum
+```
+— and never let a third-party console "pin for you" without confirming the
+pinned bytes hash identically to what you uploaded.
 
-5. [ ] Validate + register at <https://integrate.telegraphprotocol.com>. Paste the
-     YAML; it sandbox-tests every declared endpoint against the live upstream,
-     reports pass/fail per endpoint, then pins and registers for you.
-6. [ ] Sign the registration on **Base Sepolia** with the wallet that will hold
-     the slug — only that wallet can ever update it
-7. [ ] Copy the registry contract into `miner/config.yaml` → `registration.registry_contract`
-8. [ ] Log the submission + CID in `SUBMISSIONS.md`
+### Registered values
 
-Optional manual pin (the console pins for you): `PINATA_JWT=... python deploy/pin-config.py miner/telegraph.yaml`
+| Field | Value |
+|---|---|
+| YAML URL | `https://api.elcaro.trustfall.xyz/telegraph.yaml` |
+| YAML Hash | `0x213b88c646efd4d39bddaa16b3adb93402dff3ba9cd8215affa73c8f1e5adb8e` |
+| Miner `id` | `8848` |
+| `registrationId` | `145` |
+| Intents | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` |
+| Floor price | `0.01` USDC |
+| Fee/registering wallet | `0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40` (fresh — separate from the fourcast miner's wallet, deliberately) |
+
+- [ ] Set your contact in `miner/config.yaml` → `miner.contact` (it becomes public) — still outstanding, not required for the registration itself
+- [ ] Copy the registry contract into `miner/config.yaml` → `registration.registry_contract` = `0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8`
 
 ### After registering
 
-- **7-day grace period**: no leaderboard position and no score yet.
-- **Routing is 70/20/10** by rank within an Intent, so being ranked first in
-  `CONTENT_MODERATION` (currently **0 other miners**) captures the majority of
-  that intent's routed traffic.
+- **7-day grace period**: no leaderboard position and no score yet — runs until
+  ~Aug 27, 2026.
+- **Routing is 70/20/10** by rank within an Intent. `CONTENT_MODERATION` had
+  **0 other miners** at registration time, so Elcaro should default to rank 1
+  once scoring starts.
 
 ## Daily operations
 
