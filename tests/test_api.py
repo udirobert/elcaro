@@ -182,3 +182,31 @@ def test_scan_response_exposes_signal_mapping_fields(client):
 
     assert isinstance(body["risk_score"], float)
     assert isinstance(body["deep_analysis_used"], bool)
+
+
+# ── Registration YAML hosting ────────────────────────────────────────────────────
+
+
+def test_telegraph_yaml_served_byte_for_byte(client):
+    """The served bytes must exactly match the repo file — this is the whole point
+    of self-hosting it. A prior registration attempt failed because a third-party
+    console re-serialised the YAML before pinning, so the on-chain hash no longer
+    matched the fetched bytes. Any drift here reproduces that failure."""
+    from pathlib import Path
+
+    expected = (Path(__file__).resolve().parent.parent / "miner" / "telegraph.yaml").read_bytes()
+
+    response = client.get("/telegraph.yaml")
+    assert response.status_code == 200
+    assert response.content == expected
+    assert response.headers["content-type"].startswith("application/x-yaml")
+
+
+def test_telegraph_yaml_is_valid_yaml(client):
+    """Sanity check that what's served actually parses."""
+    import yaml
+
+    response = client.get("/telegraph.yaml")
+    parsed = yaml.safe_load(response.content)
+    assert parsed["slug"] == "elcaro-ipi-detection"
+    assert parsed["endpoints"][0]["path"] == "/scan"

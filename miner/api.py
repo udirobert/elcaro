@@ -15,6 +15,7 @@ Endpoints:
     POST /v1/infer     — alias for /scan
     GET  /             — API info / miner metadata
     GET  /metrics      — observability: request counts, latency, error rate
+    GET  /telegraph.yaml — raw registration config, served byte-for-byte
 """
 
 from __future__ import annotations
@@ -23,8 +24,9 @@ import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
@@ -170,6 +172,32 @@ async def miner_info():
 async def health():
     """Health check."""
     return {"status": "healthy", "miner": "elcaro", "version": "0.1.0"}
+
+
+# Resolved once at import time: miner/api.py -> miner/ -> miner/telegraph.yaml
+_TELEGRAPH_YAML_PATH = Path(__file__).resolve().parent / "telegraph.yaml"
+
+
+@app.get("/telegraph.yaml")
+async def telegraph_yaml() -> Response:
+    """Serve the Telegraph registration config as raw, unmodified bytes.
+
+    This exists because the integrate.telegraphprotocol.com console re-serialises
+    an uploaded YAML before pinning it to IPFS (comments stripped, some fields
+    reflowed), so the SHA-256 of the pinned file no longer matches the SHA-256 of
+    the file that was uploaded. Registering against the console-pinned hash then
+    fails the node's fetch-time hash verification. Hosting the exact repo file
+    here and registering against ITS hash avoids that transformation entirely.
+
+    Plain HTTPS is an explicitly supported hosting option (see
+    docs.telegraphprotocol.com -> miners/miner-registration.md, Step 2).
+    """
+    if not _TELEGRAPH_YAML_PATH.is_file():
+        raise HTTPException(status_code=500, detail="telegraph.yaml not found on this deployment")
+    return Response(
+        content=_TELEGRAPH_YAML_PATH.read_bytes(),
+        media_type="application/x-yaml",
+    )
 
 
 @app.get("/metrics")

@@ -1,14 +1,23 @@
 # Telegraph Protocol miner registration — Elcaro (IPI detection)
 #
-# Validate + register at https://integrate.telegraphprotocol.com (it sandbox-tests
-# every declared endpoint against the live upstream, pins the YAML, and registers).
-#
-# Schema reference: https://docs.telegraphprotocol.com — miners/yaml-config.md
+# ┌─ HOSTING: self-hosted HTTPS, NOT the console's IPFS pin ────────────────────┐
+# │ The integrate.telegraphprotocol.com wizard re-serialises an uploaded YAML   │
+# │ before pinning to IPFS (strips comments, reflows some fields), so the      │
+# │ SHA-256 of the pinned file differs from the SHA-256 of the uploaded file.  │
+# │ A prior registration (id 8848, registrationId 136) was rejected on exactly │
+# │ this mismatch — the node's own error: "the document at the registered URL │
+# │ is not the one committed on chain." Plain HTTPS is an explicitly supported │
+# │ hosting option (docs.telegraphprotocol.com -> miners/miner-registration.md,│
+# │ Step 2), so this file is served byte-for-byte at:                          │
+# │   https://api.elcaro.trustfall.xyz/telegraph.yaml                          │
+# │ Compute the hash from THAT URL, not from this local file, since line       │
+# │ endings or a trailing-newline difference would reproduce the same bug:     │
+# │   curl -s https://api.elcaro.trustfall.xyz/telegraph.yaml | sha256sum      │
+# └───────────────────────────────────────────────────────────────────────────────┘
 #
 # ┌─ TWO THINGS TO CHECK BEFORE REGISTERING ────────────────────────────────────┐
 # │ 1. `id` must be globally unused — requests route on it and a clash is       │
-# │    rejected. 8848 was free when checked (matches our upstream port).        │
-# │    Re-verify, since registration is on-chain and cannot be edited:          │
+# │    rejected. Re-verify, since registration is on-chain and cannot be edited:│
 # │      curl -s https://devnode.telegraphprotocol.com/api/miners \             │
 # │        | python3 -c "import json,sys;print(sorted(int(m['id']) for m in \   │
 # │          json.load(sys.stdin) if str(m['id']).isdigit()))"                  │
