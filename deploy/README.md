@@ -32,13 +32,19 @@ on the host binds :80/:443.
 DNS is a plain A-record at the registrar pointing straight at the VPS. No CDN
 proxy is involved, and none is needed: Traefik terminates TLS at the origin.
 
-## Frontend (Cloudflare Pages)
+## Frontend (Netlify)
 
-The frontend is on **Cloudflare Pages**, not Netlify.
+`netlify.toml` at the repo root is the source of truth for this — base
+directory `app/web`, build command `npm run build`, publish `app/web/.next`,
+via `@netlify/plugin-nextjs`.
 
-1. Project → Build → Root directory: `app/web`
-2. Custom domain: `elcaro.trustfall.xyz`
-3. Environment variable: `ELCARO_MINER_URL` = `https://api.elcaro.trustfall.xyz`
+1. Connect the GitHub repo to Netlify (New site from Git)
+2. It reads `netlify.toml` automatically — no manual build settings needed
+3. Site settings → Environment variables → add
+   `ELCARO_MINER_URL` = `https://api.elcaro.trustfall.xyz`
+4. Site settings → Domain management → add custom domain: `elcaro.trustfall.xyz`
+   (not registered yet — needs a CNAME/A record at the registrar once the
+   Netlify site exists)
 
 ## Miner API (VPS)
 
@@ -107,10 +113,10 @@ pm2 start deploy/ecosystem.config.cjs && pm2 save
 validation errors, metrics) plus frontend proxy checks:
 
 ```bash
-# Miner only (frontend not yet published):
+# Miner only (frontend not yet deployed):
 BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh
 
-# Full end-to-end once Cloudflare Pages has ELCARO_MINER_URL set:
+# Full end-to-end once Netlify has ELCARO_MINER_URL set:
 bash deploy/verify-live.sh
 ```
 
@@ -140,8 +146,10 @@ pm2 show elcaro-miner
 | `ecosystem.config.cjs` | PM2 process config — binds `0.0.0.0:8848`, restart policy, memory limit |
 | `traefik-elcaro.yaml` | **Live ingress.** Install into Coolify's Traefik dynamic dir as `elcaro.yaml` |
 | `verify-live.sh` | Post-deploy smoke suite (18 checks, miner + frontend proxy) |
-| `pin-config.py` | Pins `miner/config.yaml` to IPFS via Pinata, returns the CID |
+| `pin-config.py` | Pins `miner/config.yaml` to IPFS via Pinata, returns the CID — not used for `miner/telegraph.yaml`, which is self-hosted instead (see `SUBMISSIONS.md`) |
 | `nginx.conf` | Legacy CDN-proxy model — **not used on this host** |
 | `setup.sh` | Legacy one-shot deploy — nginx steps **not used on this host** |
+
+Frontend build config lives at the repo root: `netlify.toml`.
 
 Operational runbook, rollback steps, and host specifics: `docs/ops.md` (local only).

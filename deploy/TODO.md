@@ -37,15 +37,16 @@ What changed (all additive, all reversible, nothing shared touched):
 
 Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
 
-## Step 2 — Frontend (Cloudflare Pages)
+## Step 2 — Frontend (Netlify)
 
-> The frontend target is **Cloudflare Pages**. Note that
-> `elcaro.trustfall.xyz` does **not** resolve yet — a subdomain still has to be
-> created and attached to the Pages project.
+> `netlify.toml` at the repo root is the real, committed deployment config —
+> base directory `app/web`, `@netlify/plugin-nextjs`. Not deployed yet:
+> `elcaro.trustfall.xyz` does not resolve.
 
-- [ ] Create `elcaro.trustfall.xyz` at the registrar → CNAME to the Pages project
-- [ ] Add it as a custom domain on the Cloudflare Pages project
-- [ ] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Pages env vars
+- [ ] Connect the GitHub repo to Netlify — it reads `netlify.toml` automatically
+- [ ] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Netlify env vars
+- [ ] Add `elcaro.trustfall.xyz` as a custom domain once the Netlify site exists,
+      then point it there at the registrar
 - [ ] Full E2E: `bash deploy/verify-live.sh`
 
 ## Step 3 — Register the miner on Telegraph ✅ DONE (Aug 20, 2026)

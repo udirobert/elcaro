@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Post-deploy verification — run this AFTER the Cloudflare DNS steps and the
-# Netlify env var are in place. Exits 0 only if every check passes.
+# Post-deploy verification — run this AFTER the DNS record for api.elcaro is
+# live and (optionally) the Netlify env var is in place. Exits 0 only if every
+# check passes.
 #
 # Usage:
 #   bash deploy/verify-live.sh                       # full check (miner + frontend)
