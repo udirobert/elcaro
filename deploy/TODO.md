@@ -50,25 +50,60 @@ Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
 
 ## Step 3 — Register the miner on Telegraph
 
-The upload artifact is **`miner/telegraph.yaml`** (Telegraph's own config format).
-`miner/config.yaml` is the internal capability reference, not the submission.
+The upload artifact is **`miner/telegraph.yaml`**. `miner/config.yaml` is the
+internal capability reference, not the submission.
 
-1. [ ] Fill in the two console-dependent fields in `miner/telegraph.yaml`:
-     - `id` — assigned by the Developer Console (confirm global vs per-account)
-     - `protocol` — pick the value matching a direct HTTPS JSON API
-2. [ ] Set your contact in `miner/config.yaml` → `miner.contact`
-3. [ ] Pin the Telegraph config to IPFS:
+Schema reference: <https://docs.telegraphprotocol.com> → `miners/yaml-config.md`.
+
+### How Telegraph actually calls a miner
+
+Telegraph is a **passthrough proxy**, not an envelope protocol. `base_url` +
+`endpoints[].external_path` are forwarded the caller's body verbatim, and the
+miner's raw output is returned as `result`. So the flat `/scan` contract is what
+gets registered — there is no `{intent, params}` wrapper to implement.
+
+- Auto-routed: `POST /engine/v1/ask {query, context}` — an LLM router classifies
+  the query to an Intent, picks a miner, and builds the body. `input_schema` is
+  documentation that guides it; the node does **not** enforce it.
+- Direct: `POST /engine/v1/ask/{id} {method, endpoint, payload}` — `payload`
+  becomes the request body.
+
+### Pre-registration checks (registration is on-chain and cannot be edited)
+
+1. [ ] **`id` must be globally unused** — requests route on it; a clash is rejected.
+     `8848` was free when checked. Re-verify:
      ```bash
-     PINATA_JWT=... python deploy/pin-config.py miner/telegraph.yaml
+     curl -s https://devnode.telegraphprotocol.com/api/miners \
+       | python3 -c "import json,sys;print(sorted(int(m['id']) for m in json.load(sys.stdin) if str(m['id']).isdigit()))"
      ```
-4. [ ] Paste the returned CID into `miner/config.yaml` → `registration.ipfs_hash`, then commit
-5. [ ] At <https://integrate.telegraphprotocol.com> → **Register Now / Connect API**:
-     - [ ] Upload `miner/telegraph.yaml` (or paste `ipfs://<CID>`)
-     - [ ] Endpoint URL: `https://api.elcaro.trustfall.xyz/query`
-     - [ ] Intents: `INJECTION_DETECTION`, `CONTENT_SAFETY_SCAN`
-     - [ ] Sign + register on **Base Sepolia** with your wallet
-6. [ ] Copy the registry contract from the dashboard into `miner/config.yaml` → `registration.registry_contract`
-7. [ ] Log the submission + CID in `SUBMISSIONS.md`
+2. [ ] **Intents must be canonical** or `registerMiner` **reverts**. Declared:
+     `CONTENT_MODERATION` + `TEXT_CLASSIFICATION`, both verified canonical.
+     There is no `INJECTION_DETECTION` intent on the network. Re-verify:
+     ```bash
+     curl -s https://devnode.telegraphprotocol.com/engine/v1/intents
+     ```
+3. [ ] **`min_price_usdc` is immutable** after registration — changing it means
+     deregister + re-register. Currently `0.01`.
+4. [ ] Set your contact in `miner/config.yaml` → `miner.contact` (it becomes public)
+
+### Register
+
+5. [ ] Validate + register at <https://integrate.telegraphprotocol.com>. Paste the
+     YAML; it sandbox-tests every declared endpoint against the live upstream,
+     reports pass/fail per endpoint, then pins and registers for you.
+6. [ ] Sign the registration on **Base Sepolia** with the wallet that will hold
+     the slug — only that wallet can ever update it
+7. [ ] Copy the registry contract into `miner/config.yaml` → `registration.registry_contract`
+8. [ ] Log the submission + CID in `SUBMISSIONS.md`
+
+Optional manual pin (the console pins for you): `PINATA_JWT=... python deploy/pin-config.py miner/telegraph.yaml`
+
+### After registering
+
+- **7-day grace period**: no leaderboard position and no score yet.
+- **Routing is 70/20/10** by rank within an Intent, so being ranked first in
+  `CONTENT_MODERATION` (currently **0 other miners**) captures the majority of
+  that intent's routed traffic.
 
 ## Daily operations
 

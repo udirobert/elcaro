@@ -25,12 +25,9 @@ miner:
 api:
   base_url: "https://api.elcaro.trustfall.xyz"
   endpoints:
-    - path: /query
-      method: POST
-      description: "Telegraph envelope endpoint — {intent, params} → {answer, metadata}"
     - path: /scan
       method: POST
-      description: "Scan content for indirect prompt injection (flat contract)"
+      description: "Scan content for indirect prompt injection (the registered endpoint)"
     - path: /v1/infer
       method: POST
       description: "Telegraph-compatible inference endpoint (alias for /scan)"
@@ -42,6 +39,11 @@ api:
       description: "Miner metadata and discovery info"
 
 # ── Supported intents ───────────────────────────────────────────────────────────
+#
+# WARNING: these are Elcaro-internal capability names, NOT Telegraph canonical
+# intents. No INJECTION_DETECTION intent exists on the Telegraph network, and
+# declaring a non-canonical intent makes registerMiner revert. The registration
+# artifact (miner/telegraph.yaml) declares CONTENT_MODERATION + TEXT_CLASSIFICATION.
 
 intents:
   - name: INJECTION_DETECTION

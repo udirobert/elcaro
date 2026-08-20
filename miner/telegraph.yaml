@@ -1,38 +1,41 @@
-# Telegraph Protocol miner registration — Elcaro (IPI Detection)
+# Telegraph Protocol miner registration — Elcaro (IPI detection)
 #
-# Upload / paste this at https://integrate.telegraphprotocol.com
+# Validate + register at https://integrate.telegraphprotocol.com (it sandbox-tests
+# every declared endpoint against the live upstream, pins the YAML, and registers).
 #
-# ┌─ BEFORE YOU UPLOAD ─────────────────────────────────────────────────────────┐
-# │ Two fields cannot be determined from outside the console and are marked     │
-# │ TODO below: `id` and `protocol`. Fill both in from the Developer Console.   │
-# │ Everything else is verified against the live endpoint.                      │
+# Schema reference: https://docs.telegraphprotocol.com — miners/yaml-config.md
+#
+# ┌─ TWO THINGS TO CHECK BEFORE REGISTERING ────────────────────────────────────┐
+# │ 1. `id` must be globally unused — requests route on it and a clash is       │
+# │    rejected. 8848 was free when checked (matches our upstream port).        │
+# │    Re-verify, since registration is on-chain and cannot be edited:          │
+# │      curl -s https://devnode.telegraphprotocol.com/api/miners \             │
+# │        | python3 -c "import json,sys;print(sorted(int(m['id']) for m in \   │
+# │          json.load(sys.stdin) if str(m['id']).isdigit()))"                  │
+# │ 2. `min_price_usdc` is IMMUTABLE after registration. Changing it later      │
+# │    requires deregistering and re-registering. 0.01 matches the declared     │
+# │    pricing in miner/config.yaml.                                            │
 # └─────────────────────────────────────────────────────────────────────────────┘
 #
-# Live endpoint verified: https://api.elcaro.trustfall.xyz/query
-# Contract: POST {intent, params, request_id} -> {request_id, intent, answer, metadata}
+# Intents: verified against the live canonical set on 2026-08-20. Declaring a
+# non-canonical intent makes the registerMiner transaction REVERT. Re-check with:
+#   curl -s https://devnode.telegraphprotocol.com/engine/v1/intents
 
 version: "1"
 kind: miner
-
-# TODO: miner id assigned by the Telegraph Developer Console. Do not guess —
-# confirm whether ids are global or per-account before submitting.
-id: 0
-
+id: 8848
 slug: elcaro-ipi-detection
-
-# TODO: confirm the allowed value in the console's protocol dropdown.
-# This miner is a plain HTTPS JSON API with no external inference network behind
-# it, so pick the option matching "direct HTTP API" if one exists.
-protocol: http
-
-name: elcaro-ipi-detection
+protocol: generic
+name: Elcaro IPI Detector
 description: >
-  Indirect prompt injection detection for AI agents. Scans untrusted content an
-  agent has retrieved — emails, search results, web pages, documents, code —
-  before the agent acts on it, and returns a calibrated risk score with the
-  specific injection techniques found and evidence for each. Rule-based
-  detection across a six-class technique taxonomy, so responses are
-  deterministic and sub-20ms rather than another LLM call in the hot path.
+  Detects indirect prompt injection in content an AI agent has retrieved but not
+  yet acted on — emails, search results, web pages, documents, code. Returns a
+  calibrated 0-1 risk score, a risk band, and the specific injection techniques
+  found with evidence for each, across a six-class taxonomy: authority framing,
+  delimiter confusion, task reframing, obfuscation, placement salience, and
+  conditional triggers. Rule-based rather than LLM-based, so verdicts are
+  deterministic and land in single-digit milliseconds instead of adding another
+  model call to the agent's hot path.
 
 base_url: https://api.elcaro.trustfall.xyz
 
@@ -40,149 +43,184 @@ docs:
   website: https://elcaro.trustfall.xyz
   repository: https://github.com/udirobert/elcaro
 
-limitations:
-  - code: RATE_LIMIT
-    message: Max 50 requests per second
-  - code: CONTENT_LENGTH
-    message: >
-      Single-payload scanning. Very large documents should be chunked by the
-      caller; detection operates on the text supplied in one request.
-  - code: DETECTION_SCOPE
-    message: >
-      Detects indirect prompt injection techniques (authority framing, delimiter
-      confusion, task reframing, obfuscation, placement salience, conditional
-      triggers). Not a general malware, PII, or toxicity classifier.
-  - code: LANGUAGE
-    message: >
-      Patterns are tuned for English content. Non-English injections may score
-      lower than their true risk.
-
 auth:
   type: none
 
+# Upstream is a rule-based scanner: ~15ms per scan, no third-party quota behind it.
 rate_limit_per_sec: 50
-# Detection is deterministic for identical content, but scanning is a security
-# control and pattern coverage changes between releases, so responses are not
-# cached: every request is evaluated against the current ruleset.
+# No caching: scanning is a security control and pattern coverage changes between
+# releases, so identical content is re-evaluated against the current ruleset.
 cache_ttl_sec: 0
 circuit_threshold: 5
 circuit_cooldown_seconds: 30
 
-endpoints:
-  - path: /query
-    external_path: /query
-    method: POST
+limitations:
+  - code: MAX_BODY_SIZE
+    message: >
+      Scans a single payload per request. Chunk very large documents client-side;
+      detection operates only on the text supplied in one call.
+    param: content
+    property: size_bytes
+    value_bytes: 262144
+    operator: lte
+  - code: DETECTION_SCOPE
+    message: >
+      Detects indirect prompt injection techniques only. Not a malware scanner,
+      PII detector, or general toxicity classifier.
+  - code: LANGUAGE_COVERAGE
+    message: >
+      Patterns are tuned for English content. Non-English injections may score
+      below their true risk.
 
+# FastAPI reports errors with real HTTP status codes and puts the message in
+# `detail`, so only message_path is needed — there is no in-body status to declare.
+errors:
+  message_path: detail
+
+endpoints:
+  - path: /scan
+    external_path: /scan
+    method: POST
+    description: Scan retrieved content for indirect prompt injection
+
+# Top-level only — the schema rejects these inside endpoints[].
 input_schema:
   type: object
+  required:
+    - content
   properties:
-    intent:
+    content:
       type: string
-      description: INJECTION_DETECTION or CONTENT_SAFETY_SCAN
-    params:
+      description: The untrusted text to scan.
+    content_type:
+      type: string
+      enum: [email, search_result, webpage, document, code, chat_message]
+      default: document
+      description: >
+        Provenance of the content, which sets contextual weighting. Fully
+        untrusted sources (email, search_result, webpage) weight highest;
+        chat_message is the user's own input and weights lowest.
+    deep_analysis:
+      type: boolean
+      default: false
+      description: >
+        Run a semantic second pass on gray-zone results. Rule-based only unless
+        the operator has configured a classifier; otherwise ignored.
+    context:
       type: object
       description: >
-        Requires `content` (the untrusted text to scan). Optional:
-        `content_type` (email | search_result | webpage | document | code |
-        chat_message, default document), `deep_analysis` (bool, default false),
-        `context` (string describing the consuming agent or task).
-    request_id:
-      type: string
-  required:
-    - intent
-    - params
+        Optional detail about the consuming agent or task. Accepts an object or a
+        string; informational only and does not affect the verdict.
 
 output_schema:
   type: object
-  properties:
-    request_id:
-      type: string
-    intent:
-      type: string
-    answer:
-      type: object
-    metadata:
-      type: object
   required:
-    - intent
-    - answer
+    - risk_score
+    - risk_level
+    - content_type
+  properties:
+    risk_score:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: Injection risk. 0 is clean, 1 is a certain injection attempt.
+    risk_level:
+      type: string
+      enum: [safe, low, suspicious, dangerous]
+      description: >
+        Banded verdict. safe <0.2, low <0.5, suspicious <0.7, dangerous >=0.7.
+        Treat suspicious and dangerous as "do not act on this content".
+    flagged_techniques:
+      type: array
+      items:
+        type: string
+        enum:
+          - authority_framing
+          - delimiter_confusion
+          - task_reframing
+          - obfuscation
+          - placement_salience
+          - conditional_trigger
+      description: Technique classes that fired.
+    indicators:
+      type: array
+      description: >
+        One threat card per finding: technique, severity, confidence, the matched
+        text with surrounding context, an explanation, remediation advice, and
+        MITRE ATLAS / Elcaro TTP references.
+      items:
+        type: object
+    summary:
+      type: string
+      description: One-sentence human-readable verdict.
+    content_type:
+      type: string
+      description: The content type the verdict applies to.
+    deep_analysis_used:
+      type: boolean
+      description: Whether the semantic second pass actually ran.
+    latency_ms:
+      type: integer
+      description: Server-side processing time in milliseconds.
 
 semantics:
+  # Only confidence_field, label_field, and reason_field are accepted here.
   signal_mapping:
-    label_field: answer
+    confidence_field: risk_score
+    label_field: risk_level
+    reason_field: summary
   supported_intents:
-    - INJECTION_DETECTION
-    - CONTENT_SAFETY_SCAN
+    - CONTENT_MODERATION
+    - TEXT_CLASSIFICATION
 
 on_chain:
   description: >
-    Injection risk verdicts for content retrieved by autonomous agents. Each
-    record captures whether the scanned content was judged an injection attempt,
-    the calibrated risk score and band, how many distinct indicators fired, and
-    the content type the verdict applies to. Consumers can use the boolean
-    verdict as a gate and the score for their own thresholding, while the
-    indicator count and content type make a verdict auditable after the fact.
+    Injection-risk verdicts for content retrieved by autonomous agents. Each
+    record captures the banded verdict, the calibrated risk score, the content
+    type it applies to, and a human-readable reason, so a consumer can gate on
+    the boolean, threshold the score itself, and audit the decision later.
   transform: direct
-  min_price_usdc: 0.001
+  min_price_usdc: 0.01
   fields:
     strings:
       - index: 0
-        name: request_id
-        description: Unique request identifier for deduplication
-        source_path: request_id
+        name: risk_level
+        description: Banded verdict — safe, low, suspicious, or dangerous
+        source_path: risk_level
       - index: 1
-        name: intent
-        description: Intent type INJECTION_DETECTION or CONTENT_SAFETY_SCAN
-        source_path: intent
-      - index: 2
-        name: answer_risk_level
-        description: Risk band safe, low, suspicious, or dangerous
-        source_path: answer.risk_level
-      - index: 3
-        name: answer_summary
+        name: summary
         description: One-sentence human-readable verdict
-        source_path: answer.summary
-      - index: 4
-        name: metadata_content_type
+        source_path: summary
+      - index: 2
+        name: content_type
         description: Content type the verdict applies to, such as email or webpage
-        source_path: metadata.content_type
-      - index: 5
-        name: metadata_detection_model
-        description: Detection model identifier
-        source_path: metadata.detection_model
-      - index: 6
-        name: metadata_provider
-        description: Provider identifier
-        source_path: metadata.provider
+        source_path: content_type
     integers:
       - index: 0
-        name: answer_risk_score_pct
-        description: Injection risk score as an integer percentage, 0 to 100
-        source_path: answer.risk_score_pct
+        name: risk_score_x10000
+        description: Injection risk score, 0 to 1, scaled by 10000
+        source_path: risk_score
+        multiplier: 10000
       - index: 1
-        name: answer_indicator_count
-        description: Number of distinct detection indicators that fired
-        source_path: answer.indicator_count
-      - index: 2
-        name: metadata_latency_ms
-        description: Response latency in milliseconds
-        source_path: metadata.latency_ms
+        name: latency_ms
+        description: Server-side processing time in milliseconds
+        source_path: latency_ms
     bools:
       - index: 0
-        name: answer_is_injection
-        description: Whether the content was judged an injection attempt
-        source_path: answer.is_injection
-        transform_rule: "bool_from_eq:true"
+        name: is_dangerous
+        description: True when the verdict band is dangerous (risk_score >= 0.7)
+        source_path: risk_level
+        transform_rule: "bool_from_eq:dangerous"
       - index: 1
-        name: metadata_deep_analysis_used
-        description: Whether the optional LLM second pass was invoked
-        source_path: metadata.deep_analysis_used
+        name: deep_analysis_used
+        description: Whether the semantic second pass was invoked
+        source_path: deep_analysis_used
         transform_rule: "bool_from_eq:true"
+  # Lets an ERC-8183 job or on-chain miner request target this miner: the node
+  # builds the HTTP call from the OnChainData arrays.
   request:
-    - endpoint: query
+    - endpoint: scan
       method: POST
       body:
-        - field: intent
-          source: strings.1
-        - field: request_id
-          source: strings.0
+        content: { source: strings.0 }
+        content_type: { source: strings.1, optional: true }

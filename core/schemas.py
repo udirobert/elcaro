@@ -182,9 +182,12 @@ class ScanRequest(BaseModel):
         default=False,
         description="If true, run LLM second pass for ambiguous (gray-zone) results",
     )
-    context: str | None = Field(
+    context: str | dict[str, Any] | None = Field(
         default=None,
-        description="Optional context about the consuming agent or task",
+        description="Optional context about the consuming agent or task. Accepts a "
+        "string or an object: Telegraph's auto-routed /engine/v1/ask merges its "
+        "`context` object into the request body, so a dict must not be rejected. "
+        "Informational only — it does not affect detection.",
     )
 
 
@@ -219,72 +222,4 @@ class ScanResponse(BaseModel):
     latency_ms: int | None = Field(
         default=None,
         description="Processing latency in milliseconds",
-    )
-
-
-# ── Telegraph protocol envelope ─────────────────────────────────────────────────
-#
-# The Telegraph network routes requests to miners as a uniform envelope:
-#
-#     POST /query  {"intent": "...", "params": {...}, "request_id": "..."}
-#  →           200 {"request_id": ..., "intent": ..., "answer": {...}, "metadata": {...}}
-#
-# `/scan` keeps the flat, ergonomic shape for direct/library callers. `/query`
-# adapts the Telegraph envelope onto the same engine so both contracts are served
-# by one implementation.
-
-# Risk score at or above which content is labelled an injection. Must stay in
-# sync with RISK_THRESHOLD in eval/src/lib.rs, which scores miners on this basis.
-INJECTION_THRESHOLD: float = 0.5
-
-SUPPORTED_INTENTS: tuple[str, ...] = ("INJECTION_DETECTION", "CONTENT_SAFETY_SCAN")
-
-
-class TelegraphQueryRequest(BaseModel):
-    """Telegraph-format inbound request envelope."""
-
-    intent: str = Field(..., description="Requested intent, e.g. INJECTION_DETECTION")
-    params: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Intent parameters. Requires 'content'; optional 'content_type', "
-        "'deep_analysis', 'context'.",
-    )
-    request_id: str | None = Field(
-        default=None, description="Caller-supplied id, echoed back for deduplication"
-    )
-
-
-class TelegraphAnswer(BaseModel):
-    """The verifiable signal Telegraph consumers and evaluators read.
-
-    Field names deliberately mirror the flat `/scan` response so the Track 2
-    evaluator can deserialise this object directly.
-    """
-
-    is_injection: bool = Field(..., description=f"True when risk_score >= {INJECTION_THRESHOLD}")
-    risk_score: float = Field(..., ge=0.0, le=1.0, description="Injection risk, 0-1")
-    risk_score_pct: int = Field(
-        ...,
-        ge=0,
-        le=100,
-        description="risk_score as an integer percentage. Present because on-chain "
-        "field encoding supports string/integer/bool only, not floats.",
-    )
-    risk_level: RiskLevel = Field(..., description="safe | low | suspicious | dangerous")
-    flagged_techniques: list[TechniqueClass] = Field(
-        default_factory=list, description="Technique classes that triggered detection"
-    )
-    indicator_count: int = Field(..., ge=0, description="Number of indicators found")
-    summary: str = Field(default="", description="One-sentence human-readable verdict")
-
-
-class TelegraphQueryResponse(BaseModel):
-    """Telegraph-format outbound response envelope."""
-
-    request_id: str | None = Field(default=None, description="Echoed from the request")
-    intent: str = Field(..., description="Echoed from the request")
-    answer: TelegraphAnswer = Field(..., description="The signal payload")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider, latency, content type, and detection-model detail",
     )

@@ -11,8 +11,7 @@ Run locally:
 
 Endpoints:
     GET  /health       — health check
-    POST /query        — Telegraph envelope endpoint (registered with the network)
-    POST /scan         — scan content for prompt injection (flat, direct callers)
+    POST /scan         — scan content for prompt injection (the registered endpoint)
     POST /v1/infer     — alias for /scan
     GET  /             — API info / miner metadata
     GET  /metrics      — observability: request counts, latency, error rate
@@ -24,21 +23,11 @@ import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from core import (
-    INJECTION_THRESHOLD,
-    SUPPORTED_INTENTS,
-    IpiDetectionEngine,
-    ScanRequest,
-    ScanResponse,
-    TelegraphAnswer,
-    TelegraphQueryRequest,
-    TelegraphQueryResponse,
-)
+from core import IpiDetectionEngine, ScanRequest, ScanResponse
 
 # ── App ─────────────────────────────────────────────────────────────────────────
 
@@ -218,69 +207,6 @@ async def infer(request: ScanRequest) -> ScanResponse:
     result = _engine.scan(request)
     _metrics.record_scan(result)
     return result
-
-
-@app.post("/query", response_model=TelegraphQueryResponse)
-async def query(request: TelegraphQueryRequest) -> TelegraphQueryResponse:
-    """Telegraph protocol envelope endpoint — the registered miner endpoint.
-
-    The Telegraph network routes requests as ``{intent, params, request_id}`` and
-    expects ``{request_id, intent, answer, metadata}`` back. This adapts that
-    envelope onto the same detection engine that backs ``/scan``.
-
-    Returns 400 for an unsupported intent and 422 when ``params.content`` is
-    missing, so validators see an explicit contract error rather than a silent
-    empty scan.
-    """
-    if request.intent not in SUPPORTED_INTENTS:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Unsupported intent '{request.intent}'. "
-                f"This miner serves: {', '.join(SUPPORTED_INTENTS)}."
-            ),
-        )
-
-    content = request.params.get("content")
-    if not isinstance(content, str) or not content:
-        raise HTTPException(
-            status_code=422,
-            detail="params.content is required and must be a non-empty string.",
-        )
-
-    scan_request = ScanRequest(
-        content=content,
-        content_type=request.params.get("content_type", "document"),
-        deep_analysis=bool(request.params.get("deep_analysis", False)),
-        context=request.params.get("context"),
-    )
-
-    result = _engine.scan(scan_request)
-    _metrics.record_scan(result)
-
-    return TelegraphQueryResponse(
-        request_id=request.request_id,
-        intent=request.intent,
-        answer=TelegraphAnswer(
-            is_injection=result.risk_score >= INJECTION_THRESHOLD,
-            risk_score=result.risk_score,
-            risk_score_pct=round(result.risk_score * 100),
-            risk_level=result.risk_level,
-            flagged_techniques=result.flagged_techniques,
-            indicator_count=len(result.indicators),
-            summary=result.summary,
-        ),
-        metadata={
-            "provider": "elcaro",
-            "version": MINER_INFO["version"],
-            "content_type": result.content_type.value,
-            "detection_model": MINER_INFO["detection_model"],
-            "deep_analysis_used": result.deep_analysis_used,
-            "latency_ms": result.latency_ms,
-            "injection_threshold": INJECTION_THRESHOLD,
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-        },
-    )
 
 
 # ── Run ─────────────────────────────────────────────────────────────────────────
