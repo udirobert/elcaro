@@ -1,8 +1,11 @@
-# Telegraph Miner Configuration — Elcaro IPI Detection
+# Elcaro Miner — detailed capability reference
 #
-# This YAML describes the Elcaro miner for the Telegraph Protocol registry.
-# Pin to IPFS via Pinata, then register on Base Sepolia at
-# https://integrate.telegraphprotocol.com
+# NOTE: The artifact you upload / pin for Telegraph registration is
+# `miner/telegraph.yaml`, which is in Telegraph's own config format.
+#
+# This file is the richer internal reference: it documents the full JSON schemas
+# for the flat `/scan` contract used by direct callers, the app middleware, and
+# the web UI. Keep `base_url` and the intent list in sync with telegraph.yaml.
 
 miner:
   id: elcaro
@@ -22,9 +25,12 @@ miner:
 api:
   base_url: "https://api.elcaro.trustfall.xyz"
   endpoints:
+    - path: /query
+      method: POST
+      description: "Telegraph envelope endpoint — {intent, params} → {answer, metadata}"
     - path: /scan
       method: POST
-      description: "Scan content for indirect prompt injection"
+      description: "Scan content for indirect prompt injection (flat contract)"
     - path: /v1/infer
       method: POST
       description: "Telegraph-compatible inference endpoint (alias for /scan)"

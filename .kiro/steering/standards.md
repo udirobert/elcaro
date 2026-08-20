@@ -6,7 +6,7 @@
 - Python ≥ 3.11 (see `pyproject.toml`)
 - Virtual environment at `.venv/` — activate with `source .venv/bin/activate`
 - Install all deps: `pip install -e ".[dev]"` from the workspace root
-- Run tests: `python -m pytest miner/tests/ -v` from the workspace root
+- Run tests: `python -m pytest -v` from the workspace root (`testpaths = ["tests"]`)
 
 ### Style
 - `from __future__ import annotations` at the top of every Python file
@@ -60,11 +60,18 @@ CORS is configured in `miner/api.py` as `allow_origins=["*"]` for the hackathon.
 - `ObfuscationDetector._try_decode_base64` is the canonical example: `try/except Exception: return None`
 
 ### Testing
-- Test runner: `pytest` with `asyncio_mode = "auto"` (see `pyproject.toml`)
-- Test file: `miner/tests/test_detection.py` — all detection tests go here
+- Test runner: `pytest` with `asyncio_mode = "auto"` and `testpaths = ["tests"]` (see `pyproject.toml`)
+- Tests live in `tests/` at the workspace root — **not** `miner/tests/`:
+  | File | Covers |
+  |---|---|
+  | `tests/test_detection.py` | Detector patterns for all six classes, scoring, false positives, latency |
+  | `tests/test_api.py` | FastAPI endpoints (`/scan`, `/v1/infer`, `/health`, `/metrics`) |
+  | `tests/test_deep_analysis.py` | Gray-zone LLM second pass and its fallbacks |
+  | `tests/test_obfuscation.py` | Class D specifics (base64, zero-width, homoglyph, leetspeak) |
+- New detector patterns go in `tests/test_detection.py`; Class D patterns may go in `tests/test_obfuscation.py`
 - Every new detector pattern needs: one positive test + one false-positive (negative) test
 - Latency test: the `test_latency_is_reasonable` test enforces < 100ms for a single scan; do not break this
-- Run before every commit: `python -m pytest miner/tests/ -v`
+- Run before every commit: `python -m pytest -v`
 
 ## Rust / WASM (eval/)
 

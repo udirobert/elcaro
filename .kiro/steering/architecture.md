@@ -20,10 +20,13 @@ elcaro/
 ├── miner/                      # Track 1 — Telegraph Protocol miner API
 │   ├── api.py                  # FastAPI app: /scan, /v1/infer, /health, /
 │   ├── config.yaml             # Telegraph miner registration config (IPFS-pinnable)
-│   ├── requirements.txt        # fastapi, uvicorn, pydantic
-│   └── tests/
-│       ├── __init__.py
-│       └── test_detection.py   # Pytest suite: all 6 classes, false-positive checks, scoring, latency
+│   └── requirements.txt        # fastapi, uvicorn, pydantic
+├── tests/                      # Pytest suite (workspace root — testpaths = ["tests"])
+│   ├── __init__.py
+│   ├── test_detection.py       # All 6 classes, false-positive checks, scoring, latency
+│   ├── test_api.py             # FastAPI endpoints: /scan, /v1/infer, /health, /metrics
+│   ├── test_deep_analysis.py   # Gray-zone LLM second pass + fallbacks
+│   └── test_obfuscation.py     # Class D: base64, zero-width, homoglyph, leetspeak
 ├── eval/                       # Track 2 — WASM evaluation script
 │   ├── Cargo.toml              # elcaro-eval, cdylib+rlib, serde+serde_json deps
 │   ├── src/lib.rs              # Eval logic: TestCase corpus (A001–N005), evaluate/get_test_cases exports

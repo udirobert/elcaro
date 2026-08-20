@@ -113,10 +113,10 @@ When adding a new pattern to an existing detector:
 
 - [ ] Add `(pattern_string, confidence, name)` tuple to the appropriate pattern list
 - [ ] Confirm the regex compiles: test with `re.compile(pattern, re.IGNORECASE)`
-- [ ] Add at least one positive test case in `miner/tests/test_detection.py`
+- [ ] Add at least one positive test case in `tests/test_detection.py`
 - [ ] Add at least one false-positive (negative) test case for the same pattern area
 - [ ] Add at least one matching case in `eval/src/lib.rs` `TEST_CASES` if the technique is not already represented
-- [ ] Verify the test suite passes: `python -m pytest miner/tests/ -v`
+- [ ] Verify the test suite passes: `python -m pytest -v`
 
 When adding a new technique class:
 

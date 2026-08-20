@@ -50,19 +50,25 @@ Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
 
 ## Step 3 — Register the miner on Telegraph
 
-1. [ ] Set your contact in `miner/config.yaml` → `miner.contact`
-2. [ ] Pin config to IPFS:
+The upload artifact is **`miner/telegraph.yaml`** (Telegraph's own config format).
+`miner/config.yaml` is the internal capability reference, not the submission.
+
+1. [ ] Fill in the two console-dependent fields in `miner/telegraph.yaml`:
+     - `id` — assigned by the Developer Console (confirm global vs per-account)
+     - `protocol` — pick the value matching a direct HTTPS JSON API
+2. [ ] Set your contact in `miner/config.yaml` → `miner.contact`
+3. [ ] Pin the Telegraph config to IPFS:
      ```bash
-     PINATA_JWT=... python deploy/pin-config.py miner/config.yaml
+     PINATA_JWT=... python deploy/pin-config.py miner/telegraph.yaml
      ```
-3. [ ] Paste the returned CID into `miner/config.yaml` → `registration.ipfs_hash`, then commit
-4. [ ] At <https://integrate.telegraphprotocol.com> → **Register Now / Connect API**:
-     - [ ] Upload the pinned config (or paste `ipfs://<CID>`)
-     - [ ] Confirm the miner ID `elcaro`, intents `INJECTION_DETECTION` + `CONTENT_SAFETY_SCAN`,
-           and endpoint `https://api.elcaro.trustfall.xyz/scan`
+4. [ ] Paste the returned CID into `miner/config.yaml` → `registration.ipfs_hash`, then commit
+5. [ ] At <https://integrate.telegraphprotocol.com> → **Register Now / Connect API**:
+     - [ ] Upload `miner/telegraph.yaml` (or paste `ipfs://<CID>`)
+     - [ ] Endpoint URL: `https://api.elcaro.trustfall.xyz/query`
+     - [ ] Intents: `INJECTION_DETECTION`, `CONTENT_SAFETY_SCAN`
      - [ ] Sign + register on **Base Sepolia** with your wallet
-5. [ ] Copy the registry contract from the dashboard into `miner/config.yaml` → `registration.registry_contract`
-6. [ ] Log the submission + CID in `SUBMISSIONS.md`
+6. [ ] Copy the registry contract from the dashboard into `miner/config.yaml` → `registration.registry_contract`
+7. [ ] Log the submission + CID in `SUBMISSIONS.md`
 
 ## Daily operations
 

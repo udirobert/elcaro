@@ -1,0 +1,188 @@
+# Telegraph Protocol miner registration — Elcaro (IPI Detection)
+#
+# Upload / paste this at https://integrate.telegraphprotocol.com
+#
+# ┌─ BEFORE YOU UPLOAD ─────────────────────────────────────────────────────────┐
+# │ Two fields cannot be determined from outside the console and are marked     │
+# │ TODO below: `id` and `protocol`. Fill both in from the Developer Console.   │
+# │ Everything else is verified against the live endpoint.                      │
+# └─────────────────────────────────────────────────────────────────────────────┘
+#
+# Live endpoint verified: https://api.elcaro.trustfall.xyz/query
+# Contract: POST {intent, params, request_id} -> {request_id, intent, answer, metadata}
+
+version: "1"
+kind: miner
+
+# TODO: miner id assigned by the Telegraph Developer Console. Do not guess —
+# confirm whether ids are global or per-account before submitting.
+id: 0
+
+slug: elcaro-ipi-detection
+
+# TODO: confirm the allowed value in the console's protocol dropdown.
+# This miner is a plain HTTPS JSON API with no external inference network behind
+# it, so pick the option matching "direct HTTP API" if one exists.
+protocol: http
+
+name: elcaro-ipi-detection
+description: >
+  Indirect prompt injection detection for AI agents. Scans untrusted content an
+  agent has retrieved — emails, search results, web pages, documents, code —
+  before the agent acts on it, and returns a calibrated risk score with the
+  specific injection techniques found and evidence for each. Rule-based
+  detection across a six-class technique taxonomy, so responses are
+  deterministic and sub-20ms rather than another LLM call in the hot path.
+
+base_url: https://api.elcaro.trustfall.xyz
+
+docs:
+  website: https://elcaro.trustfall.xyz
+  repository: https://github.com/udirobert/elcaro
+
+limitations:
+  - code: RATE_LIMIT
+    message: Max 50 requests per second
+  - code: CONTENT_LENGTH
+    message: >
+      Single-payload scanning. Very large documents should be chunked by the
+      caller; detection operates on the text supplied in one request.
+  - code: DETECTION_SCOPE
+    message: >
+      Detects indirect prompt injection techniques (authority framing, delimiter
+      confusion, task reframing, obfuscation, placement salience, conditional
+      triggers). Not a general malware, PII, or toxicity classifier.
+  - code: LANGUAGE
+    message: >
+      Patterns are tuned for English content. Non-English injections may score
+      lower than their true risk.
+
+auth:
+  type: none
+
+rate_limit_per_sec: 50
+# Detection is deterministic for identical content, but scanning is a security
+# control and pattern coverage changes between releases, so responses are not
+# cached: every request is evaluated against the current ruleset.
+cache_ttl_sec: 0
+circuit_threshold: 5
+circuit_cooldown_seconds: 30
+
+endpoints:
+  - path: /query
+    external_path: /query
+    method: POST
+
+input_schema:
+  type: object
+  properties:
+    intent:
+      type: string
+      description: INJECTION_DETECTION or CONTENT_SAFETY_SCAN
+    params:
+      type: object
+      description: >
+        Requires `content` (the untrusted text to scan). Optional:
+        `content_type` (email | search_result | webpage | document | code |
+        chat_message, default document), `deep_analysis` (bool, default false),
+        `context` (string describing the consuming agent or task).
+    request_id:
+      type: string
+  required:
+    - intent
+    - params
+
+output_schema:
+  type: object
+  properties:
+    request_id:
+      type: string
+    intent:
+      type: string
+    answer:
+      type: object
+    metadata:
+      type: object
+  required:
+    - intent
+    - answer
+
+semantics:
+  signal_mapping:
+    label_field: answer
+  supported_intents:
+    - INJECTION_DETECTION
+    - CONTENT_SAFETY_SCAN
+
+on_chain:
+  description: >
+    Injection risk verdicts for content retrieved by autonomous agents. Each
+    record captures whether the scanned content was judged an injection attempt,
+    the calibrated risk score and band, how many distinct indicators fired, and
+    the content type the verdict applies to. Consumers can use the boolean
+    verdict as a gate and the score for their own thresholding, while the
+    indicator count and content type make a verdict auditable after the fact.
+  transform: direct
+  min_price_usdc: 0.001
+  fields:
+    strings:
+      - index: 0
+        name: request_id
+        description: Unique request identifier for deduplication
+        source_path: request_id
+      - index: 1
+        name: intent
+        description: Intent type INJECTION_DETECTION or CONTENT_SAFETY_SCAN
+        source_path: intent
+      - index: 2
+        name: answer_risk_level
+        description: Risk band safe, low, suspicious, or dangerous
+        source_path: answer.risk_level
+      - index: 3
+        name: answer_summary
+        description: One-sentence human-readable verdict
+        source_path: answer.summary
+      - index: 4
+        name: metadata_content_type
+        description: Content type the verdict applies to, such as email or webpage
+        source_path: metadata.content_type
+      - index: 5
+        name: metadata_detection_model
+        description: Detection model identifier
+        source_path: metadata.detection_model
+      - index: 6
+        name: metadata_provider
+        description: Provider identifier
+        source_path: metadata.provider
+    integers:
+      - index: 0
+        name: answer_risk_score_pct
+        description: Injection risk score as an integer percentage, 0 to 100
+        source_path: answer.risk_score_pct
+      - index: 1
+        name: answer_indicator_count
+        description: Number of distinct detection indicators that fired
+        source_path: answer.indicator_count
+      - index: 2
+        name: metadata_latency_ms
+        description: Response latency in milliseconds
+        source_path: metadata.latency_ms
+    bools:
+      - index: 0
+        name: answer_is_injection
+        description: Whether the content was judged an injection attempt
+        source_path: answer.is_injection
+        transform_rule: "bool_from_eq:true"
+      - index: 1
+        name: metadata_deep_analysis_used
+        description: Whether the optional LLM second pass was invoked
+        source_path: metadata.deep_analysis_used
+        transform_rule: "bool_from_eq:true"
+  request:
+    - endpoint: query
+      method: POST
+      body:
+        - field: intent
+          source: strings.1
+        - field: request_id
+          source: strings.0
