@@ -7,7 +7,10 @@ module.exports = {
     {
       name: "elcaro-miner",
       script: ".venv/bin/uvicorn",
-      args: "miner.api:app --host 127.0.0.1 --port 8848",
+      // Binds 0.0.0.0 so Coolify's Traefik container can reach the miner via
+      // host.docker.internal. Public exposure is prevented by ufw: port 8848 is
+      // only allowed from 10.0.0.0/8 (the Docker bridge networks).
+      args: "miner.api:app --host 0.0.0.0 --port 8848",
       cwd: "/home/linuxuser/elcaro",
       interpreter: "none",
       env: {

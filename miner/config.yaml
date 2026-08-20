@@ -15,7 +15,7 @@ miner:
     score, flagged techniques, and detailed indicators.
   version: "0.1.0"
   website: "https://elcaro.trustfall.xyz"
-  contact: ""  # TODO: set before registration
+  contact: ""  # TODO: set your email/handle before registering (required by Telegraph)
 
 # ── API endpoint ────────────────────────────────────────────────────────────────
 
@@ -199,9 +199,16 @@ pricing:
   payment_protocol: x402
 
 # ── Registration ────────────────────────────────────────────────────────────────
+#
+# Steps:
+#   1. Fill in miner.contact above.
+#   2. Pin this file to IPFS:  PINATA_JWT=... python deploy/pin-config.py miner/config.yaml
+#   3. Set ipfs_hash below to the returned CID.
+#   4. Register at https://integrate.telegraphprotocol.com (Base Sepolia, wallet).
+#   5. Copy registry_contract from the dashboard after registering.
 
 registration:
   network: base-sepolia
   ipfs_pinata: true
-  registry_contract: ""  # TODO: set from integrate.telegraphprotocol.com
-  ipfs_hash: ""  # TODO: set after pinning this config
+  registry_contract: ""  # TODO: set from dashboard after registering at integrate.telegraphprotocol.com
+  ipfs_hash: ""  # TODO: PINATA_JWT=... python deploy/pin-config.py miner/config.yaml

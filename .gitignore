@@ -56,6 +56,7 @@ coverage.xml
 
 # Local-only docs (not for public repo)
 docs/hackathon-tracker.md
+docs/ops.md
 
 # Logs
 *.log

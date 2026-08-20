@@ -1,25 +1,69 @@
-# Deployment TODO — go live checklist
+# Deployment TODO — go live + register on Telegraph
 
-## Cloudflare DNS (for trustfall.xyz)
+> Goal: get the Elcaro miner **live and registered on the Telegraph Protocol**
+> before Track 1 & 2 close **Sep 7, 2026**. Registration happens at
+> <https://integrate.telegraphprotocol.com> (web3 wallet required — do the final
+> "Register Now → Connect API" step yourself in the browser).
 
-- [ ] Add A record: `api.elcaro` → `144.202.117.160`, **Proxied** (orange cloud)
-- [ ] Add Origin Rule: for hostname `api.elcaro.trustfall.xyz`, set Origin Port to `8847`
-- [ ] Add CNAME record: `elcaro` → `[your-site].netlify.app`, **DNS only** (grey cloud)
-- [ ] Verify miner: `BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh` — 18/18 checks pass
+## Step 1 — Live HTTPS endpoint ✅ DONE (Aug 20, 2026)
 
-## Netlify
+`https://api.elcaro.trustfall.xyz/health` returns HTTP 200 with a valid Let's
+Encrypt cert (valid to Nov 18 2026). `/scan` verified end-to-end:
+`risk_score 1.0`, `latency_ms 14`. Full suite: **18/18 passed**.
 
-- [ ] Set environment variable: `ELCARO_MINER_URL` = `https://api.elcaro.trustfall.xyz`
-- [ ] Set custom domain: `elcaro.trustfall.xyz`
-- [ ] Trigger redeploy after env var is set
-- [ ] Verify end-to-end: `bash deploy/verify-live.sh` (includes the Netlify `/api/scan` proxy checks) and scan something at `https://elcaro.trustfall.xyz`
+The original CDN-proxy / host-nginx plan did **not** apply to this host. What was
+actually true:
 
-## VPS (already done)
+- The VPS is **Coolify-managed**; `coolify-proxy` (Traefik v3.6) owns :80/:443.
+- Host nginx is **not running** (`nginx.service` = `failed`), so every vhost in
+  `/etc/nginx/sites-enabled/` was inert — including the old elcaro one on :8847.
+  That is why the port was refused, and why probing the origin directly hit an
+  invalid cert.
+- A host-level certbot/nginx on :443 would have **failed to bind** and risked the
+  shared ingress for every other project on the host. That plan was dropped.
+- DNS was already correct: `api.elcaro` A → the VPS, exactly like the other
+  working services on the box. No DNS change was needed.
 
-- [x] Clone repo to `/home/linuxuser/elcaro`
-- [x] Python venv + deps installed
-- [x] 54 tests passing
-- [x] PM2 running `elcaro-miner` on `127.0.0.1:8848`
-- [x] nginx proxying `:8847` → `:8848`
-- [x] Health check responding
-- [x] Scan endpoint returning full threat cards
+What changed (all additive, all reversible, nothing shared touched):
+
+- [x] `deploy/ecosystem.config.cjs` — uvicorn rebound `127.0.0.1` → `0.0.0.0`
+      so the Traefik container can reach it via `host.docker.internal`
+- [x] `ufw allow from 10.0.0.0/8 to any port 8848 proto tcp` — reachable from the
+      Docker bridges only, never the public internet
+- [x] New Traefik dynamic route from `deploy/traefik-elcaro.yaml` — picked up
+      live via file-watch; cert issued over HTTP-01
+- [x] `pm2 save` so the new bind survives a reboot
+- [x] Confirmed neighbouring services on the shared host unaffected
+
+Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
+
+## Step 2 — Frontend (Cloudflare Pages)
+
+> The frontend target is **Cloudflare Pages**. Note that
+> `elcaro.trustfall.xyz` does **not** resolve yet — a subdomain still has to be
+> created and attached to the Pages project.
+
+- [ ] Create `elcaro.trustfall.xyz` at the registrar → CNAME to the Pages project
+- [ ] Add it as a custom domain on the Cloudflare Pages project
+- [ ] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Pages env vars
+- [ ] Full E2E: `bash deploy/verify-live.sh`
+
+## Step 3 — Register the miner on Telegraph
+
+1. [ ] Set your contact in `miner/config.yaml` → `miner.contact`
+2. [ ] Pin config to IPFS:
+     ```bash
+     PINATA_JWT=... python deploy/pin-config.py miner/config.yaml
+     ```
+3. [ ] Paste the returned CID into `miner/config.yaml` → `registration.ipfs_hash`, then commit
+4. [ ] At <https://integrate.telegraphprotocol.com> → **Register Now / Connect API**:
+     - [ ] Upload the pinned config (or paste `ipfs://<CID>`)
+     - [ ] Confirm the miner ID `elcaro`, intents `INJECTION_DETECTION` + `CONTENT_SAFETY_SCAN`,
+           and endpoint `https://api.elcaro.trustfall.xyz/scan`
+     - [ ] Sign + register on **Base Sepolia** with your wallet
+5. [ ] Copy the registry contract from the dashboard into `miner/config.yaml` → `registration.registry_contract`
+6. [ ] Log the submission + CID in `SUBMISSIONS.md`
+
+## Daily operations
+
+See `deploy/README.md` (pm2 logs/restart/update, metrics).

@@ -1,0 +1,48 @@
+# Traefik dynamic configuration for the Elcaro miner.
+#
+# The VPS runs Coolify, whose `coolify-proxy` (Traefik v3.6) container is the
+# only process bound to public :80/:443. Traefik reads this directory with
+# `--providers.file.directory=/traefik/dynamic/ --providers.file.watch=true`,
+# so dropping this file in is picked up live — no proxy restart required.
+#
+# Install to:  /data/coolify/proxy/dynamic/elcaro.yaml   (root:root 0644)
+#
+# Prerequisites:
+#   1. uvicorn binds 0.0.0.0:8848 (see deploy/ecosystem.config.cjs) so the
+#      Traefik container can reach it via host.docker.internal -> 10.0.0.1.
+#   2. ufw allows 8848/tcp from 10.0.0.0/8 only (Docker bridges), keeping the
+#      port unreachable from the public internet.
+#   3. api.elcaro.trustfall.xyz has an A record -> the VPS public IP, which the
+#      letsencrypt HTTP-01 challenge needs on the `http` entrypoint.
+#
+# Do NOT use deploy/nginx.conf or a host-level certbot on this box: port 443 is
+# already owned by Traefik, so a host nginx would fail to bind and an HTTP-01
+# standalone challenge would collide with the proxy.
+
+http:
+  routers:
+    elcaro-api-https:
+      rule: "Host(`api.elcaro.trustfall.xyz`)"
+      entryPoints:
+        - https
+      service: elcaro-api
+      tls:
+        certResolver: letsencrypt
+    elcaro-api-http:
+      rule: "Host(`api.elcaro.trustfall.xyz`)"
+      entryPoints:
+        - http
+      middlewares:
+        - elcaro-api-https-redirect
+      service: elcaro-api
+  middlewares:
+    elcaro-api-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    elcaro-api:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://host.docker.internal:8848"
