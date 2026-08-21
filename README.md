@@ -157,7 +157,7 @@ cd elcaro
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"
 
-python -m pytest                     # tests (64 passing)
+python -m pytest                     # tests (70 passing)
 ruff check && ruff format --check    # lint
 
 # Frontend

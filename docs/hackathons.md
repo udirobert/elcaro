@@ -22,12 +22,13 @@ records the submission details for each.
 
 ### Submission checklist
 
-- [ ] Public repo (github.com/udirobert/elcaro)
-- [ ] `.kiro/` directory committed
-- [ ] Demo video on YouTube (unlisted OK) — record against the live site
+- [x] Public repo (github.com/udirobert/elcaro)
+- [x] `.kiro/` directory committed (4 specs incl. kiro-guard, steering, hooks, .kiroignore)
+- [x] VPS miner redeployed with current code (safe_content/quarantined fields live, 18/18 checks passed, on-chain YAML hash verified)
+- [ ] Demo video on YouTube (unlisted OK) — record against the live site; include the guard hook firing in the Kiro IDE
 - [ ] Google Form submitted before Aug 23 23:59 UTC
 - [ ] Judges' path verified: live URL primary, self-host repo secondary
-- [ ] VPS miner redeployed with current code (safe_content/quarantined fields)
+- [ ] E2E guard-hook check in the Kiro IDE (spec `.kiro/specs/kiro-guard/` task 3.2)
 
 ## Telegraph Protocol Hackathon — Season I
 
