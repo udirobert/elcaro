@@ -1,13 +1,15 @@
 {
-  "name": "Debug hook payload capture",
-  "version": "1.0.0",
-  "description": "Captures stdin, argv, and hook-related env vars to /tmp/kiro-hook-event.json. Remove after confirming field names.",
-  "when": {
-    "type": "postToolUse",
-    "toolTypes": ["*"]
-  },
-  "then": {
-    "type": "runCommand",
-    "command": "python3 scripts/debug-hook-capture.py"
-  }
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Debug hook payload capture",
+      "description": "Writes the raw stdin event to /tmp/kiro-hook-event.json. Remove after confirming field names.",
+      "trigger": "PostToolUse",
+      "action": {
+        "type": "command",
+        "command": "python3 scripts/debug-hook-capture.py",
+        "timeout": 5
+      }
+    }
+  ]
 }
