@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -75,6 +77,53 @@ def extract_result_text(event: dict) -> str:
     return best[:100_000]
 
 
+def _ssl_context() -> ssl.SSLContext | None:
+    """Return an SSL context that can verify the Elcaro miner's certificate.
+
+    On macOS the python.org installer ships without its own CA bundle; we
+    try three sources in order of preference:
+      1. certifi (available in the venv, pip install certifi)
+      2. The macOS system keychain via `security` (no extra deps)
+      3. Default context (works on Linux / CI where the system bundle is present)
+    """
+    # 1. certifi — best option when the venv is active
+    try:
+        import certifi  # type: ignore[import-untyped]
+
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        return ctx
+    except ImportError:
+        pass
+
+    # 2. macOS system keychain — export roots on the fly into a temp bundle
+    _SECURITY = "/usr/bin/security"  # absolute path — avoids S607
+    try:
+        result = subprocess.run(  # noqa: S603
+            [
+                _SECURITY,
+                "find-certificate",
+                "-a",
+                "-p",
+                "/System/Library/Keychains/SystemRootCertificates.keychain",
+            ],
+            capture_output=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout:
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as tmp:
+                tmp.write(result.stdout)
+                tmp.flush()
+                ctx = ssl.create_default_context(cafile=tmp.name)
+                return ctx
+    except Exception as exc:  # noqa: BLE001
+        _ = exc  # keychain unavailable (non-macOS, permissions) — fall through
+
+    # 3. Default — works on Linux/CI
+    return ssl.create_default_context()
+
+
 def scan(text: str) -> dict | None:
     """POST the text to the Elcaro miner. Returns the scan response, or
     None on any infrastructure failure (unreachable, timeout, bad JSON)."""
@@ -95,9 +144,10 @@ def scan(text: str) -> dict | None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    ctx = _ssl_context()
     try:
         # Scheme validated above (http/https only) — S310 audited and satisfied.
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=ctx) as response:  # noqa: S310
             return json.loads(response.read().decode())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
         return None

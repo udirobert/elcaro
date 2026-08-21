@@ -1,16 +1,13 @@
 {
-  "version": "v1",
-  "hooks": [
-    {
-      "name": "Elcaro injection guard",
-      "description": "Scans web tool results for indirect prompt injection via the Elcaro miner. Warns the agent when the retrieved content contains hidden instructions.",
-      "trigger": "PostToolUse",
-      "matcher": "web",
-      "action": {
-        "type": "command",
-        "command": "python3 scripts/kiro-scan-hook.py"
-      },
-      "timeout": 10
-    }
-  ]
+  "name": "Elcaro injection guard",
+  "version": "1.0.0",
+  "description": "Scans web tool results for indirect prompt injection via the Elcaro miner. Warns the agent when the retrieved content contains hidden instructions.",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": ["web"]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python3 scripts/kiro-scan-hook.py"
+  }
 }
