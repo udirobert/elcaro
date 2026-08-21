@@ -1,0 +1,5 @@
+# Keep secrets and host-specific detail out of the agent's context.
+.env.local
+docs/ops.md
+.venv/
+node_modules/

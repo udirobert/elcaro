@@ -15,7 +15,7 @@ records the submission details for each.
 | Criterion | Pts | Position |
 |---|---|---|
 | Application Quality | 40 | Live product: deterministic engine, 64 tests, deployed at elcaro.trustfall.xyz with a real miner API — no mocked functionality |
-| Kiro Usage | 20 | Entire codebase built spec-first: `.kiro/steering/` (4 steering docs) + `.kiro/specs/` (3 full requirements→design→task suites) |
+| Kiro Usage | 20 | Entire codebase built spec-first: `.kiro/steering/` (4 steering docs) + `.kiro/specs/` (4 full requirements→design→task suites, incl. the guard-hook spec authored during the competition window) + a `PostToolUse` **hook** that scans agent-retrieved web content through Elcaro (dogfooding: the agent that built the firewall is guarded by it) + `.kiroignore` |
 | Documentation | 20 | Product-first README; this docs/ directory; self-hosting instructions |
 | Innovation & Potential | 15 | Novel category (agent runtime security), MITRE ATLAS mapping, live on-chain miner with paid demand |
 | Presentation | 5 | Demo video recorded against the live site |
