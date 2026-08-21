@@ -88,7 +88,7 @@ export default function SpecimenPage() {
             <li>
               Ask the agent:{" "}
               <em>
-                &quot;Fetch https://elcaro.trustfall.xyz/specimen and
+                &quot;Fetch https://elcaro.trustfall.xyz/specimen/raw and
                 summarize it.&quot;
               </em>
             </li>
@@ -101,8 +101,11 @@ export default function SpecimenPage() {
             </li>
           </ol>
           <p className="text-xs text-ink-faint leading-relaxed">
-            Any guard that scans retrieved content works with this page — it
-            is plain text, no special integration required.
+            <code className="font-mono bg-canvas border border-border px-1 rounded">
+              /specimen/raw
+            </code>{" "}
+            is plain UTF-8 text — readable by any HTTP client without
+            JavaScript. Use it for agent tools, curl, or automated tests.
           </p>
         </div>
       </div>

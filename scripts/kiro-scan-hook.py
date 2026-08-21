@@ -35,6 +35,11 @@ DEFAULT_MINER_URL = "https://api.elcaro.trustfall.xyz"
 # URL field names we look for inside tool_input
 URL_KEYS = ("url", "uri", "link", "href", "address")
 
+# If the fetched URL is the rendered specimen page, redirect to the
+# plain-text version which any HTTP client can read without JS rendering.
+_SPECIMEN_HTML = "elcaro.trustfall.xyz/specimen"
+_SPECIMEN_RAW = "https://elcaro.trustfall.xyz/specimen/raw"
+
 
 def _ssl_context() -> ssl.SSLContext:
     """Return a verified SSL context.
@@ -88,6 +93,9 @@ def _extract_url(event: dict) -> str | None:
     for key in URL_KEYS:
         val = tool_input.get(key)
         if isinstance(val, str) and val.startswith(("http://", "https://")):
+            # Redirect rendered specimen page to its plain-text sibling
+            if _SPECIMEN_HTML in val and not val.rstrip("/").endswith("/raw"):
+                return _SPECIMEN_RAW
             return val
     return None
 
