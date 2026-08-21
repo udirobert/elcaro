@@ -126,30 +126,38 @@ def _confidence_to_severity(confidence: float) -> Severity:
 
 # ── Remediation templates ──────────────────────────────────────────────────────
 
+# Each entry leads with a concrete action on THIS content (the imperative),
+# then states the standing policy (the audit-trail rationale). Keep both —
+# the first sentence is what a reviewer acts on, the second is what a
+# compliance log records.
 _REMEDIATION: dict[TechniqueClass, str] = {
     TechniqueClass.AUTHORITY: (
-        "Strip or quarantine content claiming system/admin authority. "
-        "Verify the source is actually privileged before allowing the agent to act on it."
+        "Remove the forged authority claim before this content reaches your agent. "
+        "Content claiming system/admin authority should be quarantined unless the "
+        "source is verified as actually privileged."
     ),
     TechniqueClass.DELIMITER: (
-        "Remove fabricated delimiters and role markers. "
-        "Do not allow retrieved content to redefine conversation boundaries."
+        "Strip the fabricated delimiters and role markers from this content. "
+        "Retrieved content must never be allowed to redefine conversation boundaries."
     ),
     TechniqueClass.TASK_REFRAME: (
-        "Reject content that attempts to prepend, redirect, or redefine the agent's task. "
-        "The agent's goal should only come from trusted instructions."
+        "Reject this content's attempt to redirect the agent's task. "
+        "The agent's goal should only ever come from trusted instructions."
     ),
     TechniqueClass.OBFUSCATION: (
-        "Decode and inspect obfuscated content before processing. "
-        "Block content that hides instructions behind encoding or character substitution."
+        "Block this content until the hidden payload is decoded and inspected. "
+        "Content that hides instructions behind encoding or character substitution "
+        "should not reach the agent in obfuscated form."
     ),
     TechniqueClass.PLACEMENT: (
-        "Inspect low-visibility fields (metadata, alt text, comments) for imperatives. "
-        "Do not privilege content at document edges over content in the body."
+        "Cut the instruction hiding in this low-visibility field (metadata, alt text, "
+        "or document edge). Never privilege edge content over the body when deciding "
+        "what the agent reads."
     ),
     TechniqueClass.CONDITIONAL: (
-        "Block content containing conditional triggers keyed to agent workflow. "
-        "Retrieved content should not dictate when or how the agent acts."
+        "Block this trigger before it can arm — it fires only when your agent reaches "
+        "a specific workflow state. Retrieved content should not dictate when or how "
+        "the agent acts."
     ),
 }
 

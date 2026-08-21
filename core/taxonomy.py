@@ -23,6 +23,7 @@ from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
 from core.detectors.task_reframe import TaskReframeDetector
 from core.llm_classifier import LlmClassifier
+from core.quarantine import quarantine_decision
 from core.schemas import (
     ContentType,
     DetectionIndicator,
@@ -117,6 +118,8 @@ class IpiDetectionEngine:
                 content_type=content_type,
                 deep_analysis_used=False,
                 latency_ms=int((time.monotonic() - start_time) * 1000),
+                safe_content=content,
+                quarantined=False,
             )
 
         # Run all detectors
@@ -167,6 +170,13 @@ class IpiDetectionEngine:
         # Generate summary
         summary = self._generate_summary(risk_level, flagged_classes, all_indicators, content_type)
 
+        # Apply the quarantine policy (core/quarantine.py) so every consumer
+        # of ScanResponse sees the same safe_content the middleware would
+        # substitute — single source of truth.
+        safe_content, quarantined = quarantine_decision(
+            content, weighted_score, risk_level, flagged_classes
+        )
+
         return ScanResponse(
             risk_score=round(weighted_score, 4),
             risk_level=risk_level,
@@ -176,6 +186,8 @@ class IpiDetectionEngine:
             content_type=content_type,
             deep_analysis_used=deep_analysis_used,
             latency_ms=latency_ms,
+            safe_content=safe_content,
+            quarantined=quarantined,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

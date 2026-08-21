@@ -5,6 +5,7 @@ import type { ScanResponse } from "@/lib/types";
 import { RiskMeter } from "./risk-meter";
 import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
+import { NextSteps } from "./next-steps";
 
 interface ScanResultProps {
   result: ScanResponse;
@@ -83,6 +84,11 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </div>
         </motion.div>
       )}
+
+      {/* What to do about it — the remedy, the decision, and the path to
+          automated protection. Answers "so what?" instead of stopping at
+          the alarm. */}
+      <NextSteps result={result} />
     </div>
   );
 }

@@ -55,6 +55,11 @@ middleware = ElcaroMiddleware(
 - `block`: Return empty content + warning
 - `warn`: Pass content through but prepend a warning
 
+The threshold (0.5) and the quarantine notice text live in
+`core/quarantine.py` — the same module the detection engine uses to populate
+`ScanResponse.safe_content` / `quarantined`, so the middleware and the API
+always issue identical verdicts.
+
 ## Demo
 
 ```bash

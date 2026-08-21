@@ -57,16 +57,25 @@ with evidence, severity, TTP mappings, and remediation guidance:
         "char_offset": 45
       },
       "explanation": "System-voice marker 'SYSTEM:' found in email content. Retrieved content cannot contain legitimate system instructions.",
-      "remediation": "Strip or quarantine content claiming system/admin authority. Verify the source is actually privileged before allowing the agent to act on it.",
+      "remediation": "Remove the forged authority claim before this content reaches your agent. Content claiming system/admin authority should be quarantined unless the source is verified as actually privileged.",
       "ttps": [
         {"framework": "mitre_atlas", "technique_id": "AML.T0051", "technique_name": "LLM Prompt Injection: Indirect", "tactic": "Initial Access"},
         {"framework": "elcaro", "technique_id": "ELC-A01", "technique_name": "Authority/Role Impersonation", "tactic": "Privilege Escalation"}
       ]
     }
   ],
-  "latency_ms": 2
+  "latency_ms": 2,
+  "safe_content": "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. Risk score: 0.95, level: dangerous. Flagged techniques: authority_framing. Original content withheld from agent.]",
+  "quarantined": true
 }
 ```
+
+Two fields make the verdict actionable, not just alarming: `safe_content` is
+the exact content your agent should receive instead (the original when below
+the quarantine threshold, the quarantine notice replacing it at/above 0.5),
+and `quarantined` is the block/flag decision. Both are computed by the engine
+(`core/quarantine.py`) so the API, the middleware, and the web playground
+always agree.
 
 ---
 

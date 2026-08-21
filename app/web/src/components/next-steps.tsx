@@ -1,0 +1,109 @@
+"use client";
+
+import { motion } from "framer-motion";
+import Link from "next/link";
+import type { RiskLevel, ScanResponse } from "@/lib/types";
+
+interface NextStepsProps {
+  result: ScanResponse;
+}
+
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+
+// Fallback only — the quarantine decision and the notice text now come from
+// the API (ScanResponse.quarantined / safe_content, computed once in
+// core/quarantine.py). This threshold covers responses from older miners and
+// stale localStorage history that predate the server-side fields.
+const BLOCK_THRESHOLD = 0.5;
+
+// Risk-conditioned guidance — answers "so what do I do?" in the user's terms,
+// using the same thresholds the integration docs teach (≥0.5 block, ≥0.3 flag).
+const DECISION: Record<RiskLevel, { headline: string; actions: string[] }> = {
+  dangerous: {
+    headline: "Block it — this content should not reach your agent.",
+    actions: [
+      "Quarantine it — the notice above is exactly what your agent receives instead",
+      "Alert your team, with this scan as the evidence",
+    ],
+  },
+  suspicious: {
+    headline: "Flag it — worth a human look before your agent acts.",
+    actions: [
+      "Quarantine it if nobody can review it now (notice shown above)",
+      "Have a reviewer check the findings below, then pass or block",
+    ],
+  },
+  low: {
+    headline: "Process it — but log this scan with the findings below.",
+    actions: [
+      "Let the content through, and keep this scan in your audit trail",
+    ],
+  },
+  safe: {
+    headline: "Process it — nothing to act on.",
+    actions: [],
+  },
+};
+
+export function NextSteps({ result }: NextStepsProps) {
+  const quarantined =
+    result.quarantined ?? result.risk_score >= BLOCK_THRESHOLD;
+  const decision = DECISION[result.risk_level];
+
+  return (
+    <motion.div
+      className="space-y-4"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.32, duration: 0.35, ease: EASE_OUT }}
+    >
+      {/* What your agent would receive — the remedy, not just the alarm */}
+      <div>
+        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest mb-2">
+          What your agent would receive
+        </p>
+        {quarantined ? (
+          <div className="rounded-xl bg-dangerous-bg border border-dangerous/20 p-4 font-mono text-xs leading-relaxed text-dangerous/90">
+            {result.safe_content ??
+              "Quarantined — the original content is withheld and replaced with a structured notice."}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-surface border border-border p-4 text-sm text-ink-muted leading-relaxed">
+            Passes through unchanged — the score is below the 0.5 quarantine
+            threshold. In production you&apos;d still log this scan.
+          </div>
+        )}
+      </div>
+
+      {/* Your move — the decision, in three verbs max */}
+      <div>
+        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest mb-2">
+          Your move
+        </p>
+        <p className="text-sm font-semibold text-ink leading-snug mb-2">
+          {decision.headline}
+        </p>
+        <ul className="space-y-1.5">
+          {decision.actions.map((action, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-2 text-sm text-ink-muted leading-relaxed"
+            >
+              <span className="text-safe font-semibold shrink-0 mt-0.5">→</span>
+              {action}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* The path from alarm to protection — contextual, only when it matters */}
+      <Link
+        href="/integrate"
+        className="group inline-flex items-center gap-2 text-sm font-semibold text-violet hover:text-violet/80 transition-colors"
+      >
+        Don&apos;t just detect this — block it in your agent
+        <span className="transition-transform group-hover:translate-x-0.5">→</span>
+      </Link>
+    </motion.div>
+  );
+}

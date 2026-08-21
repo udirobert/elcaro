@@ -23,16 +23,11 @@ from dataclasses import dataclass
 import httpx
 
 from core import ContentType, RiskLevel, ScanRequest, ScanResponse
+from core.quarantine import DEFAULT_RISK_THRESHOLD, build_quarantine_notice
 
 # ── Configuration ────────────────────────────────────────────────────────────────
 
 DEFAULT_MINER_URL = os.environ.get("ELCARO_MINER_URL", "http://localhost:8000")
-DEFAULT_RISK_THRESHOLD = 0.5  # Content above this is quarantined
-QUARANTINE_MESSAGE = (
-    "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. "
-    "Risk score: {score:.2f}, level: {level}. Flagged techniques: {techniques}. "
-    "Original content withheld from agent.]"
-)
 
 
 # ── Data classes ──────────────────────────────────────────────────────────────
@@ -184,10 +179,12 @@ class ElcaroMiddleware:
             )
             return warning + content
         else:  # "replace"
-            return QUARANTINE_MESSAGE.format(
-                score=response.risk_score,
-                level=response.risk_level.value,
-                techniques=techniques,
+            # Same notice the engine puts in ScanResponse.safe_content —
+            # built by the shared policy module (core/quarantine.py).
+            return build_quarantine_notice(
+                response.risk_score,
+                response.risk_level,
+                [t.value for t in response.flagged_techniques],
             )
 
     def _build_reason(self, response: ScanResponse) -> str:

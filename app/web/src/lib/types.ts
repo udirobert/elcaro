@@ -53,6 +53,10 @@ export interface ScanResponse {
   content_type: ContentType;
   deep_analysis_used: boolean;
   latency_ms: number;
+  // Populated by the engine (core/quarantine.py). Optional because responses
+  // from older miners and stale localStorage history predate these fields.
+  safe_content?: string;
+  quarantined?: boolean;
 }
 
 export interface ScanRequest {

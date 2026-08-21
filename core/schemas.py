@@ -223,3 +223,15 @@ class ScanResponse(BaseModel):
         default=None,
         description="Processing latency in milliseconds",
     )
+    safe_content: str = Field(
+        default="",
+        description=(
+            "The content as the consuming agent should receive it: the original "
+            "content when below the quarantine threshold, or the quarantine "
+            "notice replacing it (see core/quarantine.py)."
+        ),
+    )
+    quarantined: bool = Field(
+        default=False,
+        description="Whether risk_score met or exceeded the quarantine threshold (0.5)",
+    )
