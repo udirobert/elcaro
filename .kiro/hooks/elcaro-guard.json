@@ -4,7 +4,7 @@
   "description": "Scans web tool results for indirect prompt injection via the Elcaro miner. Warns the agent when the retrieved content contains hidden instructions.",
   "when": {
     "type": "postToolUse",
-    "toolTypes": ["web"]
+    "toolTypes": ["*"]
   },
   "then": {
     "type": "runCommand",
