@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ScanForm } from "@/components/scan-form";
+import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,29 +11,16 @@ export const metadata: Metadata = {
 export default function ScanPage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      {/* Minimal header */}
-      <header className="px-6 py-5 flex items-center justify-between">
-        <Link
-          href="/"
-          className="text-sm font-bold tracking-tight text-ink hover:text-violet transition-colors"
-        >
-          elcaro
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/integrate"
-            className="text-xs text-ink-faint hover:text-ink transition-colors"
-          >
-            Integrate
-          </Link>
-          <span className="text-xs text-ink-faint font-mono">v0.1</span>
-        </div>
-      </header>
+      {/* Shared chrome */}
+      <SiteHeader active="scan" />
 
       {/* Main content — generous space, the textarea is the hero */}
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8">
         <ScanForm />
       </div>
+
+      {/* Shared chrome */}
+      <SiteFooter />
     </main>
   );
 }

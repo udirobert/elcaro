@@ -2,31 +2,13 @@ import Link from "next/link";
 import { LiveProofStrip } from "@/components/live-proof-strip";
 import { HeroCatch } from "@/components/hero-catch";
 import { SpecimenMarquee } from "@/components/specimen-marquee";
+import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 
 export default function HomePage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      {/* Header — consistent wayfinding with the other routes */}
-      <header className="px-6 py-5 flex items-center justify-between">
-        <span className="text-sm font-bold tracking-tight text-ink">
-          elcaro
-        </span>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/gauntlet"
-            className="text-xs text-ink-faint hover:text-ink transition-colors"
-          >
-            Gauntlet
-          </Link>
-          <Link
-            href="/integrate"
-            className="text-xs text-ink-faint hover:text-ink transition-colors"
-          >
-            Integrate
-          </Link>
-          <span className="text-xs text-ink-faint font-mono">v0.1</span>
-        </div>
-      </header>
+      {/* Header — shared chrome, consistent wayfinding */}
+      <SiteHeader />
 
       {/* Spacious, editorial hero — the product demonstrated, not described */}
       <section className="flex-1 flex flex-col items-center justify-center px-6 py-16">
@@ -303,30 +285,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer — minimal */}
-      <footer className="border-t border-border px-6 py-8 text-center">
-        <p className="text-xs text-ink-faint">
-          Open source ·{" "}
-          <a
-            href="https://github.com/udirobert/elcaro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-ink transition-colors underline underline-offset-2"
-          >
-            GitHub
-          </a>
-          {" "}· Live as a miner on{" "}
-          <a
-            href="https://telegraphprotocol.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-ink transition-colors underline underline-offset-2"
-          >
-            Telegraph Protocol
-          </a>
-          {" "}— every scan is a paid, on-chain signal
-        </p>
-      </footer>
+      {/* Footer — shared chrome */}
+      <SiteFooter />
     </main>
   );
 }

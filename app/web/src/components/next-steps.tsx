@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import type { RiskLevel, ScanResponse } from "@/lib/types";
 import { encodeVerdict } from "@/lib/share";
+
+const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 
 interface NextStepsProps {
   result: ScanResponse;
@@ -53,6 +55,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
     result.quarantined ?? result.risk_score >= BLOCK_THRESHOLD;
   const decision = DECISION[result.risk_level];
   const [copied, setCopied] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   async function handleShare() {
     // The verdict is encoded in the URL fragment — nothing is stored
@@ -92,9 +95,27 @@ export function NextSteps({ result, content }: NextStepsProps) {
           What your agent would receive
         </p>
         {quarantined ? (
-          <div className="rounded-xl bg-dangerous-bg border border-dangerous/20 p-4 font-mono text-xs leading-relaxed text-dangerous/90">
+          <div className="relative rounded-xl bg-dangerous-bg border border-dangerous/20 p-4 font-mono text-xs leading-relaxed text-dangerous/90">
             {result.safe_content ??
               "Quarantined — the original content is withheld and replaced with a structured notice."}
+            {/* The stamp — the site's signature moment, peaking where the
+                stakes are real: the user's own content, caught live */}
+            <motion.span
+              className="absolute right-3 top-3 px-2.5 py-1 rounded-md border-2 text-[10px] font-black uppercase tracking-[0.18em] border-dangerous text-dangerous bg-dangerous-bg/90 pointer-events-none"
+              initial={
+                reduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, scale: 1.8, rotate: -14 }
+              }
+              animate={
+                reduceMotion
+                  ? { opacity: 1 }
+                  : { opacity: 1, scale: 1, rotate: -7 }
+              }
+              transition={reduceMotion ? { duration: 0.2 } : SPRING}
+            >
+              Quarantined
+            </motion.span>
           </div>
         ) : (
           <div className="rounded-xl bg-surface border border-border p-4 text-sm text-ink-muted leading-relaxed">

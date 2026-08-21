@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { IntegrateForm } from "@/components/integrate-form";
+import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 
 export const metadata: Metadata = {
   title: "Integrate",
@@ -112,21 +113,8 @@ function Section({
 export default function IntegratePage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-5 flex items-center justify-between border-b border-border">
-        <Link
-          href="/"
-          className="text-sm font-bold tracking-tight text-ink hover:text-violet transition-colors"
-        >
-          elcaro
-        </Link>
-        <Link
-          href="/scan"
-          className="text-xs text-ink-faint hover:text-ink transition-colors"
-        >
-          Try the scanner →
-        </Link>
-      </header>
+      {/* Shared chrome */}
+      <SiteHeader active="integrate" />
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-16">
 
@@ -262,31 +250,21 @@ export default function IntegratePage() {
         {/* Email capture */}
         <IntegrateForm />
 
+        {/* Path back into the product — don't end on a form */}
+        <p className="text-center text-sm text-ink-muted">
+          Want to see it work first?{" "}
+          <Link
+            href="/gauntlet"
+            className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80 transition-colors"
+          >
+            See it catch something →
+          </Link>
+        </p>
+
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border px-6 py-8 text-center">
-        <p className="text-xs text-ink-faint">
-          Open source ·{" "}
-          <a
-            href="https://github.com/udirobert/elcaro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-ink transition-colors underline underline-offset-2"
-          >
-            GitHub
-          </a>
-          {" "}· Live as a miner on{" "}
-          <a
-            href="https://telegraphprotocol.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-ink transition-colors underline underline-offset-2"
-          >
-            Telegraph Protocol
-          </a>
-        </p>
-      </footer>
+      {/* Shared chrome */}
+      <SiteFooter />
     </main>
   );
 }
