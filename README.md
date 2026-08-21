@@ -175,8 +175,12 @@ pre-commit install --hook-type pre-push
 - **Built with [Kiro](https://kiro.dev)** — spec-driven development throughout:
   steering files in `.kiro/steering/`, full requirements→design→tasks specs for
   each track in `.kiro/specs/` — and a guard **hook** (`.kiro/hooks/`) that
-  scans web content the Kiro agent retrieves through Elcaro before it can
-  influence the session. The agent that built the firewall is protected by it.
+  scans every URL the Kiro agent fetches through Elcaro before it can
+  influence the session. The hook fires as a `PostToolUse` / `askAgent` on
+  web fetches: the agent curls the miner, gets a verdict, and reports
+  `[ELCARO GUARD]` inline if risk ≥ 0.5. The agent that built the firewall
+  is protected by it. Test it: open this repo in Kiro and ask
+  *"Fetch https://elcaro.trustfall.xyz/specimen/raw and summarize it."*
 - **Live as a miner on [Telegraph Protocol](https://telegraphprotocol.com)**
   (Base Sepolia, miner id 8848) — agents route scans to Elcaro via standard API
   calls, paid per request in USDC via x402. Registered intents:

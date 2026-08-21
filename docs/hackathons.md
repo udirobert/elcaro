@@ -15,7 +15,7 @@ records the submission details for each.
 | Criterion | Pts | Position |
 |---|---|---|
 | Application Quality | 40 | Live product: deterministic engine, 70 tests, deployed at elcaro.trustfall.xyz with a real miner API — no mocked functionality. Product surface: scan playground with quarantine verdicts, the Gauntlet (one-click adversarial benchmark), shareable verdicts, live proof strip |
-| Kiro Usage | 20 | Entire codebase built spec-first: `.kiro/steering/` (4 steering docs) + `.kiro/specs/` (4 full requirements→design→task suites, incl. the guard-hook spec authored during the competition window) + a `PostToolUse` **hook** that scans agent-retrieved web content through Elcaro (dogfooding: the agent that built the firewall is guarded by it) + `.kiroignore` |
+| Kiro Usage | 20 | Entire codebase built spec-first: `.kiro/steering/` (4 steering docs) + `.kiro/specs/` (4 full requirements→design→task suites, incl. the guard-hook spec authored during the competition window) + a `PostToolUse` **hook** (`askAgent` on web fetches) that scans agent-retrieved content through Elcaro — dogfooding: the agent that built the firewall is guarded by it. Hook fires `[ELCARO GUARD]` 🚨 with risk score and technique breakdown inline. Verified E2E against `/specimen/raw`. + `.kiroignore` |
 | Documentation | 20 | Product-first README; this docs/ directory; self-hosting instructions |
 | Innovation & Potential | 15 | Novel category (agent runtime security), MITRE ATLAS mapping, live on-chain miner with paid demand |
 | Presentation | 5 | Demo video recorded against the live site (hero live-catch → Gauntlet volley with stamps → real-scan quarantine stamp → guard hook firing in the Kiro IDE) |
