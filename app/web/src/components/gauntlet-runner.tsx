@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { scanContent, isError } from "@/lib/api";
 import type { ScanResponse } from "@/lib/types";
 import { GAUNTLET_PAYLOADS } from "@/lib/gauntlet";
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 
 type Phase = "idle" | "running" | "done" | "error";
 
@@ -159,7 +160,10 @@ export function GauntletRunner() {
         )}
       </div>
 
-      {/* The board — every payload visible from the start; verdicts fill in */}
+      {/* Specimen stage — the payload on trial, presented large */}
+      <SpecimenStage entries={entries} phase={phase} runningIndex={runningIndex} />
+
+      {/* Ledger — the at-a-glance verdict summary */}
       <div className="rounded-2xl border border-border bg-surface divide-y divide-border overflow-hidden">
         {GAUNTLET_PAYLOADS.map((payload, i) => {
           const entry = entries.find((e) => e.id === payload.id);
@@ -312,6 +316,182 @@ export function GauntletRunner() {
                 Scan your own content
               </Link>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Specimen stage ─────────────────────────────────────────────────────────────
+//
+// The payload on trial, presented large: a dimensional card that enters with a
+// tilt, gets struck through and stamped QUARANTINED when caught (the UI
+// performs the arrest), and recedes into a ghost stack as the next specimen
+// comes forward. All framer-motion + CSS perspective — no WebGL, no new deps.
+
+function SpecimenStage({
+  entries,
+  phase,
+  runningIndex,
+}: {
+  entries: GauntletEntry[];
+  phase: Phase;
+  runningIndex: number;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  // The front card: the payload being fired, or the most recent verdict.
+  const displayIndex =
+    phase === "idle" ? 0 : runningIndex >= 0 ? runningIndex : entries.length - 1;
+  const front =
+    displayIndex >= 0 && displayIndex < GAUNTLET_PAYLOADS.length
+      ? GAUNTLET_PAYLOADS[displayIndex]
+      : null;
+  const frontEntry = front
+    ? entries.find((e) => e.id === front.id) ?? null
+    : null;
+  const isFrontRunning = phase === "running" && runningIndex === displayIndex;
+
+  // Ghost stack: up to three completed specimens receding behind the front card.
+  const ghostIds = new Set(
+    entries.slice(0, Math.max(displayIndex, 0)).map((e) => e.id).slice(-3)
+  );
+  const ghosts = entries.filter((e) => ghostIds.has(e.id));
+
+  const verdict: "caught" | "missed" | "clean" | "false-positive" | null =
+    frontEntry
+      ? frontEntry.isInjection
+        ? frontEntry.response.risk_score >= 0.5
+          ? "caught"
+          : "missed"
+        : frontEntry.response.risk_score < 0.5
+          ? "clean"
+          : "false-positive"
+      : null;
+
+  const STAMP_STYLES: Record<string, string> = {
+    caught: "border-dangerous text-dangerous bg-dangerous-bg/90",
+    missed: "border-suspicious text-suspicious bg-suspicious-bg/90",
+    clean: "border-safe text-safe bg-safe-bg/90",
+    "false-positive": "border-suspicious text-suspicious bg-suspicious-bg/90",
+  };
+  const STAMP_LABELS: Record<string, string> = {
+    caught: "Quarantined",
+    missed: "Missed",
+    clean: "Clean",
+    "false-positive": "Flagged",
+  };
+
+  return (
+    <div
+      className="relative h-64 sm:h-72"
+      style={{ perspective: 1200 }}
+      aria-live="polite"
+    >
+      {/* Ghost stack — completed specimens receding behind */}
+      {ghosts.map((ghost, i) => {
+        const depth = ghosts.length - i;
+        return (
+          <div
+            key={ghost.id}
+            className="absolute inset-0 rounded-2xl border border-border bg-surface"
+            style={{
+              transform: `translateY(${depth * 10}px) scale(${1 - depth * 0.04})`,
+              opacity: Math.max(0.15, 0.45 - depth * 0.1),
+            }}
+          />
+        );
+      })}
+
+      {/* Front specimen card */}
+      <AnimatePresence mode="wait">
+        {front && (
+          <motion.div
+            key={front.id}
+            className="absolute inset-0 rounded-2xl border border-border bg-surface p-6 sm:p-8 flex flex-col overflow-hidden"
+            style={{ transformPerspective: 1200 }}
+            initial={
+              reduceMotion
+                ? { opacity: 0 }
+                : { opacity: 0, rotateX: 14, y: 48, scale: 0.96 }
+            }
+            animate={
+              reduceMotion
+                ? { opacity: phase === "idle" ? 0.75 : 1 }
+                : {
+                    opacity: phase === "idle" ? 0.75 : 1,
+                    rotateX: 0,
+                    y: 0,
+                    scale: 1,
+                  }
+            }
+            exit={
+              reduceMotion
+                ? { opacity: 0 }
+                : { opacity: 0, y: -24, scale: 0.97 }
+            }
+            transition={
+              reduceMotion
+                ? { duration: 0.15 }
+                : { duration: 0.45, ease: EASE_OUT }
+            }
+          >
+            {/* Specimen header */}
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+                Specimen {front.letter} — {front.label}
+              </p>
+              <span className="text-[10px] font-mono text-ink-faint uppercase tracking-wide">
+                {front.content_type.replace(/_/g, " ")}
+              </span>
+            </div>
+
+            {/* The payload — struck through when caught */}
+            <div className="flex-1 flex items-center min-h-0">
+              <p
+                className={`font-mono text-sm sm:text-base leading-relaxed whitespace-pre-wrap max-w-2xl ${
+                  verdict === "caught"
+                    ? "text-ink-muted line-through decoration-dangerous/60 decoration-2"
+                    : "text-ink-muted"
+                }`}
+              >
+                {front.content}
+              </p>
+            </div>
+
+            {/* Scanning pulse while the payload is in flight */}
+            {isFrontRunning && (
+              <motion.div
+                className="absolute inset-0 rounded-2xl border-2 border-violet/40 pointer-events-none"
+                animate={{ opacity: [0.25, 0.7, 0.25] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              />
+            )}
+
+            {/* The stamp — the arrest, performed */}
+            {verdict && (
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                initial={
+                  reduceMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, scale: 2, rotate: -16 }
+                }
+                animate={
+                  reduceMotion
+                    ? { opacity: 1 }
+                    : { opacity: 1, scale: 1, rotate: -8 }
+                }
+                transition={reduceMotion ? { duration: 0.2 } : SPRING}
+              >
+                <span
+                  className={`px-5 py-2 rounded-lg border-2 text-sm font-black uppercase tracking-[0.2em] ${STAMP_STYLES[verdict]}`}
+                >
+                  {STAMP_LABELS[verdict]}
+                </span>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -89,6 +89,20 @@ body {
   animation: count-in 0.3s ease-out both;
 }
 
+/* Respect prefers-reduced-motion — a security tool animating hostile text
+   must never ignore the user's motion preference. Framer-motion animations
+   are guarded per-component via useReducedMotion; this covers the CSS
+   keyframe animations above. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-sweep,
+  .animate-fade-up,
+  .animate-breathe,
+  .animate-count-in,
+  .stagger-children > * {
+    animation: none !important;
+  }
+}
+
 /* Staggered children */
 .stagger-children > * {
   animation: fade-up 0.35s ease-out both;
