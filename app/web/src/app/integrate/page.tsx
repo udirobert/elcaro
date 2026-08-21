@@ -15,7 +15,11 @@ const CODE_API = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\
     "content_type": "email"
   }'`;
 
-const CODE_MIDDLEWARE = `from app.middleware import ElcaroMiddleware
+const CODE_MIDDLEWARE = `# NOTE: the Python SDK isn't on PyPI yet — these imports assume
+# you've cloned the repo so app/ and core/ are importable from your
+# project root (starter in app/middleware.py). To call Elcaro without
+# a repo checkout, use the Direct API in Option 01 instead.
+from app.middleware import ElcaroMiddleware
 from core import ContentType
 
 # Point at the live miner or run locally

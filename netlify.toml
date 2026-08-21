@@ -22,10 +22,45 @@
 # Redirect /api/* to Netlify Functions (handled by the Next.js plugin)
 # No manual redirect config needed — the plugin handles API routes.
 
-# Headers for security
+# ── Security headers ─────────────────────────────────────────────────────────
+# Applied to every response. For a security product these are load-bearing —
+# someone auditing Elcaro before adopting it will check them.
+
 [[headers]]
   for = "/*"
   [headers.values]
+    # Clickjacking — already set, kept
     X-Frame-Options = "DENY"
+
+    # MIME sniffing — already set, kept
     X-Content-Type-Options = "nosniff"
+
+    # Referrer — already set, kept
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # XSS filter (legacy browsers, belt-and-suspenders)
+    X-XSS-Protection = "1; mode=block"
+
+    # Permissions policy — disable browser features Elcaro never uses.
+    # camera/microphone/geolocation: none needed for a text-scanning tool.
+    # interest-cohort: opt out of FLoC/Topics API.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+    # Content Security Policy.
+    # default-src 'self': everything must originate here by default.
+    # script-src 'self' 'unsafe-inline': Next.js inline scripts (hydration)
+    #   require unsafe-inline; 'unsafe-eval' is NOT included.
+    # style-src 'self' 'unsafe-inline': Tailwind inlines critical CSS.
+    # img-src 'self' data: blob:: OG images, inline SVGs, scan-beam canvas.
+    # font-src 'self': Satoshi + JetBrains Mono are self-hosted (no CDN).
+    # connect-src 'self': /api/scan proxy, Netlify form submission.
+    # frame-ancestors 'none': belt-and-suspenders with X-Frame-Options.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+
+# Long-lived immutable cache for hashed Next.js static assets.
+# The /_next/static/ path contains content-hashed filenames — they can be
+# cached permanently because any change produces a new filename.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
