@@ -73,6 +73,16 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* Specimen marquee — one full-width loop of the duplicated content */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 45s linear infinite;
+}
+
 .animate-sweep {
   animation: sweep 1.2s ease-in-out;
 }
@@ -98,6 +108,7 @@ body {
   .animate-fade-up,
   .animate-breathe,
   .animate-count-in,
+  .animate-marquee,
   .stagger-children > * {
     animation: none !important;
   }
