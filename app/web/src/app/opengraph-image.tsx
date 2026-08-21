@@ -108,7 +108,7 @@ export default function OGImage() {
             margin: 0,
           }}
         >
-          See what your agent can&apos;t · github.com/udirobert/elcaro
+          oracle, reversed · github.com/udirobert/elcaro
         </p>
       </div>
     ),

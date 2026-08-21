@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useSyncExternalStore } from "react";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
-import { addToHistory } from "@/lib/history";
+import { addToHistory, getHistory } from "@/lib/history";
 import { ScanResult } from "./scan-result";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
@@ -14,6 +14,22 @@ import { ScanHistory } from "./scan-history";
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
+// A one-shot read of localStorage's initial state, exposed via
+// useSyncExternalStore so React handles the SSR/hydration mismatch (server
+// has no localStorage, so it renders the false/never-changes snapshot) without
+// a setState-in-effect. There's nothing to actually subscribe to — history
+// length is only re-checked when ScanForm's own state changes trigger a
+// re-render, so subscribe is a no-op.
+function subscribeNoop() {
+  return () => {};
+}
+function getIsFirstVisitSnapshot() {
+  return getHistory().length === 0;
+}
+function getIsFirstVisitServerSnapshot() {
+  return false;
+}
+
 export function ScanForm() {
   const [content, setContent] = useState("");
   const [contentType, setContentType] = useState<ContentType>("email");
@@ -21,8 +37,21 @@ export function ScanForm() {
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
+
+  // Was there any scan history at mount? Read via useSyncExternalStore so the
+  // SSR pass (no localStorage) and the hydrated client pass agree on a stable
+  // value without a setState-in-effect. Combined with `dismissedOnboarding`
+  // below so it disappears immediately on first interaction, not just once
+  // localStorage is next read.
+  const hadHistoryOnMount = useSyncExternalStore(
+    subscribeNoop,
+    getIsFirstVisitSnapshot,
+    getIsFirstVisitServerSnapshot
+  );
+  const isFirstVisit = hadHistoryOnMount && !dismissedOnboarding;
 
   const triggerShake = useCallback(async () => {
     await shakeControls.start({
@@ -34,6 +63,7 @@ export function ScanForm() {
   async function handleScan() {
     if (!content.trim()) return;
 
+    setDismissedOnboarding(true);
     setScanning(true);
     setResult(null);
     setError(null);
@@ -54,6 +84,7 @@ export function ScanForm() {
 
   function loadExample(index: number) {
     const example = EXAMPLES[index];
+    setDismissedOnboarding(true);
     setResult(null);
     setError(null);
     setContent("");
@@ -83,6 +114,31 @@ export function ScanForm() {
 
   return (
     <div className="space-y-6">
+      {/* First-visit onboarding — explains what to do, disappears after first use */}
+      <AnimatePresence>
+        {isFirstVisit && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink-muted leading-relaxed">
+              <span className="font-medium text-ink">
+                Paste content your agent would retrieve
+              </span>
+              {" "}— an email, a search result, a document — and Elcaro checks
+              it for hidden instructions before your agent would act on them.
+              Not sure what to try?{" "}
+              <span className="text-ink-faint">
+                Click one of the examples below.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* The content area */}
       <motion.div className="relative" animate={shakeControls}>
         {/* Scanning beam overlay */}
@@ -91,14 +147,17 @@ export function ScanForm() {
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            if (e.target.value.trim()) setDismissedOnboarding(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && e.metaKey && hasContent && !scanning) {
               e.preventDefault();
               handleScan();
             }
           }}
-          placeholder="Paste content here..."
+          placeholder="Paste content here — an email, search result, or document your agent would read..."
           className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet/50 focus:ring-1 focus:ring-violet/20 transition-all duration-200 placeholder:text-ink-faint"
           style={{ fontVariantLigatures: "none" }}
         />
@@ -142,22 +201,36 @@ export function ScanForm() {
       {/* Actions row */}
       <div className="flex items-center justify-between gap-4">
         {/* Examples */}
-        <div className="flex flex-wrap gap-1.5">
-          {EXAMPLES.map((example, i) => (
-            <motion.button
-              key={i}
-              onClick={() => loadExample(i)}
-              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
-                example.is_injection
-                  ? "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
-                  : "text-safe/70 bg-safe-bg hover:text-safe"
-              }`}
-              whileTap={{ scale: 0.92 }}
-              transition={SPRING}
-            >
-              {example.label}
-            </motion.button>
-          ))}
+        <div className="flex flex-col gap-1.5">
+          <AnimatePresence>
+            {isFirstVisit && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-[10px] text-ink-faint uppercase tracking-wide"
+              >
+                Try an example
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <div className="flex flex-wrap gap-1.5">
+            {EXAMPLES.map((example, i) => (
+              <motion.button
+                key={i}
+                onClick={() => loadExample(i)}
+                className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                  example.is_injection
+                    ? "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
+                    : "text-safe/70 bg-safe-bg hover:text-safe"
+                }`}
+                whileTap={{ scale: 0.92 }}
+                transition={SPRING}
+              >
+                {example.label}
+              </motion.button>
+            ))}
+          </div>
         </div>
 
         {/* Scan button */}

@@ -29,6 +29,58 @@ export default function HomePage() {
             Try a scan
             <span className="text-ink-faint">→</span>
           </Link>
+
+          {/* The name, explained — quiet, not a gimmick */}
+          <p className="text-xs text-ink-faint pt-2">
+            elcaro is{" "}
+            <em className="text-ink-muted not-italic font-medium">oracle</em>,
+            reversed. An oracle speaks the answer. Elcaro checks what was
+            whispered to the agent before it decides to believe it.
+          </p>
+        </div>
+      </section>
+
+      {/* Why now — the problem, with receipts, not just an assertion */}
+      <section className="border-t border-border px-6 py-16 bg-surface">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-xs text-ink-faint uppercase tracking-widest mb-8 text-center">
+            This already happened
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-8">
+            <div>
+              <p className="text-sm font-semibold text-ink mb-1.5">
+                EchoLeak — zero clicks required
+              </p>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                A single crafted email made Microsoft 365 Copilot exfiltrate
+                internal data with no user interaction.{" "}
+                <a
+                  href="https://nvd.nist.gov/vuln/detail/CVE-2025-32711"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ink-faint hover:text-violet underline underline-offset-2 transition-colors"
+                >
+                  CVE-2025-32711
+                </a>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-ink mb-1.5">
+                90+ organizations, one year
+              </p>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                CrowdStrike&apos;s 2026 threat report recorded prompt injection
+                incidents across 90+ organizations in 2025 — &quot;prompts are
+                the new malware.&quot;
+              </p>
+            </div>
+          </div>
+
+          <p className="text-sm text-ink-muted text-center mt-10 max-w-lg mx-auto leading-relaxed">
+            The model isn&apos;t the attack surface. The data your agent
+            reads is — and almost nothing scans it before the agent acts.
+          </p>
         </div>
       </section>
 
@@ -78,7 +130,16 @@ export default function HomePage() {
           >
             GitHub
           </a>
-          {" "}· Built for the Telegraph Protocol
+          {" "}· Live as a miner on{" "}
+          <a
+            href="https://telegraphprotocol.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-ink transition-colors underline underline-offset-2"
+          >
+            Telegraph Protocol
+          </a>
+          {" "}— every scan is a paid, on-chain signal
         </p>
       </footer>
     </main>
