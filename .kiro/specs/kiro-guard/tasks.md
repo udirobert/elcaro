@@ -43,10 +43,12 @@
   - Miner unreachable (`ELCARO_MINER_URL` pointing at a dead port) → exit 0
   - Malformed/empty STDIN → exit 0, no crash
 
-- [ ] **3.2 End-to-end in the Kiro IDE**
-  - Web fetch of https://elcaro.trustfall.xyz/specimen/raw (plain-text
-    Specimen Kit — readable by any HTTP client without JS rendering) →
-    hook fires, [ELCARO GUARD] warning appears in the session
+- [x] **3.2 End-to-end in the Kiro IDE**
+  - Web fetch of https://elcaro.trustfall.xyz/specimen/raw → askAgent hook
+    fires, Elcaro miner returns risk 1.00 / dangerous across all six
+    technique classes, [ELCARO GUARD] 🚨 warning appears in the session
+  - Hook: postToolUse / web / askAgent (runCommand disabled — python.org
+    Python 3.x on macOS ships without a CA bundle)
   - Capture screen recording for the demo video (the money shot)
 
 - [ ] **3.3 Documentation**
