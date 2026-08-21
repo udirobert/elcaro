@@ -130,6 +130,12 @@ def scan(text: str) -> dict | None:
     if not text.strip():
         return None
 
+    # Cap at 10 000 chars — enough to cover any injection payload while
+    # keeping the POST well within the miner's request-size limits.
+    # Injections that span beyond 10 KB are pathological; real payloads
+    # are tiny relative to the surrounding page content.
+    text = text[:10_000]
+
     miner_url = os.environ.get("ELCARO_MINER_URL", DEFAULT_MINER_URL).rstrip("/")
 
     # S310: only http(s) URLs may be opened. A file:// or custom scheme in
