@@ -14,20 +14,20 @@ records the submission details for each.
 
 | Criterion | Pts | Position |
 |---|---|---|
-| Application Quality | 40 | Live product: deterministic engine, 64 tests, deployed at elcaro.trustfall.xyz with a real miner API — no mocked functionality |
+| Application Quality | 40 | Live product: deterministic engine, 70 tests, deployed at elcaro.trustfall.xyz with a real miner API — no mocked functionality. Product surface: scan playground with quarantine verdicts, the Gauntlet (one-click adversarial benchmark), shareable verdicts, live proof strip |
 | Kiro Usage | 20 | Entire codebase built spec-first: `.kiro/steering/` (4 steering docs) + `.kiro/specs/` (4 full requirements→design→task suites, incl. the guard-hook spec authored during the competition window) + a `PostToolUse` **hook** that scans agent-retrieved web content through Elcaro (dogfooding: the agent that built the firewall is guarded by it) + `.kiroignore` |
 | Documentation | 20 | Product-first README; this docs/ directory; self-hosting instructions |
 | Innovation & Potential | 15 | Novel category (agent runtime security), MITRE ATLAS mapping, live on-chain miner with paid demand |
-| Presentation | 5 | Demo video recorded against the live site |
+| Presentation | 5 | Demo video recorded against the live site (hero live-catch → Gauntlet volley with stamps → real-scan quarantine stamp → guard hook firing in the Kiro IDE) |
 
 ### Submission checklist
 
 - [x] Public repo (github.com/udirobert/elcaro)
 - [x] `.kiro/` directory committed (4 specs incl. kiro-guard, steering, hooks, .kiroignore)
 - [x] VPS miner redeployed with current code (safe_content/quarantined fields live, 18/18 checks passed, on-chain YAML hash verified)
+- [x] Judges' path verified: live URL primary (elcaro.trustfall.xyz — custom domain live, Let's Encrypt cert provisioned, full `deploy/verify-live.sh` suite 21/21 passed including frontend proxy checks), self-host repo secondary
 - [ ] Demo video on YouTube (unlisted OK) — record against the live site; include the guard hook firing in the Kiro IDE
 - [ ] Google Form submitted before Aug 23 23:59 UTC
-- [ ] Judges' path verified: live URL primary, self-host repo secondary
 - [ ] E2E guard-hook check in the Kiro IDE (spec `.kiro/specs/kiro-guard/` task 3.2)
 
 ## Telegraph Protocol Hackathon — Season I

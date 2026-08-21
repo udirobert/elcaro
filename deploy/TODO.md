@@ -37,17 +37,19 @@ What changed (all additive, all reversible, nothing shared touched):
 
 Rollback steps and host specifics: `docs/ops.md` (local only, gitignored).
 
-## Step 2 — Frontend (Netlify)
+## Step 2 — Frontend (Netlify) ✅ DONE (Aug 21, 2026)
 
 > `netlify.toml` at the repo root is the real, committed deployment config —
-> base directory `app/web`, `@netlify/plugin-nextjs`. Not deployed yet:
-> `elcaro.trustfall.xyz` does not resolve.
+> base directory `app/web`, `@netlify/plugin-nextjs`.
 
-- [ ] Connect the GitHub repo to Netlify — it reads `netlify.toml` automatically
-- [ ] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Netlify env vars
-- [ ] Add `elcaro.trustfall.xyz` as a custom domain once the Netlify site exists,
-      then point it there at the registrar
-- [ ] Full E2E: `bash deploy/verify-live.sh`
+- [x] Connect the GitHub repo to Netlify — it reads `netlify.toml` automatically
+- [x] Set `ELCARO_MINER_URL=https://api.elcaro.trustfall.xyz` in Netlify env vars
+- [x] Add `elcaro.trustfall.xyz` as a custom domain (CNAME → `elcaro.netlify.app`,
+      registrar DNS at GoDaddy; Let's Encrypt cert provisioned automatically
+      after clicking "Verify DNS configuration")
+- [x] Full E2E: `bash deploy/verify-live.sh` — **21/21 passed** (miner + frontend
+      proxy + scan through the custom domain). Uptime monitoring
+      (`.github/workflows/uptime.yml`) covers both endpoints every 15 min.
 
 ## Step 3 — Register the miner on Telegraph ✅ DONE (Aug 20, 2026)
 

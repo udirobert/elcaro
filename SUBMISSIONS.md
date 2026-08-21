@@ -2,6 +2,9 @@
 
 > Track 1 & 2 open Aug 17, 2026. Track 3 opens after T1/T2 close (~Aug 31).
 > Log every submission, iteration, and result here.
+>
+> The Kiro "Ready, Spec, Ship" hackathon (deadline Aug 23, 2026) is tracked
+> separately in [docs/hackathons.md](docs/hackathons.md).
 
 ## Key dates
 

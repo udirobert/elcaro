@@ -43,8 +43,12 @@ via `@netlify/plugin-nextjs`.
 3. Site settings → Environment variables → add
    `ELCARO_MINER_URL` = `https://api.elcaro.trustfall.xyz`
 4. Site settings → Domain management → add custom domain: `elcaro.trustfall.xyz`
-   (not registered yet — needs a CNAME/A record at the registrar once the
-   Netlify site exists)
+
+**Live since Aug 21, 2026:** the site serves at
+[elcaro.trustfall.xyz](https://elcaro.trustfall.xyz) via a CNAME to
+`elcaro.netlify.app` (registrar DNS at GoDaddy) with an automatically
+provisioned Let's Encrypt certificate. Full suite `deploy/verify-live.sh`
+passes 21/21 including the frontend proxy checks.
 
 ## Miner API (VPS)
 
