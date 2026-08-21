@@ -88,7 +88,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
       {/* What to do about it — the remedy, the decision, and the path to
           automated protection. Answers "so what?" instead of stopping at
           the alarm. */}
-      <NextSteps result={result} />
+      <NextSteps result={result} content={content} />
     </div>
   );
 }

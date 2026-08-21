@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { RiskLevel, ScanResponse } from "@/lib/types";
+import { encodeVerdict } from "@/lib/share";
 
 interface NextStepsProps {
   result: ScanResponse;
+  content: string;
 }
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -45,10 +48,36 @@ const DECISION: Record<RiskLevel, { headline: string; actions: string[] }> = {
   },
 };
 
-export function NextSteps({ result }: NextStepsProps) {
+export function NextSteps({ result, content }: NextStepsProps) {
   const quarantined =
     result.quarantined ?? result.risk_score >= BLOCK_THRESHOLD;
   const decision = DECISION[result.risk_level];
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    // The verdict is encoded in the URL fragment — nothing is stored
+    // server-side. The disclosure below tells the user the link carries
+    // their pasted content.
+    const fragment = encodeVerdict({
+      content,
+      content_type: result.content_type,
+      response: result,
+      shared_at: Date.now(),
+    });
+    const url = `${window.location.origin}/scan#v=${fragment}`;
+    const text = `Elcaro verdict: ${result.risk_level} (risk ${result.risk_score.toFixed(2)}). See what the agent would receive:`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Elcaro scan verdict", text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // Share sheet dismissed — no-op
+    }
+  }
 
   return (
     <motion.div
@@ -104,6 +133,22 @@ export function NextSteps({ result }: NextStepsProps) {
         Don&apos;t just detect this — block it in your agent
         <span className="transition-transform group-hover:translate-x-0.5">→</span>
       </Link>
+
+      {/* Share — the verdict travels; the content travels with it (disclosed) */}
+      <div className="pt-1 border-t border-border">
+        <div className="flex items-center justify-between gap-4 flex-wrap pt-3">
+          <p className="text-[11px] text-ink-faint leading-relaxed max-w-sm">
+            Sharing encodes this scan in the link itself — nothing is stored on
+            any server. The link contains the pasted content.
+          </p>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-border text-ink-muted hover:text-ink hover:border-border-strong transition-colors shrink-0"
+          >
+            {copied ? "✓ Link copied" : "Share this verdict"}
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

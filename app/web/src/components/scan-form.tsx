@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, useSyncExternalStore } from "react";
+import { useState, useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
+import { decodeVerdict } from "@/lib/share";
 import { ScanResult } from "./scan-result";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
@@ -52,6 +53,26 @@ export function ScanForm() {
     getIsFirstVisitServerSnapshot
   );
   const isFirstVisit = hadHistoryOnMount && !dismissedOnboarding;
+
+  // Shared verdict — when the URL carries #v=<encoded>, render that scan
+  // instead of an empty form. Read once at mount: the fragment is replaced
+  // in the address bar so a refresh starts clean, and the shared content
+  // lands in the textarea for the visitor to poke at.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#v=")) return;
+
+    const shared = decodeVerdict(hash.slice(3));
+    if (!shared) return;
+
+    setContent(shared.content);
+    setContentType(shared.content_type);
+    setResult(shared.response);
+    setError(null);
+    setDismissedOnboarding(true);
+    // Drop the fragment so refreshing/re-scanning starts from a clean URL.
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   const triggerShake = useCallback(async () => {
     await shakeControls.start({

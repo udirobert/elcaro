@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveProofStrip } from "@/components/live-proof-strip";
 
 export default function HomePage() {
   return (
@@ -31,6 +32,13 @@ export default function HomePage() {
               <span className="text-ink-faint">→</span>
             </Link>
             <Link
+              href="/gauntlet"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet to-coral text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              Run the Gauntlet
+              <span className="text-canvas/60">→</span>
+            </Link>
+            <Link
               href="/integrate"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border text-sm font-semibold text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
             >
@@ -45,6 +53,9 @@ export default function HomePage() {
             reversed. An oracle speaks the answer. Elcaro checks what was
             whispered to the agent before it decides to believe it.
           </p>
+
+          {/* Live proof — real numbers from the production miner, or nothing */}
+          <LiveProofStrip />
         </div>
       </section>
 
@@ -123,6 +134,37 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Drinks its own medicine — the dogfooding story, quietly told */}
+      <section className="border-t border-border px-6 py-16 bg-surface">
+        <div className="max-w-2xl mx-auto text-center space-y-4">
+          <p className="text-xs text-ink-faint uppercase tracking-widest mb-2">
+            Drinks its own medicine
+          </p>
+          <p className="text-base text-ink-muted leading-relaxed max-w-lg mx-auto">
+            Elcaro was built spec-first in{" "}
+            <a
+              href="https://kiro.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink underline underline-offset-2 hover:text-violet transition-colors"
+            >
+              Kiro
+            </a>{" "}
+            — and a Kiro hook runs every web page the building agent retrieved
+            through Elcaro before the agent read it. The agent that built the
+            firewall is guarded by it.{" "}
+            <a
+              href="https://github.com/udirobert/elcaro/tree/main/.kiro/hooks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink-faint underline underline-offset-2 hover:text-ink transition-colors"
+            >
+              See the hook →
+            </a>
+          </p>
         </div>
       </section>
 
