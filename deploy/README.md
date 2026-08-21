@@ -91,6 +91,17 @@ pm2 start deploy/ecosystem.config.cjs && pm2 save
 
 `pm2 save` matters: without it a reboot restores the old bind address.
 
+### Update an existing deployment
+
+```bash
+bash deploy/update.sh
+```
+
+One command: records a rollback anchor, pulls, reinstalls deps, runs the test
+suite (a failure aborts **before** the restart, so a bad commit never reaches
+production), restarts, and smoke-checks `/health`. Rollback is printed at the
+top of every run: `git checkout <anchor> && pm2 restart elcaro-miner`.
+
 ### Ports
 
 | Port | Bound to | Exposure |
@@ -129,8 +140,8 @@ pm2 logs elcaro-miner
 # Restart
 pm2 restart elcaro-miner
 
-# Update code + restart
-cd ~/elcaro && git pull && .venv/bin/pip install -e ".[miner]" -q && pm2 restart elcaro-miner
+# Update code + restart (test-gated, with rollback anchor)
+bash deploy/update.sh
 
 # Check metrics
 curl http://127.0.0.1:8848/metrics
@@ -145,10 +156,14 @@ pm2 show elcaro-miner
 |---|---|
 | `ecosystem.config.cjs` | PM2 process config — binds `0.0.0.0:8848`, restart policy, memory limit |
 | `traefik-elcaro.yaml` | **Live ingress.** Install into Coolify's Traefik dynamic dir as `elcaro.yaml` |
+| `update.sh` | **Update path.** Test-gated deploy with rollback anchor and health smoke check |
 | `verify-live.sh` | Post-deploy smoke suite (18 checks, miner + frontend proxy) |
 | `pin-config.py` | Pins `miner/config.yaml` to IPFS via Pinata, returns the CID — not used for `miner/telegraph.yaml`, which is self-hosted instead (see `SUBMISSIONS.md`) |
 | `nginx.conf` | Legacy CDN-proxy model — **not used on this host** |
-| `setup.sh` | Legacy one-shot deploy — nginx steps **not used on this host** |
+
+Uptime monitoring: `.github/workflows/uptime.yml` polls the miner `/health` and
+the frontend every 15 minutes and fails the workflow on 2 consecutive misses
+(GitHub emails workflow-failure notifications to repo watchers).
 
 Frontend build config lives at the repo root: `netlify.toml`.
 

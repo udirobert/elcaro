@@ -1,0 +1,33 @@
+name: Uptime
+
+# Miner health check — the one catastrophic failure mode during hackathon
+# judging (Aug 24 – Sep 7, 2026) is the miner dying silently. This workflow
+# polls /health every 15 minutes and fails loudly on 2 consecutive misses,
+# which triggers a GitHub notification email to watchers of this repo.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  health:
+    name: Miner health check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check miner /health (2 attempts)
+        run: |
+          for i in 1 2; do
+            echo "Attempt $i..."
+            if curl -sf --max-time 15 https://api.elcaro.trustfall.xyz/health; then
+              echo "healthy"; exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Miner unhealthy: https://api.elcaro.trustfall.xyz/health failed twice in a row"
+          exit 1
+
+      - name: Check frontend
+        run: |
+          curl -sf --max-time 15 https://elcaro.trustfall.xyz/ > /dev/null \
+            || { echo "::warning::Frontend unreachable: https://elcaro.trustfall.xyz"; exit 1; }
