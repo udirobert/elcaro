@@ -3,8 +3,9 @@
   "hooks": [
     {
       "name": "Elcaro injection guard",
-      "description": "Scans web tool results for indirect prompt injection via the Elcaro miner. On detection, exits 1 with [ELCARO GUARD] on stderr — Kiro surfaces this to the agent.",
+      "description": "Scans web-fetched content for indirect prompt injection. Fires after any web tool use. Uses the Elcaro miner API to score the content and warns if risk >= 0.5.",
       "trigger": "PostToolUse",
+      "matcher": "web",
       "action": {
         "type": "command",
         "command": "python3 scripts/kiro-scan-hook.py",

@@ -2,19 +2,19 @@
 """Elcaro guard hook for Kiro — scan web tool results for prompt injection.
 
 Runs as a PostToolUse command hook (see .kiro/hooks/elcaro-guard.json).
-Reads the Kiro hook event JSON on STDIN, extracts the tool result text,
-and POSTs it to the Elcaro miner for an injection scan.
 
-Verdict behaviour (by design — see .kiro/specs/kiro-guard/design.md):
-    risk >= 0.5        -> exit 1, warning on STDERR (Kiro shows STDERR to
-                          the agent on hook failure, so the agent is told
-                          to distrust the retrieved content)
-    safe               -> exit 0, no output (silent pass)
-    miner unreachable  -> exit 0, no output (fail-open: the guard is an
-                          advisory layer; the middleware enforces)
+The Kiro IDE PostToolUse hook passes {hook_event_name, tool_name, tool_input,
+cwd, session_id} on STDIN — the tool *result* is not included. For web tool
+events we re-fetch the URL from tool_input so we can scan the actual content.
 
-Stdlib only: this runs in Kiro's hook execution context where the project
-venv is not guaranteed.
+Verdict behaviour (by design):
+    risk >= 0.5        -> exit 1, [ELCARO GUARD] on STDERR
+                          Kiro surfaces stderr to the agent on non-zero exit,
+                          so the agent is told to distrust the content.
+    safe / non-web     -> exit 0, silent pass
+    miner unreachable  -> exit 0, fail-open (advisory layer only)
+
+Stdlib only — runs outside the venv.
 """
 
 from __future__ import annotations
@@ -28,75 +28,30 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# Risk score at/above which the warning fires (mirrors core/quarantine.py).
 RISK_THRESHOLD = 0.5
-# The scan is a single small POST; anything beyond this is a dead miner.
 TIMEOUT_SECONDS = 10
 DEFAULT_MINER_URL = "https://api.elcaro.trustfall.xyz"
 
-# Candidate field names for the tool result text in a PostToolUse event.
-# The documented payload shows tool_name/tool_input; the result field name
-# is not exhaustively documented, so we try known candidates and fall back
-# to a deep search for the longest string value in the payload.
-RESULT_KEYS = ("tool_result", "tool_output", "result", "output", "content", "text")
+# URL field names we look for inside tool_input
+URL_KEYS = ("url", "uri", "link", "href", "address")
 
 
-def extract_result_text(event: dict) -> str:
-    """Defensively extract the tool result text from a hook event."""
-    if not isinstance(event, dict):
-        return ""
+def _ssl_context() -> ssl.SSLContext:
+    """Return a verified SSL context.
 
-    # Direct candidates first
-    for key in RESULT_KEYS:
-        value = event.get(key)
-        if isinstance(value, str) and value.strip():
-            return value
-
-    # Nested candidates (e.g. {"tool_result": {"text": "...", ...}})
-    for key in RESULT_KEYS:
-        value = event.get(key)
-        if isinstance(value, dict):
-            for subkey in ("text", "content", "body", "output"):
-                sub = value.get(subkey)
-                if isinstance(sub, str) and sub.strip():
-                    return sub
-
-    # Last resort: longest string value anywhere in the payload. Tool
-    # results dominate by size, so this is a reasonable heuristic when the
-    # schema is unknown. Capped to keep absurd payloads out of the scan.
-    best = ""
-    stack = [event]
-    while stack:
-        node = stack.pop()
-        if isinstance(node, dict):
-            stack.extend(node.values())
-        elif isinstance(node, list):
-            stack.extend(node)
-        elif isinstance(node, str) and len(node) > len(best):
-            best = node
-    return best[:100_000]
-
-
-def _ssl_context() -> ssl.SSLContext | None:
-    """Return an SSL context that can verify the Elcaro miner's certificate.
-
-    On macOS the python.org installer ships without its own CA bundle; we
-    try three sources in order of preference:
-      1. certifi (available in the venv, pip install certifi)
-      2. The macOS system keychain via `security` (no extra deps)
-      3. Default context (works on Linux / CI where the system bundle is present)
+    macOS python.org builds ship without a CA bundle. Try three sources:
+    1. certifi (if the venv is active)
+    2. macOS system keychain via /usr/bin/security
+    3. Default context (works on Linux / CI)
     """
-    # 1. certifi — best option when the venv is active
     try:
         import certifi  # type: ignore[import-untyped]
 
-        ctx = ssl.create_default_context(cafile=certifi.where())
-        return ctx
+        return ssl.create_default_context(cafile=certifi.where())
     except ImportError:
         pass
 
-    # 2. macOS system keychain — export roots on the fly into a temp bundle
-    _SECURITY = "/usr/bin/security"  # absolute path — avoids S607
+    _SECURITY = "/usr/bin/security"
     try:
         result = subprocess.run(  # noqa: S603
             [
@@ -115,36 +70,84 @@ def _ssl_context() -> ssl.SSLContext | None:
             with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as tmp:
                 tmp.write(result.stdout)
                 tmp.flush()
-                ctx = ssl.create_default_context(cafile=tmp.name)
-                return ctx
+                return ssl.create_default_context(cafile=tmp.name)
     except Exception as exc:  # noqa: BLE001
-        _ = exc  # keychain unavailable (non-macOS, permissions) — fall through
+        _ = exc
 
-    # 3. Default — works on Linux/CI
     return ssl.create_default_context()
 
 
+def _extract_url(event: dict) -> str | None:
+    """Pull the fetched URL out of tool_input."""
+    tool_input = event.get("tool_input")
+    if not isinstance(tool_input, dict):
+        # tool_input may be a plain string URL
+        if isinstance(tool_input, str) and tool_input.startswith(("http://", "https://")):
+            return tool_input
+        return None
+    for key in URL_KEYS:
+        val = tool_input.get(key)
+        if isinstance(val, str) and val.startswith(("http://", "https://")):
+            return val
+    return None
+
+
+def _fetch_url(url: str, ctx: ssl.SSLContext) -> str | None:
+    """Fetch the URL and return text content, or None on failure."""
+    req = urllib.request.Request(url, headers={"User-Agent": "ElcaroGuard/1.0"})  # noqa: S310
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS, context=ctx) as resp:  # noqa: S310
+            raw = resp.read()
+            # Try UTF-8 then latin-1 fallback
+            try:
+                return raw.decode("utf-8")
+            except UnicodeDecodeError:
+                return raw.decode("latin-1", errors="replace")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _extract_text_from_event(event: dict) -> str | None:
+    """Try to get content directly from the event payload (fallback for CLIs
+    or future IDE versions that do include tool_result in the payload)."""
+    for key in ("tool_result", "tool_output", "result", "output", "content", "text"):
+        val = event.get(key)
+        if isinstance(val, str) and val.strip():
+            return val
+        if isinstance(val, dict):
+            for sub in ("text", "content", "body", "output"):
+                s = val.get(sub)
+                if isinstance(s, str) and s.strip():
+                    return s
+    # Deep search — longest string in payload
+    best = ""
+    stack: list = [event]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            stack.extend(node)
+        elif isinstance(node, str) and len(node) > len(best):
+            best = node
+    return best if best.strip() else None
+
+
 def scan(text: str) -> dict | None:
-    """POST the text to the Elcaro miner. Returns the scan response, or
-    None on any infrastructure failure (unreachable, timeout, bad JSON)."""
+    """POST text to the Elcaro miner. Returns response dict or None on failure."""
     if not text.strip():
         return None
 
-    # Cap at 10 000 chars — enough to cover any injection payload while
-    # keeping the POST well within the miner's request-size limits.
-    # Injections that span beyond 10 KB are pathological; real payloads
-    # are tiny relative to the surrounding page content.
+    # Cap at 10 000 chars — covers all real injection payloads while keeping
+    # the POST within the miner's request-size limits.
     text = text[:10_000]
 
     miner_url = os.environ.get("ELCARO_MINER_URL", DEFAULT_MINER_URL).rstrip("/")
-
-    # S310: only http(s) URLs may be opened. A file:// or custom scheme in
-    # ELCARO_MINER_URL is treated as misconfiguration -> fail-open (no scan).
     if urllib.parse.urlparse(miner_url).scheme not in ("http", "https"):
         return None
 
     body = json.dumps({"content": text, "content_type": "webpage"}).encode()
-    request = urllib.request.Request(  # noqa: S310 — scheme validated above
+    req = urllib.request.Request(  # noqa: S310
         f"{miner_url}/scan",
         data=body,
         headers={"Content-Type": "application/json"},
@@ -152,23 +155,37 @@ def scan(text: str) -> dict | None:
     )
     ctx = _ssl_context()
     try:
-        # Scheme validated above (http/https only) — S310 audited and satisfied.
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=ctx) as response:  # noqa: S310
-            return json.loads(response.read().decode())
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS, context=ctx) as resp:  # noqa: S310
+            return json.loads(resp.read().decode())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
         return None
 
 
 def main() -> int:
+    raw_stdin = sys.stdin.read() or "{}"
     try:
-        event = json.loads(sys.stdin.read() or "{}")
+        event = json.loads(raw_stdin)
     except json.JSONDecodeError:
         event = {}
 
-    result = scan(extract_result_text(event))
+    ctx = _ssl_context()
+    content: str | None = None
+
+    # Primary: re-fetch the URL from tool_input (works when IDE omits tool_result)
+    url = _extract_url(event)
+    if url:
+        content = _fetch_url(url, ctx)
+
+    # Fallback: content was included in the payload directly
+    if not content:
+        content = _extract_text_from_event(event)
+
+    if not content:
+        return 0  # nothing to scan — fail open
+
+    result = scan(content)
     if result is None:
-        # Fail-open: advisory layer only, never brick the dev loop.
-        return 0
+        return 0  # miner unreachable — fail open
 
     risk = result.get("risk_score", 0.0)
     if risk >= RISK_THRESHOLD:
