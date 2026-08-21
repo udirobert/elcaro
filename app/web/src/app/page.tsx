@@ -22,13 +22,21 @@ export default function HomePage() {
           </p>
 
           {/* Single CTA */}
-          <Link
-            href="/scan"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
-          >
-            Try a scan
-            <span className="text-ink-faint">→</span>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/scan"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              Try a scan
+              <span className="text-ink-faint">→</span>
+            </Link>
+            <Link
+              href="/integrate"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border text-sm font-semibold text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
+            >
+              Add to your agent
+            </Link>
+          </div>
 
           {/* The name, explained — quiet, not a gimmick */}
           <p className="text-xs text-ink-faint pt-2">

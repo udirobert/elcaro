@@ -19,9 +19,15 @@ export default function ScanPage() {
         >
           elcaro
         </Link>
-        <span className="text-xs text-ink-faint font-mono">
-          v0.1
-        </span>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/integrate"
+            className="text-xs text-ink-faint hover:text-ink transition-colors"
+          >
+            Integrate
+          </Link>
+          <span className="text-xs text-ink-faint font-mono">v0.1</span>
+        </div>
       </header>
 
       {/* Main content — generous space, the textarea is the hero */}

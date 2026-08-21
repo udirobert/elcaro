@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--
+  Netlify form registration — do not delete.
+
+  Netlify detects forms by crawling static HTML at build time, but Next.js
+  renders forms in JavaScript. This file is the static mirror that registers
+  the form with Netlify's backend. The real form in
+  src/components/integrate-form.tsx posts to "/" with form-name=elcaro-waitlist,
+  which Netlify routes to this registered form.
+
+  Reference: https://docs.netlify.com/forms/setup/#javascript-forms
+-->
+<html>
+<body>
+  <form name="elcaro-waitlist" netlify netlify-honeypot="bot-field" hidden>
+    <input type="hidden" name="form-name" value="elcaro-waitlist" />
+    <input name="bot-field" />
+    <input type="email" name="email" />
+  </form>
+</body>
+</html>
