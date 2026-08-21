@@ -44,8 +44,9 @@
   - Malformed/empty STDIN → exit 0, no crash
 
 - [ ] **3.2 End-to-end in the Kiro IDE**
-  - Web fetch of a page containing a test injection string → hook fires,
-    warning appears in the session
+  - Web fetch of https://elcaro.trustfall.xyz/specimen (the Specimen Kit —
+    inert test payloads at a fixed URL) → hook fires, warning appears in
+    the session
   - Capture screen recording for the demo video (the money shot)
 
 - [ ] **3.3 Documentation**

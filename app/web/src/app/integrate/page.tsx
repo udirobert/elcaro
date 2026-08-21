@@ -138,6 +138,25 @@ export default function IntegratePage() {
           </div>
         </div>
 
+        {/* Test first — the Specimen Kit */}
+        <div className="rounded-xl border border-border bg-surface p-5 space-y-2">
+          <p className="text-sm font-semibold text-ink">
+            Test your defenses first
+          </p>
+          <p className="text-sm text-ink-muted leading-relaxed">
+            Point your agent — or a guard hook in your IDE — at the{" "}
+            <Link
+              href="/specimen"
+              className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80 transition-colors"
+            >
+              Specimen Kit
+            </Link>
+            : a page of harmless, clearly-marked injection specimens at a
+            fixed URL. Nothing on it is a real instruction; it exists to be
+            fetched, so you can watch detection fire end-to-end.
+          </p>
+        </div>
+
         {/* Option 1 — Direct API */}
         <Section number="01" title="Direct API call">
           <p className="text-sm text-ink-muted leading-relaxed">

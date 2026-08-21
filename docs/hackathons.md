@@ -28,7 +28,7 @@ records the submission details for each.
 - [x] Judges' path verified: live URL primary (elcaro.trustfall.xyz — custom domain live, Let's Encrypt cert provisioned, full `deploy/verify-live.sh` suite 21/21 passed including frontend proxy checks), self-host repo secondary
 - [ ] Demo video on YouTube (unlisted OK) — record against the live site; include the guard hook firing in the Kiro IDE
 - [ ] Google Form submitted before Aug 23 23:59 UTC
-- [ ] E2E guard-hook check in the Kiro IDE (spec `.kiro/specs/kiro-guard/` task 3.2)
+- [ ] E2E guard-hook check in the Kiro IDE — fetch https://elcaro.trustfall.xyz/specimen (spec `.kiro/specs/kiro-guard/` task 3.2)
 
 ## Telegraph Protocol Hackathon — Season I
 
