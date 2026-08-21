@@ -1,13 +1,13 @@
 {
   "name": "Debug hook payload capture",
   "version": "1.0.0",
-  "description": "Captures the raw postToolUse JSON payload to /tmp/kiro-hook-event.json for debugging. Remove after confirming field names.",
+  "description": "Captures stdin, argv, and hook-related env vars to /tmp/kiro-hook-event.json. Remove after confirming field names.",
   "when": {
     "type": "postToolUse",
     "toolTypes": ["*"]
   },
   "then": {
     "type": "runCommand",
-    "command": "python3 -c \"import sys, json; d=sys.stdin.read(); open('/tmp/kiro-hook-event.json','w').write(d); keys=list(json.loads(d).keys()) if d.strip() else []; print('HOOK_DEBUG keys:', keys)\""
+    "command": "python3 scripts/debug-hook-capture.py"
   }
 }
