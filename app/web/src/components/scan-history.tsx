@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { HistoryEntry } from "@/lib/history";
 import { getHistory, clearHistory } from "@/lib/history";
@@ -26,13 +26,39 @@ function timeAgo(timestamp: number): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export function ScanHistory({ onSelect, refreshKey }: ScanHistoryProps) {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [expanded, setExpanded] = useState(false);
+const EMPTY_HISTORY: HistoryEntry[] = [];
+function getServerSnapshot(): HistoryEntry[] {
+  return EMPTY_HISTORY;
+}
+function subscribeNoop() {
+  return () => {};
+}
 
-  useEffect(() => {
-    setHistory(getHistory());
-  }, [refreshKey]);
+export function ScanHistory({ onSelect, refreshKey }: ScanHistoryProps) {
+  // getHistory() allocates a new array every call, which would break
+  // useSyncExternalStore's requirement that the snapshot getter return an
+  // Object.is-equal reference across calls until the store actually changes
+  // (otherwise React assumes an infinite update loop and errors). The ref
+  // below caches the last read; `cacheKey` — refreshKey from the parent (bumped
+  // when a scan completes) combined with a local counter bumped on clear — is
+  // the only thing allowed to invalidate it, so identity stays stable across
+  // unrelated re-renders (e.g. `expanded` toggling) but updates exactly when
+  // the underlying data does.
+  const [clearCount, setClearCount] = useState(0);
+  const cacheKey = `${refreshKey}:${clearCount}`;
+  const cacheRef = useRef<{ key: string; data: HistoryEntry[] } | null>(null);
+
+  const history = useSyncExternalStore(
+    subscribeNoop,
+    () => {
+      if (!cacheRef.current || cacheRef.current.key !== cacheKey) {
+        cacheRef.current = { key: cacheKey, data: getHistory() };
+      }
+      return cacheRef.current.data;
+    },
+    getServerSnapshot
+  );
+  const [expanded, setExpanded] = useState(false);
 
   if (history.length === 0) return null;
 
@@ -90,7 +116,7 @@ export function ScanHistory({ onSelect, refreshKey }: ScanHistoryProps) {
             <button
               onClick={() => {
                 clearHistory();
-                setHistory([]);
+                setClearCount((n) => n + 1);
               }}
               className="mt-2 text-[10px] text-ink-faint hover:text-dangerous transition-colors"
             >

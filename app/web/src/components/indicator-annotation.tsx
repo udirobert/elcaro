@@ -48,20 +48,20 @@ export function IndicatorAnnotation({
       }}
       onClick={() => setExpanded(!expanded)}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         {/* Severity accent line */}
         <div
           className="w-1 shrink-0 rounded-full mt-0.5 transition-all duration-300"
           style={{
-            height: expanded ? "100%" : "2rem",
-            minHeight: "2rem",
+            height: expanded ? "100%" : "1.25rem",
+            minHeight: "1.25rem",
             backgroundColor: accentColor,
           }}
         />
 
-        <div className="space-y-2 min-w-0 flex-1">
+        <div className="space-y-1 min-w-0 flex-1 py-1">
           {/* Header row */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span
               className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${SEVERITY_BG[indicator.severity]}`}
               style={{ color: accentColor }}
@@ -79,8 +79,12 @@ export function IndicatorAnnotation({
             </span>
           </div>
 
-          {/* Explanation — always visible */}
-          <p className="text-sm text-ink-muted leading-relaxed">
+          {/* Explanation — clamped to one line when collapsed */}
+          <p
+            className={`text-sm text-ink-muted leading-relaxed ${
+              expanded ? "" : "line-clamp-1"
+            }`}
+          >
             {indicator.explanation}
           </p>
 

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import type { ScanResponse } from "@/lib/types";
-import { TECHNIQUE_LABELS } from "@/lib/constants";
 import { RiskMeter } from "./risk-meter";
 import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
@@ -15,57 +14,65 @@ interface ScanResultProps {
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 export function ScanResult({ result, content }: ScanResultProps) {
-  const isQuarantined = result.risk_score >= 0.5;
   const isSafe = result.risk_level === "safe";
+  const hasFindings = result.indicators.length > 0;
 
   return (
-    <div className="space-y-8">
-      {/* Risk meter */}
+    <div className="space-y-5">
+      {/* Risk meter — score, level, verdict, and latency in one row */}
       <RiskMeter
         score={result.risk_score}
         level={result.risk_level}
         latencyMs={result.latency_ms}
       />
 
-      {/* Summary */}
-      {result.summary && (
+      {/* Summary — the one sentence explanation, skipped when there's
+          nothing more specific to say than the risk level already shows */}
+      {result.summary && !isSafe && (
         <motion.p
           className="text-sm text-ink-muted leading-relaxed"
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.3, ease: EASE_OUT }}
+          transition={{ delay: 0.3, duration: 0.3, ease: EASE_OUT }}
         >
           {result.summary}
         </motion.p>
       )}
 
-      {/* Evidence — inline highlighting */}
-      {result.indicators.length > 0 && (
+      {/* Evidence — only shown for the safe case, where "we checked and found
+          nothing" is the useful signal. When there ARE findings, each one
+          already carries its own evidence snippet on expand below, so
+          repeating the full pasted content here would just duplicate the
+          textarea the user is already looking at. */}
+      {isSafe && (
         <motion.div
-          className="space-y-3"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.35, ease: EASE_OUT }}
+          transition={{ delay: 0.35, duration: 0.35, ease: EASE_OUT }}
         >
-          <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest">
-            Evidence
-          </p>
           <InlineHighlight content={content} indicators={result.indicators} />
         </motion.div>
       )}
 
-      {/* Indicators — threat cards */}
-      {result.indicators.length > 0 && (
+      {/* Findings — threat cards, collapsed by default; each expands to its
+          own evidence, TTPs, and remediation */}
+      {hasFindings && (
         <motion.div
-          className="space-y-3"
+          className="space-y-2"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.35, ease: EASE_OUT }}
+          transition={{ delay: 0.35, duration: 0.35, ease: EASE_OUT }}
         >
           <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest">
             Findings · {result.indicators.length}
           </p>
-          <div className="space-y-3">
+          <div
+            className={`space-y-1 ${
+              result.indicators.length > 4
+                ? "max-h-80 overflow-y-auto pr-1"
+                : ""
+            }`}
+          >
             {result.indicators.map((indicator, i) => (
               <IndicatorAnnotation
                 key={`${indicator.technique_name}-${i}`}
@@ -76,52 +83,6 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </div>
         </motion.div>
       )}
-
-      {/* Verdict */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.3, ease: EASE_OUT }}
-        className={`inline-flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-          isSafe
-            ? "bg-safe-bg"
-            : isQuarantined
-              ? "bg-dangerous-bg"
-              : "bg-suspicious-bg"
-        }`}
-      >
-        {/* Status icon with animation */}
-        <motion.span
-          className="text-xl"
-          initial={{ scale: 0, rotate: -90 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 0.7, type: "spring", stiffness: 300, damping: 20 }}
-        >
-          {isSafe ? "✓" : isQuarantined ? "◉" : "◬"}
-        </motion.span>
-        <div>
-          <p
-            className={`text-sm font-semibold ${
-              isSafe
-                ? "text-safe"
-                : isQuarantined
-                  ? "text-dangerous"
-                  : "text-suspicious"
-            }`}
-          >
-            {isSafe
-              ? "Safe to process"
-              : isQuarantined
-                ? "Quarantined"
-                : "Review recommended"}
-          </p>
-          <p className="text-xs text-ink-muted">
-            {isSafe
-              ? "No injection patterns found"
-              : `${result.flagged_techniques.map((t) => TECHNIQUE_LABELS[t] || t).join(", ")} detected`}
-          </p>
-        </div>
-      </motion.div>
     </div>
   );
 }

@@ -24,6 +24,15 @@ const LEVEL_BG: Record<RiskLevel, string> = {
   dangerous: "bg-dangerous-bg",
 };
 
+// What the level means for the caller, folded into the same badge as the
+// level itself rather than a second "verdict" block repeating it below.
+const LEVEL_ACTION: Record<RiskLevel, string> = {
+  safe: "safe to process",
+  low: "likely safe",
+  suspicious: "review recommended",
+  dangerous: "quarantined",
+};
+
 export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
   const motionScore = useMotionValue(0);
   const displayScore = useTransform(motionScore, (v) => v.toFixed(2));
@@ -47,14 +56,14 @@ export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
 
   return (
     <motion.div
-      className="flex items-baseline gap-4 flex-wrap"
+      className="flex items-baseline gap-3 flex-wrap"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Score — the hero number */}
       <motion.span
-        className="text-5xl sm:text-6xl font-black tracking-tight"
+        className="text-4xl sm:text-5xl font-black tracking-tight"
         style={{ color }}
         initial={{ scale: 0.7, opacity: 0, filter: "blur(8px)" }}
         animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
@@ -63,19 +72,20 @@ export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
         <motion.span>{displayScore}</motion.span>
       </motion.span>
 
-      {/* Level label */}
+      {/* Level + verdict — one badge, not two */}
       <motion.span
-        className={`text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${LEVEL_BG[level]}`}
+        className={`text-xs font-bold px-2.5 py-1 rounded-md ${LEVEL_BG[level]}`}
         style={{ color }}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.25, duration: 0.3 }}
       >
-        {level}
+        <span className="uppercase tracking-widest">{level}</span>
+        <span className="opacity-60 font-medium"> · {LEVEL_ACTION[level]}</span>
       </motion.span>
 
       {/* Bar */}
-      <div className="flex-1 max-w-48 h-1 rounded-full bg-border overflow-hidden self-center">
+      <div className="flex-1 min-w-16 max-w-40 h-1 rounded-full bg-border overflow-hidden self-center">
         <motion.div
           className="h-full rounded-full"
           style={{ backgroundColor: color }}
@@ -92,7 +102,7 @@ export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
         animate={{ opacity: showLatency ? 1 : 0 }}
         transition={{ duration: 0.3 }}
       >
-        {latencyMs}ms
+        {latencyMs > 0 ? `${latencyMs}ms` : "<1ms"}
       </motion.span>
     </motion.div>
   );
