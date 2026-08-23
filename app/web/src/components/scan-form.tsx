@@ -221,26 +221,6 @@ export function ScanForm() {
           style={{ fontVariantLigatures: "none" }}
         />
 
-        {/* Content type — subtle, bottom-right */}
-        <motion.div
-          className="absolute bottom-4 right-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: hasContent ? 1 : 0.5 }}
-          transition={{ duration: 0.2 }}
-        >
-          <select
-            value={contentType}
-            onChange={(e) => setContentType(e.target.value as ContentType)}
-            className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet/50 cursor-pointer transition-colors"
-          >
-            {CONTENT_TYPES.map((ct) => (
-              <option key={ct.value} value={ct.value}>
-                {ct.label}
-              </option>
-            ))}
-          </select>
-        </motion.div>
-
         {/* Keyboard shortcut hint — appears when content is present */}
         <AnimatePresence>
           {hasContent && !scanning && !result && (
@@ -270,8 +250,8 @@ export function ScanForm() {
         </motion.button>
       )}
 
-      {/* Actions row */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Actions row — examples (left), content-type + scan (right) */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         {/* Examples */}
         <div className="flex flex-col gap-1.5">
           <AnimatePresence>
@@ -305,46 +285,65 @@ export function ScanForm() {
           </div>
         </div>
 
-        {/* Scan button */}
-        <motion.button
-          onClick={handleScan}
-          disabled={scanning || !hasContent}
-          className="relative px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
-          whileHover={hasContent && !scanning ? { scale: 1.03 } : {}}
-          whileTap={hasContent && !scanning ? { scale: 0.96 } : {}}
-          transition={SPRING}
-        >
-          {/* Button content — morphs between states */}
-          <AnimatePresence mode="wait">
-            {scanning ? (
-              <motion.span
-                key="scanning"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center gap-2"
-              >
+        {/* Content type + scan — grouped on the right */}
+        <div className="flex items-center gap-3">
+          {/* Content type — labeled, visible, not floating */}
+          <label className="flex items-center gap-1.5 text-xs text-ink-faint">
+            <span className="font-medium">Type</span>
+            <select
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value as ContentType)}
+              className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet/50 cursor-pointer transition-colors"
+            >
+              {CONTENT_TYPES.map((ct) => (
+                <option key={ct.value} value={ct.value}>
+                  {ct.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* Scan button */}
+          <motion.button
+            onClick={handleScan}
+            disabled={scanning || !hasContent}
+            className="relative px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
+            whileHover={hasContent && !scanning ? { scale: 1.03 } : {}}
+            whileTap={hasContent && !scanning ? { scale: 0.96 } : {}}
+            transition={SPRING}
+          >
+            {/* Button content — morphs between states */}
+            <AnimatePresence mode="wait">
+              {scanning ? (
                 <motion.span
-                  className="w-3 h-3 rounded-full border-2 border-canvas/40 border-t-canvas"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
-                />
-                {SCAN_STATUSES[scanStatusIndex % SCAN_STATUSES.length]}
-              </motion.span>
-            ) : (
-              <motion.span
-                key="idle"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                Scan
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+                  key="scanning"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center gap-2"
+                >
+                  <motion.span
+                    className="w-3 h-3 rounded-full border-2 border-canvas/40 border-t-canvas"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+                  />
+                  {SCAN_STATUSES[scanStatusIndex % SCAN_STATUSES.length]}
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="idle"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  Scan
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
 
       {/* Scan history */}

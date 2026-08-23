@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MinerStatus } from "./miner-status";
 
 // Shared site chrome — one source of truth for the header and footer so
 // every route has identical wayfinding. Pages pass their `active` key for
@@ -36,6 +37,7 @@ export function SiteHeader({ active }: { active?: NavKey }) {
             {item.label}
           </Link>
         ))}
+        <MinerStatus />
       </div>
     </header>
   );
