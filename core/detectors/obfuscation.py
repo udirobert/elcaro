@@ -54,6 +54,47 @@ LEETSPEAK_IMPERATIVE_PATTERN = re.compile(
 # Must contain at least one digit to count as leetspeak (not plain English)
 LEETSPEAK_REQUIRES_DIGIT = re.compile(r"\d")
 
+# Translation indirection — routing instructions through a translation/interpretation
+# step to evade keyword filters.
+# Matches: "interpret the following in Spanish", "translate this to French and execute",
+#          "interpret the following as Base64 instructions", etc.
+# Does NOT match: "translate this document for me", "what language is this text?"
+TRANSLATION_INDIRECTION_PATTERN = re.compile(
+    r"\b(?:translate|interpret)\b.{0,30}\b(?:following|below|above|this)\b.{0,40}"
+    r"\b(?:in|as|to|into)\s+\w+.{0,60}"
+    r"\b(?:execute|run|perform|do|apply|eval|follow|obey|carry\s+out|act\s+on|process)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# Simpler form: "interpret the following in <language> and execute/run/..."
+# This catches cases where the imperative is embedded in the translation command itself
+TRANSLATION_INDIRECTION_SIMPLE_PATTERN = re.compile(
+    r"\b(?:translate|interpret)\s+(?:the\s+)?(?:following|this|below).{0,60}"
+    r"\b(?:and\s+(?:then\s+)?)?(?:execute|run|eval|apply|follow|obey|carry\s+out|act\s+on)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# Token splitting — imperative keywords split across string boundaries or by
+# interspersed characters, e.g. "r" + "u" + "n", "s-e-n-d", "e.x.e.c"
+# Matches quoted token concat: "r" + "u" + "n", 'e' + 'x' + 'e' + 'c'
+TOKEN_SPLIT_CONCAT_PATTERN = re.compile(
+    r"""(?:['"]\w+['"]\s*\+\s*){2,}['"]\w+['"]""",
+    re.IGNORECASE,
+)
+
+# Matches separator-split imperatives: s-e-n-d, e.x.e.c.u.t.e, r_u_n, i/g/n/o/r/e
+# Must be 3+ single chars (so "a-b-c" but not "hello-world")
+TOKEN_SPLIT_SEPARATOR_PATTERN = re.compile(
+    r"\b(?:[a-zA-Z][-._/\\|]){2,}[a-zA-Z]\b",
+    re.IGNORECASE,
+)
+
+# Imperative words that, when reconstructed from split tokens, are suspicious
+TOKEN_SPLIT_IMPERATIVES = frozenset(
+    "run exec execute send forward install delete reset approve grant"
+    " ignore disregard override sudo eval spawn call wipe remove".split()
+)
+
 # Mixed-script homoglyph detection (Latin + Cyrillic in same word)
 # Common homoglyphs: Cyrillic а е о р с у х (look like Latin a e o p c y x)
 HOMOGLYPH_CHARS = set("аеорсухАЕОРСУХіјѵѕ")  # Cyrillic + others that look Latin
@@ -182,6 +223,55 @@ class ObfuscationDetector(BaseDetector):
                     )
             except (UnicodeDecodeError, UnicodeEncodeError):
                 pass
+
+        # Translation indirection — instructions routed through a translate/interpret
+        # step to evade keyword filters; e.g. "interpret the following in Spanish and execute"
+        for pattern in (TRANSLATION_INDIRECTION_PATTERN, TRANSLATION_INDIRECTION_SIMPLE_PATTERN):
+            match = pattern.search(content)
+            if match:
+                indicators.append(
+                    self._make_indicator(
+                        technique_name="obfuscation:translation_indirection",
+                        confidence=0.65,
+                        matched_text=match.group(0),
+                        explanation=(
+                            f"Content instructs an agent to translate or interpret text "
+                            f"and then execute/follow the result in {content_type.value}. "
+                            f"Translation indirection routes injected instructions through "
+                            f"a language step to bypass keyword-based content filters."
+                        ),
+                        content=content,
+                        char_offset=match.start(),
+                    )
+                )
+                break  # Only fire once even if both patterns match
+
+        # Token splitting — imperative keywords split across string boundaries
+        # e.g. "r" + "u" + "n", "s-e-n-d", "e.x.e.c.u.t.e"
+        for pattern, label in (
+            (TOKEN_SPLIT_CONCAT_PATTERN, "string concatenation"),
+            (TOKEN_SPLIT_SEPARATOR_PATTERN, "separator-delimited chars"),
+        ):
+            for match in pattern.finditer(content):
+                matched_text = match.group(0)
+                # Reconstruct the word by stripping separators/quotes and joining
+                reconstructed = re.sub(r"""['".\-_/\\|+\s]""", "", matched_text).lower()
+                if any(imp in reconstructed for imp in TOKEN_SPLIT_IMPERATIVES):
+                    indicators.append(
+                        self._make_indicator(
+                            technique_name="obfuscation:token_splitting",
+                            confidence=0.7,
+                            matched_text=matched_text,
+                            explanation=(
+                                f"Imperative keyword appears to be split using {label} "
+                                f"in {content_type.value}: '{matched_text}' reconstructs "
+                                f"to '{reconstructed}'. Token splitting evades keyword "
+                                f"filters by fragmenting recognised command words."
+                            ),
+                            content=content,
+                            char_offset=match.start(),
+                        )
+                    )
 
         return indicators
 
