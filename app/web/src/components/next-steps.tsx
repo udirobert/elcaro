@@ -55,7 +55,25 @@ export function NextSteps({ result, content }: NextStepsProps) {
     result.quarantined ?? result.risk_score >= BLOCK_THRESHOLD;
   const decision = DECISION[result.risk_level];
   const [copied, setCopied] = useState(false);
+  const [copiedCurl, setCopiedCurl] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  // Copy as curl — the exact API call that produced this verdict, replayable
+  // in the user's terminal. Content is JSON-escaped into the body.
+  function handleCopyCurl() {
+    const body = JSON.stringify({
+      content,
+      content_type: result.content_type,
+    });
+    const cmd = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'`;
+    navigator.clipboard
+      .writeText(cmd)
+      .then(() => {
+        setCopiedCurl(true);
+        setTimeout(() => setCopiedCurl(false), 2000);
+      })
+      .catch(() => {});
+  }
 
   async function handleShare() {
     // The verdict is encoded in the URL fragment — nothing is stored
@@ -162,12 +180,20 @@ export function NextSteps({ result, content }: NextStepsProps) {
             Sharing encodes this scan in the link itself — nothing is stored on
             any server. The link contains the pasted content.
           </p>
-          <button
-            onClick={handleShare}
-            className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-border text-ink-muted hover:text-ink hover:border-border-strong transition-colors shrink-0"
-          >
-            {copied ? "✓ Link copied" : "Share this verdict"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleCopyCurl}
+              className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-border text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
+            >
+              {copiedCurl ? "✓ Copied" : "Copy as curl"}
+            </button>
+            <button
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-border text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
+            >
+              {copied ? "✓ Link copied" : "Share this verdict"}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

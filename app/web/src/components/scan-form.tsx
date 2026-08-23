@@ -15,6 +15,33 @@ import { ScanHistory } from "./scan-history";
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
+// Rotating status lines while a scan runs — one per detector concern, so the
+// wait reads as the six detector classes working (which is literally true).
+const SCAN_STATUSES = [
+  "Checking for forged authority…",
+  "Watching context boundaries…",
+  "Decoding obfuscation…",
+  "Reading the document edges…",
+];
+
+// Content-type whisper — the pasted shape suggests the provenance, which
+// sets risk weighting (one of the five integration rules on /integrate).
+function detectContentType(
+  content: string
+): { type: ContentType; label: string } | null {
+  if (/^\s*(from|to|subject|cc):/im.test(content)) {
+    return { type: "email", label: "Email" };
+  }
+  if (
+    /^\s*(def |class |import |from \w+ import|function |const |let |var |#!\/)/m.test(
+      content
+    )
+  ) {
+    return { type: "code", label: "Code" };
+  }
+  return null;
+}
+
 // A one-shot read of localStorage's initial state, exposed via
 // useSyncExternalStore so React handles the SSR/hydration mismatch (server
 // has no localStorage, so it renders the false/never-changes snapshot) without
@@ -39,6 +66,7 @@ export function ScanForm() {
   const [error, setError] = useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
+  const [scanStatusIndex, setScanStatusIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
 
@@ -133,6 +161,16 @@ export function ScanForm() {
 
   const hasContent = content.trim().length > 0;
 
+  // Rotating scan status — cycles the detector-concern lines while scanning.
+  useEffect(() => {
+    if (!scanning) return;
+    setScanStatusIndex(0);
+    const interval = setInterval(() => setScanStatusIndex((i) => i + 1), 700);
+    return () => clearInterval(interval);
+  }, [scanning]);
+
+  const suggestion = hasContent ? detectContentType(content) : null;
+
   return (
     <div className="space-y-6">
       {/* First-visit onboarding — explains what to do, disappears after first use */}
@@ -219,6 +257,19 @@ export function ScanForm() {
         </AnimatePresence>
       </motion.div>
 
+      {/* Content-type whisper — suggests provenance from the pasted shape */}
+      {suggestion && suggestion.type !== contentType && (
+        <motion.button
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => setContentType(suggestion.type)}
+          className="text-xs text-violet font-medium hover:text-violet/80 transition-colors"
+        >
+          {suggestion.label} detected — scan as{" "}
+          {suggestion.label.toLowerCase()}?
+        </motion.button>
+      )}
+
       {/* Actions row */}
       <div className="flex items-center justify-between gap-4">
         {/* Examples */}
@@ -279,7 +330,7 @@ export function ScanForm() {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
                 />
-                Scanning
+                {SCAN_STATUSES[scanStatusIndex % SCAN_STATUSES.length]}
               </motion.span>
             ) : (
               <motion.span

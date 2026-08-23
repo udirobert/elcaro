@@ -36,7 +36,6 @@ export function SiteHeader({ active }: { active?: NavKey }) {
             {item.label}
           </Link>
         ))}
-        <span className="text-xs text-ink-faint font-mono">v0.1</span>
       </div>
     </header>
   );

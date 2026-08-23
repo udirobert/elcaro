@@ -72,13 +72,27 @@ export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
         <motion.span>{displayScore}</motion.span>
       </motion.span>
 
-      {/* Level + verdict — one badge, not two */}
+      {/* Level + verdict — one badge, not two. The safe case gets a quiet
+          scale-in "clean" moment: scanning your own content is often an
+          anxious act, and the good outcome deserves a beat of recognition. */}
       <motion.span
         className={`text-xs font-bold px-2.5 py-1 rounded-md ${LEVEL_BG[level]}`}
         style={{ color }}
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.25, duration: 0.3 }}
+        initial={
+          level === "safe"
+            ? { opacity: 0, scale: 1.6 }
+            : { opacity: 0, x: -8 }
+        }
+        animate={
+          level === "safe"
+            ? { opacity: 1, scale: 1 }
+            : { opacity: 1, x: 0 }
+        }
+        transition={{
+          delay: 0.25,
+          duration: level === "safe" ? 0.45 : 0.3,
+          ease: [0.16, 1, 0.3, 1],
+        }}
       >
         <span className="uppercase tracking-widest">{level}</span>
         <span className="opacity-60 font-medium"> · {LEVEL_ACTION[level]}</span>

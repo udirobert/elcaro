@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { ScanResponse } from "@/lib/types";
 import { RiskMeter } from "./risk-meter";
@@ -17,6 +18,25 @@ const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 export function ScanResult({ result, content }: ScanResultProps) {
   const isSafe = result.risk_level === "safe";
   const hasFindings = result.indicators.length > 0;
+
+  // Expanded-finding state lives here (not per-card) so an expand-all
+  // control can drive every card at once.
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  function toggleExpanded(index: number) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
+
+  const allExpanded =
+    hasFindings && expandedIds.size === result.indicators.length;
 
   return (
     <div className="space-y-5">
@@ -79,9 +99,26 @@ export function ScanResult({ result, content }: ScanResultProps) {
                 key={`${indicator.technique_name}-${i}`}
                 indicator={indicator}
                 index={i}
+                expanded={expandedIds.has(i)}
+                onToggle={() => toggleExpanded(i)}
               />
             ))}
           </div>
+          {/* Expand-all — for the reviewer with eight indicators */}
+          {result.indicators.length > 1 && (
+            <button
+              onClick={() =>
+                setExpandedIds(
+                  allExpanded
+                    ? new Set()
+                    : new Set(result.indicators.map((_, i) => i))
+                )
+              }
+              className="text-xs text-ink-faint hover:text-ink transition-colors"
+            >
+              {allExpanded ? "Collapse all" : "Expand all"}
+            </button>
+          )}
         </motion.div>
       )}
 

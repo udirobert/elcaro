@@ -6,6 +6,7 @@ import Link from "next/link";
 import { scanContent, isError } from "@/lib/api";
 import type { ScanResponse } from "@/lib/types";
 import { GAUNTLET_PAYLOADS } from "@/lib/gauntlet";
+import { markGauntletRun } from "@/lib/journey";
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
@@ -85,6 +86,9 @@ export function GauntletRunner() {
 
     setRunningIndex(-1);
     setPhase("done");
+    // Mark the journey so the homepage closing CTA adapts to suggest scanning
+    // the visitor's own content next, rather than re-pitching the Gauntlet.
+    markGauntletRun();
   }
 
   function verdictText(): string {
@@ -199,6 +203,9 @@ export function GauntletRunner() {
                 </span>
                 <span className="hidden sm:inline text-xs text-ink-faint ml-2">
                   — {payload.note}
+                </span>
+                <span className="hidden sm:inline-block text-[10px] font-mono text-ink-faint ml-2 px-1.5 py-0.5 rounded bg-canvas border border-border">
+                  {payload.content_type.replace("_", " ")}
                 </span>
               </div>
 
