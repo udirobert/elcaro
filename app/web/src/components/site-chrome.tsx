@@ -63,7 +63,6 @@ export function SiteFooter() {
         >
           Telegraph Protocol
         </a>
-        {" "}— every scan is a paid, on-chain signal
       </p>
     </footer>
   );

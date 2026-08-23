@@ -73,6 +73,45 @@ export default function HomePage() {
       {/* Specimen marquee — the threats, ambient */}
       <SpecimenMarquee />
 
+      {/* Why now — the problem, with receipts */}
+      <section className="px-6 py-16 bg-surface">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-8">
+            <div>
+              <p className="text-sm font-semibold text-ink mb-1.5">
+                EchoLeak — zero clicks required
+              </p>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                A single crafted email made Microsoft 365 Copilot exfiltrate
+                internal data with no user interaction.{" "}
+                <a
+                  href="https://nvd.nist.gov/vuln/detail/CVE-2025-32711"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ink-faint hover:text-violet underline underline-offset-2 transition-colors"
+                >
+                  CVE-2025-32711
+                </a>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-ink mb-1.5">
+                90+ organizations, one year
+              </p>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                CrowdStrike&apos;s 2026 threat report recorded prompt injection
+                incidents across 90+ organizations in 2025 — &quot;prompts are
+                the new malware.&quot;
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-ink-muted text-center mt-10 max-w-lg mx-auto leading-relaxed">
+            The model isn&apos;t the attack surface. The data your agent
+            reads is — and almost nothing scans it before the agent acts.
+          </p>
+        </div>
+      </section>
+
       {/* The technique taxonomy — compact grid, expand on interest */}
       <section className="border-t border-border px-6 py-20">
         <div className="max-w-2xl mx-auto">
