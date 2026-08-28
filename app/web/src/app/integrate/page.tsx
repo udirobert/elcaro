@@ -6,7 +6,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 export const metadata: Metadata = {
   title: "Integrate",
   description:
-    "Add Elcaro to your agent's retrieval pipeline. Direct API, Python middleware, or Telegraph routing — five lines of code.",
+    "Add Elcaro to your agent's retrieval pipeline. Direct API, MCP tools, Python middleware, or Telegraph routing — five lines of code.",
 };
 
 const CODE_API = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\
@@ -49,6 +49,18 @@ x-payment: <x402 USDC payment>
   "payload": {
     "content": "<retrieved content>",
     "content_type": "email"
+  }
+}`;
+
+const CODE_MCP = `// claude_desktop_config.json (or your MCP client's equivalent)
+{
+  "mcpServers": {
+    "elcaro": {
+      "command": "python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/path/to/elcaro-checkout",
+      "env": { "ELCARO_MCP_LOCAL": "1" }
+    }
   }
 }`;
 
@@ -250,8 +262,48 @@ export default function IntegratePage() {
           <CodeBlock code={CODE_TELEGRAPH} language="http" />
         </Section>
 
+        {/* Option 4 — MCP server */}
+        <Section number="04" title="Via MCP (agent frameworks)">
+          <p className="text-sm text-ink-muted leading-relaxed">
+            If your agent runs in an MCP-compatible framework — Claude
+            Desktop, Cursor, Kiro, or any MCP client — run Elcaro as a local
+            tool server and the agent gets two tools:{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              scan_content
+            </code>{" "}
+            (scan retrieved content before processing it) and{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              explain_verdict
+            </code>{" "}
+            (turn a verdict into a recommended action). Requires{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              {'pip install "mcp>=2"'}
+            </code>{" "}
+            and a repo checkout. Source in{" "}
+            <a
+              href="https://github.com/udirobert/elcaro/blob/main/app/mcp_server.py"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-ink transition-colors"
+            >
+              app/mcp_server.py
+            </a>
+            .
+          </p>
+          <CodeBlock code={CODE_MCP} language="json" />
+          <p className="text-xs text-ink-faint leading-relaxed">
+            By default the server calls the production miner — scanned content
+            leaves your machine. Set{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              ELCARO_MCP_LOCAL=1
+            </code>{" "}
+            (as above) to run the detection engine in-process instead: no
+            network calls, nothing leaves the machine.
+          </p>
+        </Section>
+
         {/* Best practices */}
-        <Section number="04" title="Five rules for safe agent pipelines">
+        <Section number="05" title="Five rules for safe agent pipelines">
           <div className="space-y-0 divide-y divide-border">
             {PRINCIPLES.map((p, i) => (
               <div key={i} className="py-4 grid grid-cols-[1fr_1.4fr] gap-8 items-start">

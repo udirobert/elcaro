@@ -1,0 +1,22 @@
+# Elcaro
+
+> Elcaro detects indirect prompt injection — hidden instructions inside content that AI agents retrieve (emails, search results, web pages, code, documents) — before the agent processes them. Stateless API, verdicts in milliseconds, no account or API key.
+
+Every scan returns a structured verdict: risk score, risk level, the techniques detected (with evidence, confidence, and MITRE ATLAS mappings), and `safe_content` — what the agent should process instead of the raw content when a scan is quarantined. Quarantine doctrine: block at risk >= 0.5, human review from 0.3, never pass 0.7+.
+
+## Scan API
+
+- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message", "deep_analysis"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, safe_content, quarantined, latency_ms}`. CORS-open.
+- [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
+
+## Tools for agents
+
+- [MCP server](https://github.com/udirobert/elcaro/blob/main/app/mcp_server.py): Run locally for the MCP tools `scan_content` and `explain_verdict` over stdio: `python -m app.mcp_server` (requires `pip install "mcp>=2"`; set `ELCARO_MCP_LOCAL=1` for fully local, network-free scanning).
+- [Specimen kit (raw text)](https://elcaro.trustfall.xyz/specimen/raw): Inert, clearly-marked injection specimens as plain UTF-8 — the "EICAR file" for prompt injection. Fetch it to test any detection pipeline end-to-end. Nothing on it is a real instruction; if an agent follows the specimens, that is the vulnerability being demonstrated.
+- [Integration guide](https://elcaro.trustfall.xyz/integrate): Direct API, MCP, Python middleware, and Telegraph Protocol routing, plus five rules for safe agent pipelines.
+
+## Docs
+
+- [README](https://github.com/udirobert/elcaro/blob/main/README.md): What Elcaro is, quickstart, an example verdict.
+- [Technique reference](https://github.com/udirobert/elcaro/blob/main/docs/technique-reference.md): The six injection classes detected — authority framing, delimiter confusion, task reframing, obfuscation, placement salience, conditional triggers.
+- [UX audit — adaptive & agentic lenses](https://github.com/udirobert/elcaro/blob/main/docs/ux-audit.md): How this product designs for agents as first-class users.
