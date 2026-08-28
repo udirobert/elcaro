@@ -129,7 +129,7 @@ def main() -> None:
     else:
         issues = fetch_issues(args.repo)
         candidates = [
-            {**parse_report_body(i.get("body", "")), "issue": i["number"]}
+            {**parsed, "issue": i["number"]}
             for i in issues
             if (parsed := parse_report_body(i.get("body", "")))
         ]

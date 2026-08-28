@@ -4,7 +4,8 @@ export type ContentType =
   | "webpage"
   | "document"
   | "code"
-  | "chat_message";
+  | "chat_message"
+  | "system_prompt";
 
 export type RiskLevel = "safe" | "low" | "suspicious" | "dangerous";
 
