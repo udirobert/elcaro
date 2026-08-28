@@ -119,3 +119,20 @@ def test_human_summary_not_blocked_register():
     summary = build_human_summary(0.35, RiskLevel.LOW, [], "webpage", False)
     assert "this web page" in summary
     assert "nothing that needs blocking" in summary
+
+
+def test_human_summary_appends_content_type_guidance():
+    """Blocked summaries end with type-specific actionable guidance (R8)."""
+    from core.quarantine import build_human_summary
+
+    email_summary = build_human_summary(
+        0.95, RiskLevel.DANGEROUS, ["authority_framing"], "email", True
+    )
+    assert email_summary.endswith("verify with the sender through a separate channel.")
+
+    code_summary = build_human_summary(0.9, RiskLevel.DANGEROUS, ["obfuscation"], "code", True)
+    assert "Don't execute it" in code_summary
+
+    # The safe register stays calm — no guidance clause.
+    safe_summary = build_human_summary(0.02, RiskLevel.SAFE, [], "email", False)
+    assert "verify with the sender" not in safe_summary

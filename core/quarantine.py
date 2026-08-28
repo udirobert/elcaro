@@ -61,6 +61,27 @@ _TECHNIQUE_EXPLANATIONS = {
 
 _FALLBACK_EXPLANATION = "it contains patterns associated with hidden agent instructions"
 
+# Per-content-type actionable guidance, appended to the blocked summary only.
+# The safe register stays calm; the blocked register tells the user what to do
+# next, in terms specific to what was blocked (docs/ux-audit.md, R8).
+_CONTENT_GUIDANCE = {
+    "email": (
+        "If you're expecting instructions, verify with the sender through a separate channel."
+    ),
+    "search_result": (
+        "The source may be compromised, not just this snippet — "
+        "don't trust further results from it unchecked."
+    ),
+    "webpage": (
+        "The page may be tampered with; don't follow instructions embedded anywhere in it."
+    ),
+    "document": (
+        "Treat embedded instructions as untrusted until the document's provenance is verified."
+    ),
+    "code": "Don't execute it; review the diff before running anything sourced from it.",
+    "chat_message": "Treat the message as untrusted input, not a legitimate command.",
+}
+
 
 def _value(x: object) -> str:
     return x.value if isinstance(x, Enum) else str(x)
@@ -106,11 +127,15 @@ def build_human_summary(
         first = technique_values[0]
         template = _TECHNIQUE_EXPLANATIONS.get(first, _FALLBACK_EXPLANATION)
         why = template.format(desc=desc)
-    return (
+    summary = (
         f"Elcaro blocked {desc}: {why} "
         f"(risk {score:.2f} — {level_value}). "
         "The original content was withheld from your agent."
     )
+    guidance = _CONTENT_GUIDANCE.get(_value(content_type))
+    if guidance:
+        summary = f"{summary} {guidance}"
+    return summary
 
 
 def build_quarantine_notice(

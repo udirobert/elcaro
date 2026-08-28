@@ -54,7 +54,7 @@ agent can quote back to you verbatim:
     }
   ],
   "latency_ms": 2,
-  "human_summary": "Elcaro blocked this email: it pretends to be a system or administrator message — real system instructions can't legitimately arrive inside this email (risk 0.95 — dangerous). The original content was withheld from your agent.",
+  "human_summary": "Elcaro blocked this email: it pretends to be a system or administrator message — real system instructions can't legitimately arrive inside this email (risk 0.95 — dangerous). The original content was withheld from your agent. If you're expecting instructions, verify with the sender through a separate channel.",
   "safe_content": "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. Risk score: 0.95, level: dangerous. Flagged techniques: authority_framing. Original content withheld from agent. Tell your user: \"Elcaro blocked this email: it pretends to be a system or administrator message — real system instructions can't legitimately arrive inside this email (risk 0.95 — dangerous). The original content was withheld from your agent.\"]",
   "quarantined": true
 }
