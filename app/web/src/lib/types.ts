@@ -57,6 +57,12 @@ export interface ScanResponse {
   // from older miners and stale localStorage history predate these fields.
   safe_content?: string;
   quarantined?: boolean;
+  // Relay contract (what the agent should quote to its user) and verdict
+  // signing (present when the miner has ELCARO_SIGNING_KEY configured).
+  human_summary?: string;
+  scanned_at?: number;
+  signature?: string;
+  key_id?: string;
 }
 
 export interface ScanRequest {

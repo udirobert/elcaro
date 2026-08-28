@@ -85,6 +85,10 @@ const PRINCIPLES = [
     rule: "Log every quarantined result.",
     why: "The flagged_techniques and indicators fields are structured and machine-readable. Log them — they're the audit trail that proves your agent was protected.",
   },
+  {
+    rule: "Verify signed verdicts — in-band notices are display text.",
+    why: "The quarantine notice is text inside the agent's input, and an attacker who knows the format can fake it. When the miner sets ELCARO_SIGNING_KEY, verdicts carry an Ed25519 signature: fetch GET /pubkey and verify offline, or POST the verdict to /verify.",
+  },
 ];
 
 function CodeBlock({ code, language = "bash" }: { code: string; language?: string }) {
@@ -303,7 +307,7 @@ export default function IntegratePage() {
         </Section>
 
         {/* Best practices */}
-        <Section number="05" title="Five rules for safe agent pipelines">
+        <Section number="05" title="Six rules for safe agent pipelines">
           <div className="space-y-0 divide-y divide-border">
             {PRINCIPLES.map((p, i) => (
               <div key={i} className="py-4 grid grid-cols-[1fr_1.4fr] gap-8 items-start">

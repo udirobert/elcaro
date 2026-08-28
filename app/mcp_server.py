@@ -61,7 +61,8 @@ DECISIONS: dict[str, dict[str, Any]] = {
         "headline": "Block it — this content should not reach your agent.",
         "recommended_steps": [
             "Process safe_content (the quarantine notice) instead of the original content",
-            "Tell your user the content was blocked, and why",
+            "Tell your user the content was blocked, and why — quote the "
+            "verdict's human_summary field verbatim",
             "Alert your team, with this verdict as the evidence",
         ],
     },

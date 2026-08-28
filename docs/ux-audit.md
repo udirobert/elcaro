@@ -1,6 +1,6 @@
 # UX Audit — Adaptive & Agentic Lenses
 
-> Date: 2026-08-28 · Status: audit complete. R1 (MCP server, `app/mcp_server.py`) and R2 (agent-legible layer, `app/web/public/llms.txt`) are implemented; the rest of §6 remains proposal.
+> Date: 2026-08-28 · Status: audit complete. R1 (MCP server), R2 (agent-legible layer), R3 (relay contract — `human_summary` + two-register quarantine notice), and R5 (signed verdicts — `core/signing.py`, `GET /pubkey`, `POST /verify`) are implemented; the rest of §6 remains proposal.
 > Scope: the whole product surface — web app (`app/web`), miner API, Python middleware (`app/middleware.py`), quarantine policy (`core/quarantine.py`), Kiro guard hook (`.kiro/hooks/`) — audited through two lenses:
 >
 > - **Adaptive UX** — the interface responds to who the user is, what they've done, and the current risk state.

@@ -16,6 +16,8 @@ Endpoints:
     GET  /             — API info / miner metadata
     GET  /metrics      — observability: request counts, latency, error rate
     GET  /telegraph.yaml — raw registration config, served byte-for-byte
+    GET  /pubkey       — verdict-signing public key (404 when running unsigned)
+    POST /verify       — verify a signed verdict against this miner's key
 """
 
 from __future__ import annotations
@@ -28,8 +30,15 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
+from core.signing import (
+    VerdictSigner,
+    canonical_verdict_payload,
+    sha256_hex,
+    verify_verdict,
+)
 
 # ── App ─────────────────────────────────────────────────────────────────────────
 
@@ -160,6 +169,58 @@ MINER_INFO = {
 
 _engine = IpiDetectionEngine()
 
+# ── Verdict signing (optional — unsigned when ELCARO_SIGNING_KEY is unset) ──────
+#
+# Verdicts are signed because the quarantine notice is in-band text — and
+# in-band text is spoofable (docs/ux-audit.md, BG4). A malformed key raises
+# at boot: security configuration fails loud, never silently.
+_signer = VerdictSigner.from_env()
+
+if _signer is not None:
+    MINER_INFO["signing"] = {
+        "algorithm": "ed25519",
+        "key_id": _signer.key_id,
+        "pubkey_url": "/pubkey",
+    }
+
+
+def _sign_response(content: str, result: ScanResponse) -> ScanResponse:
+    """Stamp the scan time; sign the canonical payload when a key is configured.
+
+    Signs the ROUNDED score that appears in the response, and the content's
+    SHA-256 — never the content itself (the miner stays stateless).
+    """
+    result.scanned_at = int(time.time())
+    if _signer is not None:
+        payload = canonical_verdict_payload(
+            content_sha256=sha256_hex(content),
+            risk_score=result.risk_score,
+            risk_level=result.risk_level.value,
+            quarantined=result.quarantined,
+            flagged_techniques=[t.value for t in result.flagged_techniques],
+            scanned_at=result.scanned_at,
+        )
+        result.signature = _signer.sign(payload)
+        result.key_id = _signer.key_id
+    return result
+
+
+class VerifyRequest(BaseModel):
+    """A verdict to verify against this miner's signing key.
+
+    Carries the content (hashed client-side here, never stored) plus the
+    response fields that went into the canonical payload.
+    """
+
+    content: str = Field(..., description="The content that was scanned")
+    risk_score: float
+    risk_level: str
+    quarantined: bool
+    flagged_techniques: list[str] = Field(default_factory=list)
+    scanned_at: int
+    signature: str = Field(..., description="The verdict's hex Ed25519 signature")
+
+
 # ── Endpoints ───────────────────────────────────────────────────────────────────
 
 
@@ -223,7 +284,7 @@ async def scan(request: ScanRequest) -> ScanResponse:
     """
     result = _engine.scan(request)
     _metrics.record_scan(result)
-    return result
+    return _sign_response(request.content, result)
 
 
 @app.post("/v1/infer", response_model=ScanResponse)
@@ -235,7 +296,60 @@ async def infer(request: ScanRequest) -> ScanResponse:
     """
     result = _engine.scan(request)
     _metrics.record_scan(result)
-    return result
+    return _sign_response(request.content, result)
+
+
+@app.get("/pubkey")
+async def pubkey():
+    """The public half of this miner's verdict-signing key.
+
+    Fetch once, cache, and verify verdicts offline — the trust anchor for
+    signed verdicts. 404 when the miner runs unsigned (no ELCARO_SIGNING_KEY).
+    """
+    if _signer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This miner does not sign verdicts (ELCARO_SIGNING_KEY not set).",
+        )
+    return {
+        "algorithm": "ed25519",
+        "key_id": _signer.key_id,
+        "public_key": _signer.public_key_hex,
+        "payload_format": "canonical JSON, sorted keys — see core/signing.py",
+    }
+
+
+@app.post("/verify")
+async def verify(request: VerifyRequest):
+    """Verify a signed verdict against this miner's key.
+
+    Recomputes the canonical payload (content is hashed, never stored) and
+    checks the Ed25519 signature. For offline verification, use GET /pubkey
+    with any Ed25519 library instead.
+    """
+    if _signer is None:
+        raise HTTPException(
+            status_code=503,
+            detail="This miner does not sign verdicts (ELCARO_SIGNING_KEY not set).",
+        )
+    payload = canonical_verdict_payload(
+        content_sha256=sha256_hex(request.content),
+        risk_score=request.risk_score,
+        risk_level=request.risk_level,
+        quarantined=request.quarantined,
+        flagged_techniques=request.flagged_techniques,
+        scanned_at=request.scanned_at,
+    )
+    valid = verify_verdict(payload, request.signature, _signer.public_key_hex)
+    return {
+        "valid": valid,
+        "key_id": _signer.key_id,
+        "detail": (
+            "Signature matches this miner's key."
+            if valid
+            else "Signature does not match — the verdict was altered, or signed by a different key."
+        ),
+    }
 
 
 # ── Run ─────────────────────────────────────────────────────────────────────────

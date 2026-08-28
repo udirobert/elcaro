@@ -30,6 +30,9 @@ async def test_scan_quarantines_injection():
     assert verdict["quarantined"] is True
     assert "QUARANTINED" in verdict["safe_content"]
     assert verdict["indicators"], "expected at least one evidenced finding"
+    # The relay contract rides along in every verdict (R3).
+    assert verdict["human_summary"]
+    assert "Tell your user:" in verdict["safe_content"]
 
 
 async def test_scan_passes_clean_content_through():

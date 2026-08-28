@@ -23,8 +23,9 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 ## What you get back
 
 Every scan returns a structured verdict — not just "dangerous", but *why*,
-with evidence, severity, TTP mappings, remediation guidance, and the exact
-content your agent should receive instead:
+with evidence, severity, TTP mappings, remediation guidance, the exact
+content your agent should receive instead, and a plain-language summary your
+agent can quote back to you verbatim:
 
 ```json
 {
@@ -53,7 +54,8 @@ content your agent should receive instead:
     }
   ],
   "latency_ms": 2,
-  "safe_content": "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. Risk score: 0.95, level: dangerous. Flagged techniques: authority_framing. Original content withheld from agent.]",
+  "human_summary": "Elcaro blocked this email: it pretends to be a system or administrator message — real system instructions can't legitimately arrive inside this email (risk 0.95 — dangerous). The original content was withheld from your agent.",
+  "safe_content": "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. Risk score: 0.95, level: dangerous. Flagged techniques: authority_framing. Original content withheld from agent. Tell your user: \"Elcaro blocked this email: it pretends to be a system or administrator message — real system instructions can't legitimately arrive inside this email (risk 0.95 — dangerous). The original content was withheld from your agent.\"]",
   "quarantined": true
 }
 ```
@@ -63,6 +65,15 @@ original when below the quarantine threshold, the quarantine notice replacing
 it at/above 0.5. `quarantined` is the block/flag decision. Both are computed
 once by the engine (`core/quarantine.py`) so the API, the middleware, and the
 web playground always agree.
+
+`human_summary` is the relay contract: one or two plain-language sentences the
+agent can quote to you word-for-word when you ask why something was blocked.
+
+And because in-band text can be forged — an attacker can write a fake
+"quarantine notice" into a page — the miner can sign every verdict (Ed25519,
+`ELCARO_SIGNING_KEY`). Verify offline against `GET /pubkey`, or POST the
+verdict to `/verify`. The bracketed notice is display text; the signature is
+the trust signal.
 
 ---
 

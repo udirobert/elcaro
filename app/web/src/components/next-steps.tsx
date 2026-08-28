@@ -113,6 +113,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
           What your agent would receive
         </p>
         {quarantined ? (
+          <>
           <div className="relative rounded-xl bg-dangerous-bg border border-dangerous/20 p-4 font-mono text-xs leading-relaxed text-dangerous/90">
             {result.safe_content ??
               "Quarantined — the original content is withheld and replaced with a structured notice."}
@@ -135,6 +136,18 @@ export function NextSteps({ result, content }: NextStepsProps) {
               Quarantined
             </motion.span>
           </div>
+          {/* The relay contract, made visible: the human register pulled out
+              of the bracketed notice — the sentence the agent should quote
+              verbatim when its user asks why content was blocked */}
+          {result.human_summary && (
+            <p className="mt-2 text-xs text-ink-muted leading-relaxed">
+              <span className="font-semibold text-ink">
+                What your agent should tell you:
+              </span>{" "}
+              “{result.human_summary}”
+            </p>
+          )}
+          </>
         ) : (
           <div className="rounded-xl bg-surface border border-border p-4 text-sm text-ink-muted leading-relaxed">
             Passes through unchanged — the score is below the 0.5 quarantine
