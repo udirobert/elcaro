@@ -223,6 +223,14 @@ class ScanResponse(BaseModel):
         default=None,
         description="Processing latency in milliseconds",
     )
+    human_summary: str = Field(
+        default="",
+        description=(
+            "One or two plain-language sentences the consuming agent can quote "
+            "verbatim to its user — the relay contract (docs/ux-audit.md, "
+            "principle 6). Written for someone who didn't run the scan."
+        ),
+    )
     safe_content: str = Field(
         default="",
         description=(
@@ -234,4 +242,21 @@ class ScanResponse(BaseModel):
     quarantined: bool = Field(
         default=False,
         description="Whether risk_score met or exceeded the quarantine threshold (0.5)",
+    )
+    scanned_at: int | None = Field(
+        default=None,
+        description="Unix timestamp of the scan. Set by the miner API; part of the signed payload.",
+    )
+    signature: str | None = Field(
+        default=None,
+        description=(
+            "Ed25519 signature (hex) over the canonical verdict payload — present "
+            "when the miner has ELCARO_SIGNING_KEY configured (core/signing.py). "
+            "Verify against GET /pubkey or POST /verify. Absent means unsigned, "
+            "not invalid."
+        ),
+    )
+    key_id: str | None = Field(
+        default=None,
+        description="Short fingerprint of the signing key, so verifiers know which key signed.",
     )

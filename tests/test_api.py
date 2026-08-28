@@ -210,3 +210,98 @@ def test_telegraph_yaml_is_valid_yaml(client):
     parsed = yaml.safe_load(response.content)
     assert parsed["slug"] == "elcaro-ipi-detection"
     assert parsed["endpoints"][0]["path"] == "/scan"
+
+
+# ── Verdict signing (R5) ────────────────────────────────────────────────────────
+#
+# The default test app runs unsigned (no ELCARO_SIGNING_KEY in the env), so
+# _signer is None. Signed-mode tests monkeypatch miner.api._signer with a
+# deterministic test key — the endpoints read the module global at request
+# time, so the swap works with the shared app.
+
+TEST_SIGNING_KEY = "01" * 32
+
+
+def test_scan_is_unsigned_by_default(client):
+    """No signing key configured → signature fields null, but scanned_at set."""
+    body = client.post("/scan", json=DANGEROUS_PAYLOAD).json()
+    assert body["signature"] is None
+    assert body["key_id"] is None
+    assert isinstance(body["scanned_at"], int)
+
+
+def test_pubkey_404_when_unsigned(client):
+    assert client.get("/pubkey").status_code == 404
+
+
+def test_verify_503_when_unsigned(client):
+    response = client.post(
+        "/verify",
+        json={
+            "content": "x",
+            "risk_score": 0.5,
+            "risk_level": "suspicious",
+            "quarantined": True,
+            "flagged_techniques": [],
+            "scanned_at": 1724870400,
+            "signature": "ab" * 64,
+        },
+    )
+    assert response.status_code == 503
+
+
+def test_signed_scan_verifies_roundtrip(client, monkeypatch):
+    from core.signing import VerdictSigner
+
+    monkeypatch.setattr("miner.api._signer", VerdictSigner(TEST_SIGNING_KEY))
+
+    scan = client.post("/scan", json=DANGEROUS_PAYLOAD).json()
+    assert scan["signature"] and scan["key_id"]
+
+    verification = client.post(
+        "/verify",
+        json={
+            "content": DANGEROUS_PAYLOAD["content"],
+            "risk_score": scan["risk_score"],
+            "risk_level": scan["risk_level"],
+            "quarantined": scan["quarantined"],
+            "flagged_techniques": scan["flagged_techniques"],
+            "scanned_at": scan["scanned_at"],
+            "signature": scan["signature"],
+        },
+    ).json()
+    assert verification["valid"] is True
+    assert verification["key_id"] == scan["key_id"]
+
+
+def test_verify_rejects_tampered_verdict(client, monkeypatch):
+    """A forged 'safe' verdict over quarantined content must not verify."""
+    from core.signing import VerdictSigner
+
+    monkeypatch.setattr("miner.api._signer", VerdictSigner(TEST_SIGNING_KEY))
+
+    scan = client.post("/scan", json=DANGEROUS_PAYLOAD).json()
+    verification = client.post(
+        "/verify",
+        json={
+            "content": DANGEROUS_PAYLOAD["content"],
+            "risk_score": 0.01,  # tampered: attacker claims the scan was clean
+            "risk_level": "safe",
+            "quarantined": False,
+            "flagged_techniques": scan["flagged_techniques"],
+            "scanned_at": scan["scanned_at"],
+            "signature": scan["signature"],
+        },
+    ).json()
+    assert verification["valid"] is False
+
+
+def test_pubkey_served_when_signed(client, monkeypatch):
+    from core.signing import VerdictSigner
+
+    monkeypatch.setattr("miner.api._signer", VerdictSigner(TEST_SIGNING_KEY))
+
+    body = client.get("/pubkey").json()
+    assert body["algorithm"] == "ed25519"
+    assert body["key_id"] == VerdictSigner(TEST_SIGNING_KEY).key_id
+    assert len(body["public_key"]) == 64  # 32 bytes, hex

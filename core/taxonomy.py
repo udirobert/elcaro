@@ -120,6 +120,10 @@ class IpiDetectionEngine:
                 latency_ms=int((time.monotonic() - start_time) * 1000),
                 safe_content=content,
                 quarantined=False,
+                human_summary=(
+                    "Elcaro treats this system prompt as trusted and skips "
+                    "scanning it (risk 0.00 — safe)."
+                ),
             )
 
         # Run all detectors
@@ -172,9 +176,10 @@ class IpiDetectionEngine:
 
         # Apply the quarantine policy (core/quarantine.py) so every consumer
         # of ScanResponse sees the same safe_content the middleware would
-        # substitute — single source of truth.
-        safe_content, quarantined = quarantine_decision(
-            content, weighted_score, risk_level, flagged_classes
+        # substitute, and the same human_summary the agent should relay —
+        # single source of truth.
+        decision = quarantine_decision(
+            content, weighted_score, risk_level, flagged_classes, content_type
         )
 
         return ScanResponse(
@@ -186,8 +191,9 @@ class IpiDetectionEngine:
             content_type=content_type,
             deep_analysis_used=deep_analysis_used,
             latency_ms=latency_ms,
-            safe_content=safe_content,
-            quarantined=quarantined,
+            safe_content=decision.safe_content,
+            quarantined=decision.quarantined,
+            human_summary=decision.human_summary,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:
