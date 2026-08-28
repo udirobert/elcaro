@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { IntegrateForm } from "@/components/integrate-form";
+import { ThresholdReplay } from "@/components/threshold-replay";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 
 export const metadata: Metadata = {
@@ -321,6 +322,9 @@ export default function IntegratePage() {
             ))}
           </div>
         </Section>
+
+        {/* Threshold replay — feel the doctrine on your own scans (R7) */}
+        <ThresholdReplay />
 
         {/* Email capture */}
         <IntegrateForm />

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import type { RiskLevel, ScanResponse } from "@/lib/types";
 import { encodeVerdict } from "@/lib/share";
+import { buildVerdictReport, type ReportLabel } from "@/lib/report";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 
@@ -56,6 +57,8 @@ export function NextSteps({ result, content }: NextStepsProps) {
   const decision = DECISION[result.risk_level];
   const [copied, setCopied] = useState(false);
   const [copiedCurl, setCopiedCurl] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
   const reduceMotion = useReducedMotion();
 
   // Copy as curl — the exact API call that produced this verdict, replayable
@@ -98,6 +101,22 @@ export function NextSteps({ result, content }: NextStepsProps) {
     } catch {
       // Share sheet dismissed — no-op
     }
+  }
+
+  // Correction surface (R4): file a labeled verdict report. The miner stays
+  // stateless, so the report is a GitHub issue — the body is copied to the
+  // clipboard and the issue page opens prefilled. Content travels only
+  // because the user chose to report it (same disclosure as Share).
+  async function handleReport(label: ReportLabel) {
+    const report = await buildVerdictReport(result, content, label);
+    try {
+      await navigator.clipboard.writeText(report.body);
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2500);
+    } catch {
+      // clipboard blocked — the issue page still opens; user pastes manually
+    }
+    window.open(report.url, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -208,6 +227,54 @@ export function NextSteps({ result, content }: NextStepsProps) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Correction surface — a detector that can't be told it's wrong can't
+          stay calibrated. Reports route to a GitHub issue (stateless) and
+          feed eval via scripts/ingest_verdict_reports.py. */}
+      <div className="pt-1 border-t border-border">
+        <div className="flex items-center justify-between gap-4 flex-wrap pt-3">
+          <p className="text-[11px] text-ink-faint leading-relaxed max-w-sm">
+            Wrong verdict? Report it — the report opens a GitHub issue and the
+            body is copied to your clipboard (it includes the pasted content).
+            Labeled reports become eval test cases.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setReportOpen((v) => !v)}
+              className="text-xs text-ink-faint hover:text-ink transition-colors"
+              aria-expanded={reportOpen}
+            >
+              {reportOpen ? "Cancel" : "Report this verdict"}
+            </button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {reportOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-2 pt-3">
+                <button
+                  onClick={() => handleReport("missed")}
+                  className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-dangerous/30 text-dangerous hover:bg-dangerous-bg/50 transition-colors"
+                >
+                  {reportCopied ? "✓ Copied — paste in the issue" : "Missed it"}
+                </button>
+                <button
+                  onClick={() => handleReport("over-flagged")}
+                  className="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-border text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
+                >
+                  {reportCopied ? "✓ Copied — paste in the issue" : "Over-flagged"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
