@@ -114,7 +114,13 @@ async def _scan_remote(
     content_type: ContentType,
     deep_analysis: bool,
 ) -> ScanResponse:
-    """Call a miner API — same contract as app/middleware.py."""
+    """Call a miner /scan endpoint.
+
+    Sends the content_type and deep_analysis fields; omits the optional
+    `context` field that app/middleware.py forwards (informational only —
+    the miner's ScanRequest accepts both). Same /scan route, same
+    ScanResponse contract.
+    """
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
             f"{miner_url.rstrip('/')}/scan",

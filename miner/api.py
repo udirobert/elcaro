@@ -151,6 +151,7 @@ MINER_INFO = {
         "document",
         "webpage",
         "chat_message",
+        "system_prompt",
     ],
 }
 

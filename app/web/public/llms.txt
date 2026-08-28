@@ -6,7 +6,7 @@ Every scan returns a structured verdict: risk score, risk level, the techniques 
 
 ## Scan API
 
-- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message", "deep_analysis"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, safe_content, quarantined, latency_ms}`. CORS-open.
+- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, safe_content, quarantined, latency_ms}`. CORS-open.
 - [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
 
 ## Tools for agents
