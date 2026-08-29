@@ -140,6 +140,12 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--generate", action="store_true", help="Print test cases as JSON")
     group.add_argument("--run", action="store_true", help="Run against an LLM")
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Completions per case (the decision rule calls for >= 3 per model)",
+    )
     args = parser.parse_args()
 
     if args.generate:
@@ -159,7 +165,10 @@ def main() -> None:
 
     base_url = os.environ.get("ELCARO_LLM_BASE_URL", "https://api.openai.com/v1")
     model = os.environ.get("ELCARO_LLM_MODEL", "gpt-4o-mini")
-    results = asyncio.run(run_experiment(api_key, base_url, model))
+    results = []
+    for run in range(max(1, args.repeat)):
+        run_results = asyncio.run(run_experiment(api_key, base_url, model))
+        results.extend({**r, "model": model, "run": run} for r in run_results)
 
     for pos in ("prefix", "suffix", "sandwich"):
         subset = [r for r in results if r["position"] == pos]

@@ -48,12 +48,18 @@ explicitly authorized), which would flatten or invert the ordering.
 ## Running it
 
 ```bash
+# One command for the full decision-rule study (3 models x 3 repeats):
+# requires ELCARO_LLM_API_KEY in the environment (see .env.example).
+./scripts/run_salience_study.sh
+
+# Or drive it manually:
+
 # Inspect the generated cases without an LLM:
 python scripts/warn_salience_experiment.py --generate > cases.json
 
 # Run against an OpenAI-compatible endpoint (same ELCARO_LLM_* env as the
-# deep-analysis classifier):
-ELCARO_LLM_API_KEY=... python scripts/warn_salience_experiment.py --run
+# deep-analysis classifier); --repeat N satisfies the >= 3 runs rule:
+ELCARO_LLM_API_KEY=... python scripts/warn_salience_experiment.py --run --repeat 3
 ```
 
 ## Reading the results

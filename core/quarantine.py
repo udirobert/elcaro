@@ -25,6 +25,8 @@ from core.schemas import RiskLevel
 
 # Content at/above this score is quarantined. Matches the doctrine documented
 # on the /integrate page (>= 0.5 block, >= 0.3 flag).
+# COUPLED CONSTANT: app/web/src/lib/history.ts (QUARANTINE_THRESHOLD) must
+# stay in sync — the web surfaces compute "quarantined" from this same line.
 DEFAULT_RISK_THRESHOLD = 0.5
 
 QUARANTINE_MESSAGE = (

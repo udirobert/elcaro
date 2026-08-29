@@ -16,6 +16,8 @@ const MAX_ENTRIES = 50;
 
 // The quarantine doctrine (docs/ux-audit.md): a verdict at or above this score
 // is quarantined. Shared so every surface computes "quarantined" identically.
+// COUPLED CONSTANT: core/quarantine.py (DEFAULT_RISK_THRESHOLD) must stay in
+// sync — the server computes the actual quarantine decision from that line.
 export const QUARANTINE_THRESHOLD = 0.5;
 
 export function getHistory(): HistoryEntry[] {
