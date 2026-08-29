@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import type { HistoryEntry } from "@/lib/history";
-import { getHistory, clearHistory } from "@/lib/history";
+import { getHistory, clearHistory, QUARANTINE_THRESHOLD, STORAGE_KEY } from "@/lib/history";
 import type { RiskLevel } from "@/lib/types";
 
 // Session watch (docs/ux-audit.md, R10) — a calm-mode supervision view built
@@ -21,8 +21,16 @@ const RISK_DOT: Record<RiskLevel, string> = {
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
-function subscribeNoop() {
-  return () => {};
+// Subscribe to history changes so the watch view stays live: another tab (or a
+// same-tab write) touching localStorage fires `storage`; `e.key === null`
+// covers clearHistory(). No-op on the server.
+function subscribeToHistory(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const handler = (e: StorageEvent) => {
+    if (e.key === null || e.key === STORAGE_KEY) onStoreChange();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
 }
 const EMPTY: HistoryEntry[] = [];
 function getServerSnapshot() {
@@ -30,7 +38,7 @@ function getServerSnapshot() {
 }
 
 export function SessionWatch() {
-  const history = useSyncExternalStore(subscribeNoop, getHistory, getServerSnapshot);
+  const history = useSyncExternalStore(subscribeToHistory, getHistory, getServerSnapshot);
 
   if (history.length === 0) {
     return (
@@ -46,7 +54,7 @@ export function SessionWatch() {
     );
   }
 
-  const quarantined = history.filter((h) => h.risk_score >= 0.5);
+  const quarantined = history.filter((h) => h.risk_score >= QUARANTINE_THRESHOLD);
   const quarantineRate = quarantined.length / history.length;
   const techniques = new Map<string, number>();
   for (const h of history) {
