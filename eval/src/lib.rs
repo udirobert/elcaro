@@ -406,7 +406,6 @@ pub fn evaluate(miner_responses_json: &str) -> String {
         });
     }
 
-    let total = TEST_CASES.len() as f64;
     let positives = TEST_CASES.iter().filter(|t| t.is_injection).count() as f64;
     let negatives = TEST_CASES.iter().filter(|t| !t.is_injection).count() as f64;
 
@@ -466,14 +465,23 @@ pub fn evaluate(miner_responses_json: &str) -> String {
 //   - `get_test_cases_ptr(out_len)` — same pattern for the corpus JSON.
 //   - `test_case_count()`       — plain `usize`, valid ABI as-is.
 
-/// Allocate a buffer of `len` bytes and leak it so the host can write into it.
-/// The host must pass it back to `elcaro_dealloc` when done.
+/// Allocate a buffer of `len` bytes and hand it to the host for writing.
+/// The host must pass it back to `elcaro_dealloc` with the same `len`.
+/// Returns null for `len == 0`.
 #[no_mangle]
 pub extern "C" fn elcaro_alloc(len: usize) -> *mut u8 {
-    let mut buf: Vec<u8> = Vec::with_capacity(len);
-    let ptr = buf.as_mut_ptr();
-    std::mem::forget(buf);
-    ptr
+    if len == 0 {
+        return std::ptr::null_mut();
+    }
+    // SAFETY: layout has non-zero size and align 1 is valid.
+    unsafe {
+        let layout = std::alloc::Layout::from_size_align_unchecked(len, 1);
+        let ptr = std::alloc::alloc(layout);
+        if ptr.is_null() {
+            std::alloc::handle_alloc_error(layout);
+        }
+        ptr
+    }
 }
 
 /// Free a buffer previously returned by `elcaro_alloc`, `evaluate_ptr`, or
@@ -484,15 +492,19 @@ pub extern "C" fn elcaro_alloc(len: usize) -> *mut u8 {
 /// not be used after this call.
 #[no_mangle]
 pub unsafe extern "C" fn elcaro_dealloc(ptr: *mut u8, len: usize) {
-    if !ptr.is_null() {
-        // SAFETY: per contract, ptr/len came from a Vec<u8> created here.
-        drop(Vec::from_raw_parts(ptr, 0, len));
+    if !ptr.is_null() && len > 0 {
+        // SAFETY: per contract, ptr came from alloc with layout (len, 1).
+        std::alloc::dealloc(ptr, std::alloc::Layout::from_size_align_unchecked(len, 1));
     }
 }
 
 /// Internal helper: run `f` on the UTF-8 input at `ptr`/`len`, serialize the
 /// resulting JSON into a freshly allocated buffer, and return it with the
 /// length written to `out_len`. On invalid input, returns an empty JSON string.
+///
+/// The output buffer is allocated with layout (len, 1) so the host can return
+/// it to `elcaro_dealloc(ptr, len)` exactly — a `Vec` would not be safe here
+/// because its capacity may exceed its length.
 ///
 /// # Safety
 /// `ptr`/`len` must describe a readable region the host owns; `out_len` must
@@ -516,10 +528,19 @@ unsafe fn run_with_string_output(
     };
 
     let output = f(input);
-    let mut buf = output.into_bytes();
-    let out_ptr = buf.as_mut_ptr();
-    let out_size = buf.len();
-    std::mem::forget(buf);
+    let out_bytes = output.as_bytes();
+    let out_size = out_bytes.len();
+    let out_ptr = if out_size == 0 {
+        std::ptr::null_mut()
+    } else {
+        // SAFETY: layout has non-zero size and align 1 is valid.
+        let dest = std::alloc::alloc(std::alloc::Layout::from_size_align_unchecked(out_size, 1));
+        if dest.is_null() {
+            std::alloc::handle_alloc_error(std::alloc::Layout::from_size_align_unchecked(out_size, 1));
+        }
+        std::ptr::copy_nonoverlapping(out_bytes.as_ptr(), dest, out_size);
+        dest
+    };
 
     if !out_len.is_null() {
         // SAFETY: per contract, out_len is writable.

@@ -26,7 +26,7 @@
 
 | # | Date | What | Status | Notes |
 |---|------|------|--------|-------|
-| — | — | WASM eval script: score miners against IPI corpus | TODO | Rust → wasm32-unknown-unknown |
+| 1 | 2026-08-29 | WASM eval script: score miners against IPI corpus | ✅ Done | Rust → `wasm32-unknown-unknown`, 26-case corpus (18 adversarial positives across all six classes + 8 clean negatives), pointer/length host ABI, standalone browser demo (`eval/wasm-demo/`). Verified in-browser against the live miner: **0.672** overall (24/26, TPR 0.889, TNR 1.0, FPR 0.0). |
 
 ## Track 3 — App (Agent Content Screener)
 
@@ -85,3 +85,35 @@ end-to-end post-registration.
 **Takeaway for next registration or update:** always hash the URL the node
 will fetch (`curl -s <url> | sha256sum`), never a local file, and don't trust
 a console's "we'll pin it for you" step to preserve bytes unless verified.
+
+### 2026-08-29 — Track 2 eval script: WASM build, ABI bug caught by browser test
+
+**Build.** `eval/` compiled clean to `wasm32-unknown-unknown` (156K artifact,
+zero warnings, 6/6 native tests). Exports verified programmatically:
+`elcaro_alloc`, `elcaro_dealloc`, `evaluate_ptr`, `get_test_cases_ptr`,
+`test_case_count` — the pointer/length ABI the validator runtime needs.
+
+**Bug caught by smoke-testing the actual artifact.** A Node round-trip of the
+pointer ABI panicked inside the allocator on the first `elcaro_dealloc`.
+Root cause: output buffers were handed to the host as `Vec<u8>` memory, but a
+`Vec`'s *capacity* can exceed its *length*, while the dealloc contract passes
+length as capacity — `Vec::from_raw_parts(ptr, 0, len)` with mismatched
+capacity is UB and tripped the allocator's checks. Native tests never caught
+it because they only exercised allocations where capacity happened to match.
+Fix: both sides of the ABI now use raw `alloc`/`dealloc` with exact-size
+`(len, 1)` layouts, so the contract holds unconditionally.
+
+**Live self-score via the browser demo.** `eval/wasm-demo/` runs the module
+entirely client-side: pulls the corpus out of the WASM, sends each of the 26
+cases to the miner's `/scan` from the page, and scores the responses in WASM.
+Against the production miner (`api.elcaro.trustfall.xyz`):
+
+- overall **0.672** — 24/26 cases, TPR 0.889, TNR 1.000, FPR 0.000,
+  technique accuracy 0.667
+- both misses are obfuscation-class detections (D004 translation indirection,
+  D005 token splitting) — a known engine gap, now measurable by anyone from
+  a static HTML page
+
+**Takeaway:** never ship a WASM ABI on native tests alone — instantiate the
+real artifact and round-trip it. The capacity/length mismatch would have
+scored zero silently in a validator.

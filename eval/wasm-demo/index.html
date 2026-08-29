@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elcaro WASM eval — score any miner</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+      background: #0a0c10; color: #d7dde6;
+      max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.15rem; margin-bottom: 0.25rem; }
+    p.sub { color: #7a8595; margin-top: 0; font-size: 0.85rem; }
+    .row { display: flex; gap: 0.5rem; margin: 1.25rem 0; flex-wrap: wrap; }
+    input[type="text"] {
+      flex: 1; min-width: 16rem; padding: 0.5rem 0.7rem;
+      background: #12161d; color: #d7dde6;
+      border: 1px solid #2a3140; border-radius: 6px;
+      font: inherit; font-size: 0.85rem;
+    }
+    button {
+      padding: 0.5rem 1.1rem; border-radius: 6px; border: 1px solid #2a3140;
+      background: #1a2130; color: #e8edf4; font: inherit; font-size: 0.85rem;
+      cursor: pointer;
+    }
+    button:hover { background: #232c40; }
+    #log {
+      background: #0d1017; border: 1px solid #1e2530; border-radius: 8px;
+      padding: 0.9rem 1rem; min-height: 12rem; max-height: 26rem;
+      overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap;
+    }
+    #log .err { color: #f28b82; }
+    #log .score { color: #7ee0a3; font-weight: 600; }
+    a { color: #8ab4f8; }
+    .note { color: #7a8595; font-size: 0.78rem; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Elcaro WASM eval</h1>
+  <p class="sub">
+    Scores any Telegraph miner against the adversarial IPI corpus — the
+    scoring logic runs entirely in this browser tab via
+    <code>elcaro_eval.wasm</code>. Only the <code>/scan</code> requests touch
+    the miner.
+  </p>
+
+  <div class="row">
+    <input id="miner-url" type="text" placeholder="https://miner.example.com" spellcheck="false" />
+    <button id="run">Run eval</button>
+    <a id="download" download="eval-result.json" hidden>Download JSON</a>
+  </div>
+
+  <div id="log"></div>
+
+  <p class="note">
+    Requires the built artifact at
+    <code>../target/wasm32-unknown-unknown/release/elcaro_eval.wasm</code> and
+    a local static server (e.g. <code>python3 -m http.server</code> from
+    <code>eval/</code>). The miner must allow cross-origin requests from this
+    page.
+  </p>
+
+  <script src="index.js"></script>
+</body>
+</html>

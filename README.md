@@ -174,7 +174,7 @@ Everything is live — no waitlists, no gated features:
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
 | `app/middleware.py` | Python · httpx | Drop-in middleware for Python agents |
-| `eval/` | Rust · WASM | Adversarial evaluation script |
+| `eval/` | Rust · WASM | Adversarial evaluation script — scores any miner client-side (`eval/wasm-demo/`) |
 
 ---
 
