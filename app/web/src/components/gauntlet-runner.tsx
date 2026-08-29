@@ -7,6 +7,7 @@ import { scanContent, isError } from "@/lib/api";
 import type { ScanResponse } from "@/lib/types";
 import { GAUNTLET_PAYLOADS } from "@/lib/gauntlet";
 import { markGauntletRun } from "@/lib/journey";
+import { QUARANTINE_THRESHOLD } from "@/lib/history";
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
@@ -39,10 +40,10 @@ export function GauntletRunner() {
   const cleans = GAUNTLET_PAYLOADS.filter((p) => !p.isInjection);
 
   const caught = entries.filter(
-    (e) => e.isInjection && e.response.risk_score >= 0.5
+    (e) => e.isInjection && e.response.risk_score >= QUARANTINE_THRESHOLD
   ).length;
   const falsePositives = entries.filter(
-    (e) => !e.isInjection && e.response.risk_score >= 0.5
+    (e) => !e.isInjection && e.response.risk_score >= QUARANTINE_THRESHOLD
   ).length;
   const latencies = entries
     .map((e) => e.response.latency_ms ?? 0)
@@ -174,8 +175,8 @@ export function GauntletRunner() {
           const isRunning = runningIndex === i;
           const correct = entry
             ? entry.isInjection
-              ? entry.response.risk_score >= 0.5
-              : entry.response.risk_score < 0.5
+              ? entry.response.risk_score >= QUARANTINE_THRESHOLD
+              : entry.response.risk_score < QUARANTINE_THRESHOLD
             : false;
 
           return (
@@ -369,10 +370,10 @@ function SpecimenStage({
   const verdict: "caught" | "missed" | "clean" | "false-positive" | null =
     frontEntry
       ? frontEntry.isInjection
-        ? frontEntry.response.risk_score >= 0.5
+        ? frontEntry.response.risk_score >= QUARANTINE_THRESHOLD
           ? "caught"
           : "missed"
-        : frontEntry.response.risk_score < 0.5
+        : frontEntry.response.risk_score < QUARANTINE_THRESHOLD
           ? "clean"
           : "false-positive"
       : null;

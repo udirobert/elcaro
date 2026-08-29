@@ -58,6 +58,22 @@ function getIsFirstVisitServerSnapshot() {
   return false;
 }
 
+// The shared-verdict URL fragment, as an external store. getSnapshot parses
+// and decodes once per React query; the server snapshot is always null so
+// hydration is safe. subscribe listens for hashchange (covers back/forward
+// navigation into a shared link).
+function subscribeHash(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+function getHashVerdict() {
+  const hash = window.location.hash;
+  return hash.startsWith("#v=") ? decodeVerdict(hash.slice(3)) : null;
+}
+function getHashVerdictServer() {
+  return null;
+}
+
 export function ScanForm() {
   const [content, setContent] = useState("");
   const [contentType, setContentType] = useState<ContentType>("email");
@@ -83,24 +99,34 @@ export function ScanForm() {
   const isFirstVisit = hadHistoryOnMount && !dismissedOnboarding;
 
   // Shared verdict — when the URL carries #v=<encoded>, render that scan
-  // instead of an empty form. Read once at mount: the fragment is replaced
-  // in the address bar so a refresh starts clean, and the shared content
-  // lands in the textarea for the visitor to poke at.
+  // instead of an empty form. The fragment is an external store: read via
+  // useSyncExternalStore (server snapshot is null, so hydration is safe),
+  // adopted by adjusting state during render (the React-sanctioned pattern —
+  // no setState inside an effect), and the fragment is then dropped from the
+  // address bar so a refresh starts clean.
+  const sharedVerdict = useSyncExternalStore(
+    subscribeHash,
+    getHashVerdict,
+    getHashVerdictServer
+  );
+  const [adoptedVerdict, setAdoptedVerdict] = useState(sharedVerdict);
+  if (sharedVerdict !== adoptedVerdict) {
+    setAdoptedVerdict(sharedVerdict);
+    if (sharedVerdict) {
+      setContent(sharedVerdict.content);
+      setContentType(sharedVerdict.content_type);
+      setResult(sharedVerdict.response);
+      setError(null);
+      setDismissedOnboarding(true);
+    }
+  }
+
+  // Side effect only — no setState. Runs after the verdict is adopted.
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.startsWith("#v=")) return;
-
-    const shared = decodeVerdict(hash.slice(3));
-    if (!shared) return;
-
-    setContent(shared.content);
-    setContentType(shared.content_type);
-    setResult(shared.response);
-    setError(null);
-    setDismissedOnboarding(true);
-    // Drop the fragment so refreshing/re-scanning starts from a clean URL.
-    window.history.replaceState(null, "", window.location.pathname);
-  }, []);
+    if (adoptedVerdict && window.location.hash.startsWith("#v=")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [adoptedVerdict]);
 
   const triggerShake = useCallback(async () => {
     await shakeControls.start({
@@ -114,6 +140,7 @@ export function ScanForm() {
 
     setDismissedOnboarding(true);
     setScanning(true);
+    setScanStatusIndex(0);
     setResult(null);
     setError(null);
 
@@ -162,9 +189,10 @@ export function ScanForm() {
   const hasContent = content.trim().length > 0;
 
   // Rotating scan status — cycles the detector-concern lines while scanning.
+  // The index is reset where scanning starts (handleScan), not here, so no
+  // setState fires synchronously inside the effect.
   useEffect(() => {
     if (!scanning) return;
-    setScanStatusIndex(0);
     const interval = setInterval(() => setScanStatusIndex((i) => i + 1), 700);
     return () => clearInterval(interval);
   }, [scanning]);

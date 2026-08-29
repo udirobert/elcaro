@@ -1,6 +1,6 @@
 "use client";
 
-import { getHistory } from "@/lib/history";
+import { getHistory, QUARANTINE_THRESHOLD } from "@/lib/history";
 
 // Threshold replay (docs/ux-audit.md, R7) — turns the "0.5 blocks / 0.3 flags"
 // doctrine into something the user can *feel*, by re-scoring their own session
@@ -8,7 +8,6 @@ import { getHistory } from "@/lib/history";
 // quarantine decision flips. Pure client-side — reads localStorage, nothing
 // leaves the browser.
 
-const BLOCK_AT = 0.5;
 const FLAG_AT = 0.3;
 const NEVER_PASS_AT = 0.7;
 
@@ -19,13 +18,13 @@ export function ThresholdReplay() {
   // At FLAG_AT, how many currently-passing scans (score in [0.3, 0.5)) would
   // flip to quarantined?
   const newlyFlagged = history.filter(
-    (h) => h.risk_score >= FLAG_AT && h.risk_score < BLOCK_AT
+    (h) => h.risk_score >= FLAG_AT && h.risk_score < QUARANTINE_THRESHOLD
   ).length;
 
   // At NEVER_PASS_AT, how many currently-quarantined scans (score in [0.5, 0.7))
   // would pass instead?
   const wouldSlipThrough = history.filter(
-    (h) => h.risk_score >= BLOCK_AT && h.risk_score < NEVER_PASS_AT
+    (h) => h.risk_score >= QUARANTINE_THRESHOLD && h.risk_score < NEVER_PASS_AT
   ).length;
 
   return (
@@ -38,13 +37,13 @@ export function ThresholdReplay() {
         <li>
           <span className="font-mono text-ink">{FLAG_AT.toFixed(1)}</span> block threshold →{" "}
           <span className="text-suspicious font-semibold">{newlyFlagged}</span> more would be
-          quarantined (currently passing, score {FLAG_AT.toFixed(1)}–{BLOCK_AT.toFixed(1)}).
+          quarantined (currently passing, score {FLAG_AT.toFixed(1)}–{QUARANTINE_THRESHOLD.toFixed(1)}).
         </li>
         <li>
           <span className="font-mono text-ink">{NEVER_PASS_AT.toFixed(1)}</span> block threshold →{" "}
           <span className="text-dangerous font-semibold">{wouldSlipThrough}</span> currently
           quarantined scan{wouldSlipThrough === 1 ? "" : "s"} would pass instead (score{" "}
-          {BLOCK_AT.toFixed(1)}–{NEVER_PASS_AT.toFixed(1)}).
+          {QUARANTINE_THRESHOLD.toFixed(1)}–{NEVER_PASS_AT.toFixed(1)}).
         </li>
       </ul>
       <p className="text-[11px] text-ink-faint leading-relaxed pt-1">

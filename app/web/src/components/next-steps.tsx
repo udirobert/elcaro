@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { RiskLevel, ScanResponse } from "@/lib/types";
 import { encodeVerdict } from "@/lib/share";
 import { buildVerdictReport, type ReportLabel } from "@/lib/report";
+import { QUARANTINE_THRESHOLD } from "@/lib/history";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 
@@ -20,7 +21,6 @@ const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 // the API (ScanResponse.quarantined / safe_content, computed once in
 // core/quarantine.py). This threshold covers responses from older miners and
 // stale localStorage history that predate the server-side fields.
-const BLOCK_THRESHOLD = 0.5;
 
 // Risk-conditioned guidance — answers "so what do I do?" in the user's terms,
 // using the same thresholds the integration docs teach (≥0.5 block, ≥0.3 flag).
@@ -53,7 +53,7 @@ const DECISION: Record<RiskLevel, { headline: string; actions: string[] }> = {
 
 export function NextSteps({ result, content }: NextStepsProps) {
   const quarantined =
-    result.quarantined ?? result.risk_score >= BLOCK_THRESHOLD;
+    result.quarantined ?? result.risk_score >= QUARANTINE_THRESHOLD;
   const decision = DECISION[result.risk_level];
   const [copied, setCopied] = useState(false);
   const [copiedCurl, setCopiedCurl] = useState(false);
