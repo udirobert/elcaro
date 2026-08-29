@@ -66,3 +66,4 @@ docs/ops.md
 node_modules/
 .next/
 app/web/.env.local
+uv.lock

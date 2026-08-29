@@ -1,6 +1,6 @@
 # UX Audit — Adaptive & Agentic Lenses
 
-> Date: 2026-08-28 · Status: audit complete. R1 (MCP server), R2 (agent-legible layer), R3 (relay contract), R5 (signed verdicts), R4 (correction surface), R6 (reviewer mode), R7 (threshold replay), and R8 (content-type-aware notices) are implemented. Remaining: the P2 agentic-web items (R9–R12).
+> Date: 2026-08-28 · Status: audit complete — **all twelve roadmap items are implemented**: R1 (MCP server), R2 (agent-legible layer), R3 (relay contract), R4 (correction surface), R5 (signed verdicts), R6 (reviewer mode), R7 (threshold replay), R8 (content-type-aware notices), R9 (WebMCP readiness — tool-declarable scan form), R10 (supervision surface — session watch), R11 (warn-mode salience experiment harness), R12 ("designing for agents" page). R11's run step awaits an LLM API key (see `docs/warn-salience-experiment.md`).
 > Scope: the whole product surface — web app (`app/web`), miner API, Python middleware (`app/middleware.py`), quarantine policy (`core/quarantine.py`), Kiro guard hook (`.kiro/hooks/`) — audited through two lenses:
 >
 > - **Adaptive UX** — the interface responds to who the user is, what they've done, and the current risk state.

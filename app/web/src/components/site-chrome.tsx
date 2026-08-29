@@ -5,12 +5,13 @@ import { MinerStatus } from "./miner-status";
 // every route has identical wayfinding. Pages pass their `active` key for
 // highlighting (kept as a prop so pages stay server-rendered).
 
-export type NavKey = "scan" | "gauntlet" | "integrate";
+export type NavKey = "scan" | "gauntlet" | "integrate" | "for-agents";
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: "scan", href: "/scan", label: "Scan" },
   { key: "gauntlet", href: "/gauntlet", label: "Gauntlet" },
   { key: "integrate", href: "/integrate", label: "Integrate" },
+  { key: "for-agents", href: "/for-agents", label: "For agents" },
 ];
 
 export function SiteHeader({ active }: { active?: NavKey }) {

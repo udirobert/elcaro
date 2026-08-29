@@ -326,6 +326,21 @@ export default function IntegratePage() {
         {/* Threshold replay — feel the doctrine on your own scans (R7) */}
         <ThresholdReplay />
 
+        {/* Supervision — the power-user view (R10) */}
+        <div className="rounded-xl border border-border bg-surface p-4 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-xs text-ink-muted leading-relaxed max-w-md">
+            Supervising a session? The{" "}
+            <Link
+              href="/supervise"
+              className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80 transition-colors"
+            >
+              session watch
+            </Link>{" "}
+            shows quarantine rate and techniques from your local history — no
+            server-side storage.
+          </p>
+        </div>
+
         {/* Email capture */}
         <IntegrateForm />
 

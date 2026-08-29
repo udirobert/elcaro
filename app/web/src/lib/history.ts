@@ -11,8 +11,12 @@ export interface HistoryEntry {
   response: ScanResponse;
 }
 
-const STORAGE_KEY = "elcaro_scan_history";
+export const STORAGE_KEY = "elcaro_scan_history";
 const MAX_ENTRIES = 50;
+
+// The quarantine doctrine (docs/ux-audit.md): a verdict at or above this score
+// is quarantined. Shared so every surface computes "quarantined" identically.
+export const QUARANTINE_THRESHOLD = 0.5;
 
 export function getHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];

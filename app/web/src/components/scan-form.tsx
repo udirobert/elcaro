@@ -205,6 +205,7 @@ export function ScanForm() {
 
         <textarea
           ref={textareaRef}
+          name="content"
           value={content}
           onChange={(e) => {
             setContent(e.target.value);
@@ -219,6 +220,7 @@ export function ScanForm() {
           placeholder="Paste content here — an email, search result, or document your agent would read..."
           className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet/50 focus:ring-1 focus:ring-violet/20 transition-all duration-200 placeholder:text-ink-faint"
           style={{ fontVariantLigatures: "none" }}
+          aria-label="Content to scan for prompt injection"
         />
 
         {/* Keyboard shortcut hint — appears when content is present */}
@@ -291,9 +293,11 @@ export function ScanForm() {
           <label className="flex items-center gap-1.5 text-xs text-ink-faint">
             <span className="font-medium">Type</span>
             <select
+              name="content_type"
               value={contentType}
               onChange={(e) => setContentType(e.target.value as ContentType)}
               className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet/50 cursor-pointer transition-colors"
+              aria-label="Content type"
             >
               {CONTENT_TYPES.map((ct) => (
                 <option key={ct.value} value={ct.value}>
