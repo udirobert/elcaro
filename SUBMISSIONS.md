@@ -32,7 +32,7 @@
 
 | # | Date | What | Status | Notes |
 |---|------|------|--------|-------|
-| — | — | Middleware demo: agent pre-filters retrieved content | TODO | Depends on T1 miner being live |
+| — | 2026-08-29 | Middleware demo: agent pre-filters retrieved content | ✅ Done | `app/middleware.py` + interactive walkthrough on [/integrate](https://elcaro.trustfall.xyz/integrate); replace/block/warn quarantine modes, signed verdicts, session-watch supervision |
 
 ## Iteration log
 

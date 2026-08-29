@@ -121,6 +121,38 @@ API key the flag is a safe no-op.
 
 ---
 
+## Product surface
+
+Everything is live — no waitlists, no gated features:
+
+- **[Scan](https://elcaro.trustfall.xyz/scan)** — paste content, get a verdict.
+  The form carries stable semantic field names (`content`, `content_type`) so
+  it can be declared as a WebMCP form tool when browsers land the
+  [W3C WebML CG draft](https://github.com/webmachinelearning/webmcp).
+- **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
+  specimen corpus against the live miner and watch every verdict.
+- **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,
+  middleware, Telegraph routing, and a threshold-replay sandbox built from
+  your own session history.
+- **[Session watch](https://elcaro.trustfall.xyz/supervise)** — a calm-mode
+  supervision panel over your browser's local scan history (quarantine rate,
+  technique breakdown). Stateless by construction: `noindex`, nothing leaves
+  the browser.
+- **[Designing for agents](https://elcaro.trustfall.xyz/for-agents)** — how
+  (and why) we treat agents as first-class users.
+- **[llms.txt](https://elcaro.trustfall.xyz/llms.txt)** — the machine-readable
+  layer: API contract, MCP server, specimen kit, signed-verdict verification.
+- **[MCP server](app/mcp_server.py)** — `scan_content` and `explain_verdict`
+  over stdio: `python -m app.mcp_server` (set `ELCARO_MCP_LOCAL=1` for fully
+  local, network-free scanning).
+- **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
+  tests whether the warn notice's position (prefix / suffix / sandwich)
+  affects agent compliance with injected instructions. Methodology and
+  decision rule in [docs/warn-salience-experiment.md](docs/warn-salience-experiment.md);
+  the run step awaits an `ELCARO_LLM_API_KEY`.
+
+---
+
 ## Architecture
 
 ```
@@ -168,7 +200,7 @@ cd elcaro
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"
 
-python -m pytest                     # tests (70 passing)
+python -m pytest                     # tests (124 passing)
 ruff check && ruff format --check    # lint
 
 # Frontend

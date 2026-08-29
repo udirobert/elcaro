@@ -27,3 +27,4 @@ When the miner runs with `ELCARO_SIGNING_KEY` set, every verdict carries an Ed25
 - [README](https://github.com/udirobert/elcaro/blob/main/README.md): What Elcaro is, quickstart, an example verdict.
 - [Technique reference](https://github.com/udirobert/elcaro/blob/main/docs/technique-reference.md): The six injection classes detected — authority framing, delimiter confusion, task reframing, obfuscation, placement salience, conditional triggers.
 - [UX audit — adaptive & agentic lenses](https://github.com/udirobert/elcaro/blob/main/docs/ux-audit.md): How this product designs for agents as first-class users.
+- [Warn-mode salience experiment](https://github.com/udirobert/elcaro/blob/main/docs/warn-salience-experiment.md): Does the position of the quarantine warning — prefix, suffix, or sandwich — change whether an agent follows the injected instruction anyway? Methodology, decision rule, and what would change the middleware default.
