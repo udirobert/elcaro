@@ -147,9 +147,11 @@ Everything is live — no waitlists, no gated features:
   local, network-free scanning).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
-  affects agent compliance with injected instructions. Methodology and
-  decision rule in [docs/warn-salience-experiment.md](docs/warn-salience-experiment.md);
-  the run step awaits an `ELCARO_LLM_API_KEY`.
+  affects agent compliance with injected instructions. One command runs the
+  full decision-rule study (3 models × 3 repeats):
+  `./scripts/run_salience_study.sh` (needs `ELCARO_LLM_API_KEY`, see
+  `.env.example`). Methodology and decision rule in
+  [docs/warn-salience-experiment.md](docs/warn-salience-experiment.md).
 
 ---
 
@@ -197,6 +199,7 @@ instructions in retrieved content). A secure agent deployment needs both.
 ```bash
 git clone https://github.com/udirobert/elcaro.git
 cd elcaro
+cp .env.example .env                  # optional config (LLM key, signing, MCP)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"
 
