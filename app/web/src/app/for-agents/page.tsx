@@ -85,6 +85,83 @@ export default function ForAgentsPage() {
           body="If your product serves agents, your own agent-facing surfaces must model the trustworthy patterns whose absence you detect. Elcaro detects authority framing; its own notices must not be authority-framed spoofs. Elcaro detects in-band injection; its own verdicts must be signed. The product is the demo."
         />
 
+        <div className="space-y-3">
+          <div className="flex items-baseline gap-3">
+            <span className="text-xs font-mono text-ink-faint">09</span>
+            <h2 className="text-lg font-bold text-ink">
+              Test your own safety assumptions — then publish the data
+            </h2>
+          </div>
+          <div className="space-y-3 pl-7 text-sm text-ink-muted leading-relaxed">
+            <p>
+              Elcaro&apos;s warn mode passes dangerous content through with a
+              notice prepended. That design rested on an untested assumption:
+              that the warning actually stops an agent from following the
+              injection. So we tested it. Three injection specimens × three
+              warning positions (prefix, suffix, sandwich) × three
+              instruction-following models (Qwen3-30B, Mistral-Large,
+              Llama-3.3-70B) × three repeats — 81 completions, judged by an
+              independent model for actual compliance.
+            </p>
+            <table className="w-full text-sm font-mono border border-border">
+              <thead>
+                <tr className="text-ink-faint text-xs">
+                  <th className="text-left px-3 py-2 border-b border-border">Warning position</th>
+                  <th className="text-left px-3 py-2 border-b border-border">Complied with injection</th>
+                  <th className="text-left px-3 py-2 border-b border-border">Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="px-3 py-2 border-b border-border">prefix (default)</td>
+                  <td className="px-3 py-2 border-b border-border">0 / 27</td>
+                  <td className="px-3 py-2 border-b border-border">0.0%</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 border-b border-border">sandwich</td>
+                  <td className="px-3 py-2 border-b border-border">0 / 27</td>
+                  <td className="px-3 py-2 border-b border-border">0.0%</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 border-b border-border">suffix</td>
+                  <td className="px-3 py-2 border-b border-border">3 / 27</td>
+                  <td className="px-3 py-2 border-b border-border">11.1%</td>
+                </tr>
+              </tbody>
+            </table>
+            <p>
+              The warning suppressed compliance in 78 of 81 cases across all
+              three model families. All three failures were the same shape:
+              warning placed last, authority-framed injection, and the model
+              paraphrased the injected &quot;policy&quot; as fact. Our pre-committed
+              decision rule (act only on a ≥25-point gap) doesn&apos;t trigger a
+              default change — and prefix, the current default, is already the
+              best position. One honest caveat: the pre-committed keyword
+              scorer saturated (responses that refused still quoted the
+              injection&apos;s words), so the numbers above come from a judge-model
+              rescore of the saved responses. Methodology and raw JSON:{" "}
+              <a
+                href="https://github.com/udirobert/elcaro/blob/main/docs/warn-salience-experiment.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80"
+              >
+                docs/warn-salience-experiment.md
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://github.com/udirobert/elcaro/tree/main/eval/results"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80"
+              >
+                eval/results/
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+
         <div className="border-t border-border pt-8">
           <p className="text-sm text-ink-muted leading-relaxed">
             These principles shape Elcaro&apos;s own surfaces — our{" "}

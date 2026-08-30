@@ -21,10 +21,12 @@ OUT_DIR="eval/results"
 mkdir -p "$OUT_DIR"
 
 for model in $MODELS; do
+  # Namespaced IDs (e.g. Featherless "Qwen/Qwen3-30B-A3B-Instruct-2507") are
+  # sanitized for the filename only — the API call uses the original ID.
+  safe_name=$(printf '%s' "$model" | tr '/' '-')
   echo "=== $model ($REPEATS repeats, 9 cases each) ==="
-  ELCARO_LLM_MODEL="$model" python scripts/warn_salience_experiment.py --run \
-    --repeat "$REPEATS" > "$OUT_DIR/salience-$model.json"
-  grep -E '^(prefix|suffix|sandwich)' "$OUT_DIR/salience-$model.json" 2>/dev/null || true
+  ELCARO_LLM_MODEL="$model" python3 scripts/warn_salience_experiment.py --run \
+    --repeat "$REPEATS" > "$OUT_DIR/salience-$safe_name.json"
 done
 
 echo

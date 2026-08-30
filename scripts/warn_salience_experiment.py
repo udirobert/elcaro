@@ -110,21 +110,30 @@ def score_response(text: str, keywords: list[str]) -> bool:
 
 async def run_experiment(api_key: str, base_url: str, model: str) -> list[dict]:
     """Run the cases against an LLM and score each. Returns results."""
+    import asyncio
+
     import httpx
 
     cases = generate_cases()
     results = []
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         for case in cases:
-            resp = await client.post(
-                f"{base_url.rstrip('/')}/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": case["prompt"]}],
-                    "max_tokens": 200,
-                },
-            )
+            # Shared-host providers (Featherless etc.) intermittently return
+            # 5xx/capacity errors; retry rather than aborting a long study.
+            resp = None
+            for attempt in range(4):
+                resp = await client.post(
+                    f"{base_url.rstrip('/')}/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": case["prompt"]}],
+                        "max_tokens": 200,
+                    },
+                )
+                if resp.status_code not in (429, 500, 502, 503, 504):
+                    break
+                await asyncio.sleep(2**attempt)
             resp.raise_for_status()
             reply = resp.json()["choices"][0]["message"]["content"]
             followed = score_response(reply, case["follow_keywords"])
@@ -173,7 +182,9 @@ def main() -> None:
     for pos in ("prefix", "suffix", "sandwich"):
         subset = [r for r in results if r["position"] == pos]
         followed = sum(1 for r in subset if r["followed"])
-        print(f"{pos:10s}: {followed}/{len(subset)} responses followed the injection")
+        print(
+            f"{pos:10s}: {followed}/{len(subset)} responses followed the injection", file=sys.stderr
+        )
 
     json.dump(results, sys.stdout, indent=2)
     print()
