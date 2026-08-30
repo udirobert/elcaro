@@ -147,10 +147,11 @@ Everything is live — no waitlists, no gated features:
   local, network-free scanning).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
-  affects agent compliance with injected instructions. One command runs the
-  full decision-rule study (3 models × 3 repeats):
-  `./scripts/run_salience_study.sh` (needs `ELCARO_LLM_API_KEY`, see
-  `.env.example`). Methodology and decision rule in
+  affects agent compliance with injected instructions. Executed 2026-08-30
+  (81 completions, 3 model families): compliance 0/27 prefix, 0/27 sandwich,
+  3/27 suffix — prefix stays the default, placement is load-bearing. Rerun
+  with `./scripts/run_salience_study.sh` (needs `ELCARO_LLM_API_KEY`, see
+  `.env.example`). Methodology, decision rule, and results in
   [docs/warn-salience-experiment.md](docs/warn-salience-experiment.md).
 
 ---
