@@ -25,7 +25,7 @@
 |---|------|------|----------|--------|--------|-------|
 | 1 | 2026-08-20 | Registered on Base Sepolia | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ❌ Rejected | `registrationId 136` — YAML hash mismatch. Console's IPFS pin re-serialised the file before hashing. See iteration log. |
 | 2 | 2026-08-20 | Re-registered, self-hosted YAML | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ❌ Deregistered | `registrationId 145`, tx [`0x79a908a6...`](https://sepolia.basescan.org/tx/0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f). Superseded 2026-09-01. |
-| 3 | 2026-09-01 | YAML: endpoint `intents` + `params.body`; re-register | `8848` | same | ✅ Active | Live YAML hash `deaa3184…fb0c` matches local `miner/telegraph.yaml`. `registrationId 406` (`/api/miners/406`, `activation_status: active`). 145 and 405 are deregistered. Catalog lists miner 8848 as active. Track 1 form submit: **unverified here — paste confirmation if you have it.** |
+| 3 | 2026-09-01 | YAML: endpoint `intents` + `params.body`; re-register | `8848` | same | ✅ Active | Live YAML hash `deaa3184…fb0c` matches local `miner/telegraph.yaml`. `registrationId 406` (`/api/miners/406`, `activation_status: active`). 145 and 405 are deregistered. Catalog lists miner 8848 as active. Track 1 form submitted (operator, 2026-09-01). X: https://x.com/UNgethe/status/2094759875712577935 |
 
 ## Track 2 — Eval Script (Adversarial IPI Test Suite)
 
@@ -161,5 +161,5 @@ Verified against the protocol node (not the form):
 - Catalog `?intent=CONTENT_MODERATION` lists miner `8848` as active
   (`registered_at` 2026-09-01T10:52:24Z).
 
-Track 1 Google/Telegraph form and the X post are not visible from here.
-Paste a confirmation screenshot or URL to close those checklist items.
+Track 1 form submitted (operator, 2026-09-01). Showcase post:
+https://x.com/UNgethe/status/2094759875712577935

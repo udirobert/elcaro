@@ -36,9 +36,9 @@ H1 of a 3-round series ($5K this round; $10K in October; mainnet later).
 Event: [hackathon.telegraphprotocol.com](https://hackathon.telegraphprotocol.com).
 Overall submissions close **Sun 07 Sep 2026 23:59 UTC**.
 
-- **Track 1 form** (miner ID + YAML): **Wed 02 Sep 2026 11:59:59 UTC**
+- **Track 1 form** (miner ID + YAML): **submitted** (operator, 2026-09-01; deadline Wed 02 Sep 2026 11:59:59 UTC)
 - **Track 3** (Apps & Agents) is the current build window — must use live Telegraph miners
-- **X / engagement posts** showcasing the project: extended to **2 Sep 2026**
+- **X / engagement posts:** [UNgethe/status/2094759875712577935](https://x.com/UNgethe/status/2094759875712577935) (deadline 2 Sep)
 - Log: [SUBMISSIONS.md](../SUBMISSIONS.md)
 
 ### Judging (official)
@@ -87,7 +87,7 @@ Verify the record: `curl -s https://devnode.telegraphprotocol.com/api/miners/406
 
 - **Host:** OpenAI · Chrome, Cloudflare, Shopify, Vercel, Render, Netlify
 - **Deadline:** **Wed 3 Sep 2026 21:00 GMT+1**
-- **Event:** [Devpost — The WebMCP Challenge](https://webmcpchallenge.devpost.com/)
+- **Event:** [Devpost — The WebMCP Challenge](https://webmcp.devpost.com/)
 - **Plan:** [docs/webmcp.md](webmcp.md)
 - **Live URL for judges:** https://elcaro.trustfall.xyz/scan
   (ChatGPT in-app browser, or Chrome with `chrome://flags/#enable-webmcp-testing`)
