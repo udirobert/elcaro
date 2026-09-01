@@ -8,7 +8,7 @@ set -euo pipefail
 
 YAML_URL="${YAML_URL:-https://api.elcaro.trustfall.xyz/telegraph.yaml}"
 DIAMOND="${DIAMOND:-0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8}"
-REGISTRATION_ID="${REGISTRATION_ID:-145}"
+REGISTRATION_ID="${REGISTRATION_ID:-406}"
 FEE_ADDRESS="${FEE_ADDRESS:-0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40}"
 MIN_PRICE="${MIN_PRICE:-10000}"
 LOCAL_YAML="$(cd "$(dirname "$0")/.." && pwd)/miner/telegraph.yaml"

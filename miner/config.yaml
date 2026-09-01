@@ -43,7 +43,7 @@ api:
 # WARNING: these are Elcaro-internal capability names, NOT Telegraph canonical
 # intents. No INJECTION_DETECTION intent exists on the Telegraph network.
 # The actual registered intents (miner/telegraph.yaml, and confirmed on-chain
-# under registration_id 145) are CONTENT_MODERATION and TEXT_CLASSIFICATION.
+# under registration_id 406) are CONTENT_MODERATION and TEXT_CLASSIFICATION.
 
 intents:
   - name: INJECTION_DETECTION
@@ -217,14 +217,15 @@ pricing:
 # deploy/TODO.md, Step 3.
 #
 # To verify this record is still live:
-#   curl -s https://devnode.telegraphprotocol.com/api/miners/145
+#   curl -s https://devnode.telegraphprotocol.com/api/miners/406
 
 registration:
   network: base-sepolia
   registry_contract: "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8"
-  registration_id: 145
+  registration_id: 406
   yaml_url: "https://api.elcaro.trustfall.xyz/telegraph.yaml"
-  yaml_hash: "0x213b88c646efd4d39bddaa16b3adb93402dff3ba9cd8215affa73c8f1e5adb8e"
+  yaml_hash: "0xdeaa3184024df4e256578f0b804e55ab5ac987d833a1323a381937998156fb0c"
   fee_address: "0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40"
-  registered_at: "2026-08-20"
-  tx_hash: "0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f"
+  registered_at: "2026-09-01"
+  # Prior active records: 145 (2026-08-20, tx 0x79a908a6…), then 405 (YAML
+  # intents pass). Both are now deregistered. Current hash matches the live URL.

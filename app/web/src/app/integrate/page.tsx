@@ -170,7 +170,7 @@ export default function IntegratePage() {
               Live on Telegraph Protocol
             </span>
             <span className="text-xs text-ink-faint font-mono">
-              id 8848 · registrationId 145
+              id 8848 · registrationId 406
             </span>
           </div>
         </div>

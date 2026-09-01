@@ -24,8 +24,8 @@
 | # | Date | What | Miner ID | Intent | Status | Notes |
 |---|------|------|----------|--------|--------|-------|
 | 1 | 2026-08-20 | Registered on Base Sepolia | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ❌ Rejected | `registrationId 136` — YAML hash mismatch. Console's IPFS pin re-serialised the file before hashing. See iteration log. |
-| 2 | 2026-08-20 | Re-registered, self-hosted YAML | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ✅ Active | `registrationId 145`, tx [`0x79a908a6...`](https://sepolia.basescan.org/tx/0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f). Confirmed `activation_status: active` via `devnode.telegraphprotocol.com/api/miners/145`. |
-| 3 | 2026-09-01 | YAML: endpoint `intents` + `params.body` so engine routing can select `/scan` | `8848` | same | ⏳ Needs deploy + `updateMiner` then form submit | Catalog listed Elcaro for `CONTENT_MODERATION` but `/scan` declared no `intents`, so auto-routed asks could not select it. Direct 402 calls do not count as miner volume. |
+| 2 | 2026-08-20 | Re-registered, self-hosted YAML | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ❌ Deregistered | `registrationId 145`, tx [`0x79a908a6...`](https://sepolia.basescan.org/tx/0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f). Superseded 2026-09-01. |
+| 3 | 2026-09-01 | YAML: endpoint `intents` + `params.body`; re-register | `8848` | same | ✅ Active | Live YAML hash `deaa3184…fb0c` matches local `miner/telegraph.yaml`. `registrationId 406` (`/api/miners/406`, `activation_status: active`). 145 and 405 are deregistered. Catalog lists miner 8848 as active. Track 1 form submit: **unverified here — paste confirmation if you have it.** |
 
 ## Track 2 — Eval Script (Adversarial IPI Test Suite)
 
@@ -40,7 +40,7 @@ Official bar: users & activity, usage, creativity, **must use Telegraph miners**
 | # | Date | What | Status | Notes |
 |---|------|------|--------|-------|
 | 1 | 2026-08-29 | Middleware demo: agent pre-filters retrieved content | ✅ Product | `app/middleware.py` + [/integrate](https://elcaro.trustfall.xyz/integrate). Direct `POST /scan` — fine as a product, **does not** by itself satisfy “must use Telegraph miners”. |
-| 2 | 2026-09-01 | Live Telegraph catalog on /integrate | ⏳ Ship with frontend | `GET /api/telegraph/miners` reads `devnode…/api/miners?intent=CONTENT_MODERATION`. Counted volume still needs auto-routed `/engine/v1/ask` after YAML `updateMiner`. |
+| 2 | 2026-09-01 | Live Telegraph catalog on /integrate | ✅ Shipped | `GET /api/telegraph/miners` reads `devnode…/api/miners?intent=CONTENT_MODERATION`. Counted miner volume is still auto-routed `/engine/v1/ask` only. |
 
 ## Iteration log
 
@@ -147,3 +147,19 @@ hash-mismatch and reject the miner. Sequence: deploy →
 `scripts/print_update_miner.sh` → `updateMiner` from the registering
 wallet → submit miner id `8848` + the live YAML on the Track 1 form
 before Wed 02 Sep 2026 11:59:59 UTC.
+
+### 2026-09-01 later — registration 406 is the live record
+
+Verified against the protocol node (not the form):
+
+- Live YAML `https://api.elcaro.trustfall.xyz/telegraph.yaml` hashes
+  `deaa3184024df4e256578f0b804e55ab5ac987d833a1323a381937998156fb0c`,
+  identical to repo `miner/telegraph.yaml`, and includes `/scan` `intents`
+  + `params.body`.
+- `GET /api/miners/406` → `activation_status: active`, same hash.
+- `GET /api/miners/145` and `/api/miners/405` → `deregistered`.
+- Catalog `?intent=CONTENT_MODERATION` lists miner `8848` as active
+  (`registered_at` 2026-09-01T10:52:24Z).
+
+Track 1 Google/Telegraph form and the X post are not visible from here.
+Paste a confirmation screenshot or URL to close those checklist items.

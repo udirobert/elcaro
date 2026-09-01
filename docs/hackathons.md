@@ -54,16 +54,17 @@ Overall submissions close **Sun 07 Sep 2026 23:59 UTC**.
 | Field | Value |
 |---|---|
 | Miner ID | `8848` |
-| Registration ID | `145` |
+| Registration ID | `406` (145 and 405 are deregistered) |
 | Network | Base Sepolia |
 | Registry contract | `0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8` |
 | YAML URL | https://api.elcaro.trustfall.xyz/telegraph.yaml |
+| YAML hash | `deaa3184024df4e256578f0b804e55ab5ac987d833a1323a381937998156fb0c` |
 | Fee address | `0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40` |
-| Registered | 2026-08-20 · tx `0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f` |
+| Registered | 2026-09-01T10:52:24Z |
 | Intents | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` |
 | Pricing | 0.01 USDC per request (x402) — immutable after registration |
 
-Verify the record: `curl -s https://devnode.telegraphprotocol.com/api/miners/145`
+Verify the record: `curl -s https://devnode.telegraphprotocol.com/api/miners/406`
 
 ### Compatibility notes (do not break the miner)
 
@@ -114,7 +115,7 @@ as WebMCP.
 
 - [x] Public repo (github.com/udirobert/elcaro)
 - [x] `LICENSE` at repo root (MIT — GitHub About must show it)
-- [ ] WebMCP tools live on production `/scan` (five tools + Together rail)
+- [x] WebMCP tools live on production `/scan` (five tools + Together rail; verified 2026-09-01 in the deployed JS bundle)
 - [x] `llms.txt` / `/for-agents` / `/integrate` describe the tools
 - [ ] Demo video (&lt;3 min, public YouTube, **with audio**) in ChatGPT’s in-app browser: load specimen `authority` → pause so the human reads the email → `scan_content` → `contrast_intent` (“I was about to send the reset link to the user”) → About to / The document asked / Do this instead → agent quotes `human_summary` and does not act
 - [ ] Devpost form: live URL, description (why WebMCP, human+agent, how implemented), repo URL
