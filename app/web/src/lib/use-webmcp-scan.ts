@@ -21,6 +21,8 @@ export function useWebMcpScan(handlers: ScanToolHandlers): boolean {
         handlersRef.current.scan(content, contentType),
       loadSpecimen: (id) => handlersRef.current.loadSpecimen(id),
       lastVerdict: () => handlersRef.current.lastVerdict(),
+      contrastIntent: (intendedAction) =>
+        handlersRef.current.contrastIntent(intendedAction),
     };
 
     const ac = new AbortController();

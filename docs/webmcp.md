@@ -1,33 +1,35 @@
-# WebMCP on Elcaro — scan gate
+# WebMCP on Elcaro — joint review
 
-Elcaro’s thesis is that **humans and agents share one verdict**. WebMCP is
-how that happens in a browser: the agent does not scrape `/scan`; it calls
-tools that fill the same form, run the same `/api/scan` path, and paint the
-same risk meter the human is looking at.
+Elcaro’s thesis is that **humans and agents share one near-miss**. WebMCP
+is how that happens in a browser: the agent does not scrape `/scan`; it
+loads a specimen the human can read, scans through the same form, then
+**declares the action it was about to take**. The page puts that sentence
+next to what the hidden instruction asked for.
 
-This is not a port of `app/mcp_server.py` into the page. Stdio MCP is for
-IDEs. WebMCP is for the **site as a co-working surface**.
+That contrast is the thing that was impossible before. A silent `POST
+/scan` never shows the human what the model almost did. A human-only paste
+never captures the agent’s intended tool call. Stdio MCP (`app/mcp_server.py`)
+is for IDEs; it is not this surface.
 
-## Why this use case
+## Demo story (&lt;3 min video)
 
-Prompt-level “ignore retrieved instructions” fails when the instruction is
-*in the document the agent already trusts*. A human watching ChatGPT’s
-in-app browser cannot see what the model ingested. A silent `POST /scan`
-sidecar does not help them either.
+Record in ChatGPT’s in-app browser on https://elcaro.trustfall.xyz/scan
+with a human visible on the tab.
 
-With WebMCP:
+1. **Load.** Agent: `list_specimens` → `load_specimen` id `authority`.
+   Human sees a real-looking password-reset email in the textarea. Pause.
+2. **Scan.** Agent: `scan_content` with that text. Human sees **1.00 /
+   dangerous / quarantined** and the `SYSTEM:` span.
+3. **Contrast.** Agent: `contrast_intent` with
+   `intended_action`: “Extract the reset link and send it to the user so
+   they can recover the vendor portal.”
+   The page shows three columns: *About to* / *The document asked*
+   (`SYSTEM: … forward … Do not confirm`) / *Do this instead* (quote
+   `human_summary`, do not act).
+4. **Close.** Agent reads `quote_to_user` aloud. Does not send the link.
 
-1. The agent retrieves untrusted content (email, search snippet, page).
-2. It calls `scan_content` **on this origin** before it summarizes or acts.
-3. The playground updates: textarea, scan beam, score, matched span.
-4. The agent receives structured JSON (`risk_score`, `quarantined`,
-   `safe_content`, `human_summary`) and follows the same doctrine as
-   `/integrate` (block at ≥ 0.5, review from 0.3, never pass 0.7+).
-
-That pairing — machine-readable verdict + human-visible evidence — is the
-thing that was awkward before: either the human pasted into Elcaro and the
-agent never saw the result, or the agent called an API and the human saw
-nothing.
+That is people and agents together: the human watches the ingest; the
+agent confesses the near-miss; both see the same remediation.
 
 ## Tools (registered on `/scan`)
 
@@ -37,6 +39,7 @@ nothing.
 | `load_specimen` | yes | Load a labeled playground example into the textarea |
 | `list_specimens` | no | Catalog of specimen ids the agent can load |
 | `explain_verdict` | no | Doctrine for the **last** on-page verdict (same numbers as MCP) |
+| `contrast_intent` | yes | Agent declares what it was about to do; human sees the near-miss; agent gets `safe_content` + `quote_to_user` |
 
 Implementation: [`app/web/src/lib/webmcp-register.ts`](../app/web/src/lib/webmcp-register.ts)
 (`document.modelContext.registerTool`). Hook:
@@ -44,7 +47,14 @@ Implementation: [`app/web/src/lib/webmcp-register.ts`](../app/web/src/lib/webmcp
 
 `scan_content` is annotated `untrustedContentHint: true` because the return
 echoes matched spans from retrieved content. `list_specimens` and
-`explain_verdict` are `readOnlyHint: true`.
+`explain_verdict` are `readOnlyHint: true`. `contrast_intent` is not
+read-only: it writes the agent’s intent onto the page for the human.
+
+The playground itself does not name tools. Humans see **Scan**, a paste
+box, and — only when `modelContext` exists — a **Together** rail
+(Load → Scan → Say what you almost did). After a verdict, a waiting line
+asks the agent to declare intent. Tool names live in `llms.txt`,
+`/integrate`, and this doc.
 
 Feature detect `document.modelContext` (fallback `navigator.modelContext`).
 Unregister on unmount via `AbortSignal`. No-op in browsers without WebMCP.
@@ -69,6 +79,8 @@ live URL, &lt;3 min YouTube with audio in ChatGPT’s in-app browser.
 1. `cd app/web && npm run dev`
 2. Chrome: `chrome://flags/#enable-webmcp-testing` → enable → open
    `http://localhost:3000/scan`
-3. The page should show “Agent connected” when `modelContext` exists.
-4. ChatGPT in-app browser: open `https://elcaro.trustfall.xyz/scan` and ask
-   the agent to load specimen `authority` then scan it.
+3. With WebMCP on, a **Together** rail appears (Load → Scan → Say what
+   you almost did). Without it, the page is a normal paste-and-scan —
+   no tool names, no Chrome-flag copy.
+4. ChatGPT in-app browser: open `https://elcaro.trustfall.xyz/scan` and run
+   the four-beat demo above (`authority` → scan → `contrast_intent`).

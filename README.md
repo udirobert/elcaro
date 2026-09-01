@@ -127,9 +127,9 @@ Everything is live — no waitlists, no gated features:
 
 - **[Scan](https://elcaro.trustfall.xyz/scan)** — paste content, get a verdict.
   The playground registers WebMCP tools (`scan_content`, `load_specimen`,
-  `list_specimens`, `explain_verdict`) so an agent in ChatGPT’s in-app
-  browser or Chrome (`chrome://flags/#enable-webmcp-testing`) scans through
-  the same UI a human is watching. Plan: [docs/webmcp.md](docs/webmcp.md).
+  `list_specimens`, `explain_verdict`, `contrast_intent`) so an agent in
+  ChatGPT’s in-app browser loads a specimen the human can see, scans it,
+  then declares the action it was about to take. Plan: [docs/webmcp.md](docs/webmcp.md).
 - **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
   specimen corpus against the live miner and watch every verdict.
 - **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,

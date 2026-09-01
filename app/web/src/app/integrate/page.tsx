@@ -387,7 +387,12 @@ export default function IntegratePage() {
               scan_content
             </code>
             . The playground the human is watching fills in; the agent gets
-            the same JSON verdict. Also:{" "}
+            the same JSON verdict. After the scan, call{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              contrast_intent
+            </code>{" "}
+            with the action you were about to take — the human sees that
+            sentence beside the injection. Also:{" "}
             <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
               load_specimen
             </code>

@@ -14,6 +14,7 @@ def test_webmcp_register_tool_source_exists():
         '"load_specimen"',
         '"list_specimens"',
         '"explain_verdict"',
+        '"contrast_intent"',
     ):
         assert name in text, f"missing tool {name}"
     assert "untrustedContentHint" in text

@@ -95,16 +95,17 @@ Verify the record: `curl -s https://devnode.telegraphprotocol.com/api/miners/145
 
 The contest asks for something **meaningfully better when people and their
 agents use it together**. Elcaro already is that product: IPI scanning of
-retrieved content. WebMCP is the missing browser contract — agents stop
-guessing the textarea and call `scan_content`; the human sees the same
-verdict. Stdio MCP (`app/mcp_server.py`) stays for IDEs; it does not count
+retrieved content. WebMCP is the missing browser contract — the agent
+loads a specimen the human can read, scans it, then **declares the action
+it was about to take**. The page shows that sentence next to the injection.
+Stdio MCP (`app/mcp_server.py`) stays for IDEs; it does not count
 as WebMCP.
 
 ### Judging → what we ship
 
 | Criterion | Position |
 |---|---|
-| **WebMCP Leverage** | Four `document.modelContext.registerTool` tools on `/scan` that drive the live playground (not a silent API wrap). Source: `app/web/src/lib/webmcp-register.ts`. |
+| **WebMCP Leverage** | Five `document.modelContext.registerTool` tools on `/scan`. `contrast_intent` is the bidirectional beat: the agent writes its intended action onto the page; the human reviews the near-miss. Source: `app/web/src/lib/webmcp-register.ts`. |
 | **Execution** | Existing scan / quarantine / evidence UI. Tools reuse `/api/scan`. |
 | **Potential Impact** | Scan-gate before the agent acts — a real IPI failure mode, not a demo catalog. |
 | **Creativity** | Safety checkpoint in-page, not `search_products`. |
@@ -113,9 +114,9 @@ as WebMCP.
 
 - [x] Public repo (github.com/udirobert/elcaro)
 - [x] `LICENSE` at repo root (MIT — GitHub About must show it)
-- [ ] WebMCP tools live on production `/scan`
-- [ ] `llms.txt` / `/for-agents` / `/integrate` describe the tools
-- [ ] Demo video (&lt;3 min, public YouTube, **with audio**) in ChatGPT’s in-app browser: load specimen → scan → human sees 1.00 / quarantined → agent reads `explain_verdict`
+- [ ] WebMCP tools live on production `/scan` (five tools + Together rail)
+- [x] `llms.txt` / `/for-agents` / `/integrate` describe the tools
+- [ ] Demo video (&lt;3 min, public YouTube, **with audio**) in ChatGPT’s in-app browser: load specimen `authority` → pause so the human reads the email → `scan_content` → `contrast_intent` (“I was about to send the reset link to the user”) → About to / The document asked / Do this instead → agent quotes `human_summary` and does not act
 - [ ] Devpost form: live URL, description (why WebMCP, human+agent, how implemented), repo URL
 
 Do not submit until the tools are on the deployed Netlify site and the

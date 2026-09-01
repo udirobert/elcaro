@@ -8,7 +8,14 @@ import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
 import { useWebMcpScan } from "@/lib/use-webmcp-scan";
+import { buildIntentContrast, type IntentContrast } from "@/lib/webmcp-doctrine";
 import { ScanResult } from "./scan-result";
+import { IntentContrastPanel } from "./intent-contrast";
+import {
+  AgentSessionRail,
+  WaitingForIntent,
+  agentBeat,
+} from "./agent-session";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
 
@@ -84,6 +91,9 @@ export function ScanForm() {
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [scanStatusIndex, setScanStatusIndex] = useState(0);
+  const [intentContrast, setIntentContrast] = useState<IntentContrast | null>(
+    null
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
@@ -120,6 +130,7 @@ export function ScanForm() {
       setContent(sharedVerdict.content);
       setContentType(sharedVerdict.content_type);
       setResult(sharedVerdict.response);
+      setIntentContrast(null);
       setError(null);
       setDismissedOnboarding(true);
     }
@@ -154,6 +165,7 @@ export function ScanForm() {
     setScanning(true);
     setScanStatusIndex(0);
     setResult(null);
+    setIntentContrast(null);
     setError(null);
 
     try {
@@ -192,6 +204,7 @@ export function ScanForm() {
     }
     setDismissedOnboarding(true);
     setResult(null);
+    setIntentContrast(null);
     setError(null);
     setContent(example.content);
     setContentType(example.content_type);
@@ -202,12 +215,26 @@ export function ScanForm() {
     scan: runScanWith,
     loadSpecimen: applySpecimen,
     lastVerdict: () => resultRef.current,
+    contrastIntent: (intendedAction) => {
+      const last = resultRef.current;
+      if (!last) {
+        return {
+          ok: false as const,
+          error:
+            "No verdict on this page yet. Call scan_content first, with the human watching.",
+        };
+      }
+      const contrast = buildIntentContrast(last, intendedAction);
+      setIntentContrast(contrast);
+      return { ok: true as const, contrast };
+    },
   });
 
   function loadExample(index: number) {
     const example = EXAMPLES[index];
     setDismissedOnboarding(true);
     setResult(null);
+    setIntentContrast(null);
     setError(null);
     setContent("");
     setContentType(example.content_type);
@@ -229,6 +256,7 @@ export function ScanForm() {
     setContent(entry.content);
     setContentType(entry.content_type);
     setResult(entry.response);
+    setIntentContrast(null);
     setError(null);
   }
 
@@ -244,24 +272,26 @@ export function ScanForm() {
   }, [scanning]);
 
   const suggestion = hasContent ? detectContentType(content) : null;
+  const beat = agentBeat({
+    hasContent,
+    scanning,
+    hasResult: Boolean(result),
+    hasContrast: Boolean(intentContrast),
+  });
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-ink-faint leading-relaxed">
-        {webmcpLive ? (
-          <span className="text-ink-muted">
-            Agent connected — tools on this page are live. A scan from the
-            agent fills this form so you see the same verdict.
-          </span>
-        ) : (
-          <span>
-            Agents can call{" "}
-            <span className="font-mono">scan_content</span> on this page
-            (ChatGPT in-app browser, or Chrome with WebMCP enabled). You
-            still paste below.
-          </span>
-        )}
-      </p>
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+          Scan
+        </h1>
+        <p className="text-base text-ink-muted leading-relaxed max-w-xl">
+          Paste what your agent retrieved. Hidden instructions get caught
+          before it acts.
+        </p>
+      </div>
+
+      {webmcpLive && <AgentSessionRail beat={beat} />}
 
       {/* First-visit onboarding — explains what to do, disappears after first use */}
       <AnimatePresence>
@@ -274,15 +304,9 @@ export function ScanForm() {
             className="overflow-hidden"
           >
             <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink-muted leading-relaxed">
-              <span className="font-medium text-ink">
-                Paste content your agent would retrieve
-              </span>
-              {" "}— an email, a search result, a document — and Elcaro checks
-              it for hidden instructions before your agent would act on them.
               Not sure what to try?{" "}
-              <span className="text-ink-faint">
-                Click one of the examples below.
-              </span>
+              <span className="text-ink">Click an example below</span>
+              {" "}— one is a hidden instruction, one is clean.
             </div>
           </motion.div>
         )}
@@ -468,6 +492,16 @@ export function ScanForm() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.45, ease: EASE_OUT }}
           >
+            {intentContrast && (
+              <div className="mb-5">
+                <IntentContrastPanel contrast={intentContrast} />
+              </div>
+            )}
+            {webmcpLive && result && !intentContrast && (
+              <div className="mb-5">
+                <WaitingForIntent />
+              </div>
+            )}
             <ScanResult result={result} content={content} />
           </motion.div>
         )}

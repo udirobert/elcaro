@@ -76,7 +76,7 @@ export default function ForAgentsPage() {
         <Principle
           number="07"
           title="Expose WebMCP tools on the human UI"
-          body="WebMCP (W3C WebML Community Group draft, implemented in ChatGPT’s in-app browser and behind chrome://flags/#enable-webmcp-testing) lets a site register JavaScript tools with document.modelContext.registerTool. Elcaro’s /scan playground registers scan_content, load_specimen, list_specimens, and explain_verdict so an agent and a human share one verdict — the form fills, the risk meter moves, the agent gets JSON. Stdio MCP remains for IDEs; it is not a substitute. See docs/webmcp.md."
+          body="WebMCP (W3C WebML Community Group draft, implemented in ChatGPT’s in-app browser and behind chrome://flags/#enable-webmcp-testing) lets a site register JavaScript tools with document.modelContext.registerTool. Elcaro’s /scan playground registers scan_content, load_specimen, list_specimens, explain_verdict, and contrast_intent. The last one is the joint review: the agent declares the action it was about to take; the human sees that next to what the hidden instruction asked for. Stdio MCP remains for IDEs; it is not a substitute. See docs/webmcp.md."
         />
 
         <Principle
