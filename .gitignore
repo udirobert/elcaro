@@ -53,6 +53,7 @@ coverage.xml
 
 # Kiro / editor tooling
 .kimchi/
+.qoder/
 
 # Local-only docs (not for public repo)
 docs/hackathon-tracker.md
