@@ -124,27 +124,9 @@ endpoints:
             type: string
             intents: ["*"]
             description: >
-              Provenance of the content. email, search_result, and webpage
-              weight highest; chat_message lowest. Defaults to document.
-            accepted_fields:
-              - value: email
-                intents: ["*"]
-                description: Untrusted inbound email.
-              - value: search_result
-                intents: ["*"]
-                description: Web or tool search snippet.
-              - value: webpage
-                intents: ["*"]
-                description: Fetched web page text.
-              - value: document
-                intents: ["*"]
-                description: Generic document. Default if omitted.
-              - value: code
-                intents: ["*"]
-                description: Source code or a diff.
-              - value: chat_message
-                intents: ["*"]
-                description: The user's own chat input (lowest weight).
+              Provenance of the content. One of email, search_result, webpage,
+              document, code, chat_message. email/search_result/webpage weight
+              highest; chat_message lowest. Defaults to document.
           - name: deep_analysis
             type: boolean
             intents: ["*"]
