@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Scan",
   description:
-    "Paste any content and scan it for indirect prompt injection patterns.",
+    "Paste any content and scan it for indirect prompt injection. Agents on this page can call scan_content via WebMCP.",
 };
 
 export default function ScanPage() {

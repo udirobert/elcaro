@@ -1,6 +1,9 @@
 # Submission Log — Telegraph Hackathon Season I
 
-> Track 1 & 2 open Aug 17, 2026. Track 3 opens after T1/T2 close (~Aug 31).
+> H1 overall close: **Sun 07 Sep 2026 23:59 UTC**.
+> Track 1 miner-ID + YAML form: **Wed 02 Sep 2026 11:59:59 UTC**.
+> Track 3 (Apps & Agents) is open now — must consume live Telegraph miners.
+> X / engagement posts: extended to **2 Sep 2026**.
 > Log every submission, iteration, and result here.
 >
 > The Kiro "Ready, Spec, Ship" hackathon (deadline Aug 23, 2026) is tracked
@@ -10,9 +13,10 @@
 
 | Date | Event |
 |------|-------|
-| Aug 17, 2026 12:00 UTC | Track 1 (Miners) & Track 2 (Scripts) open |
-| Aug 31, 2026 | Track 3 (Apps) opens |
-| Sep 7, 2026 | Track 1 & 2 close; evaluation begins |
+| Aug 17, 2026 | H1 opens — Track 1 (Miners) & Track 2 (Scripts) |
+| Aug 31 / Sep 1 | Track 3 (Apps & Agents) is the live build window |
+| **Wed 02 Sep 2026 11:59:59 UTC** | **Track 1 form: miner ID(s) + YAML** · X/engagement posts extended to this date |
+| **Sun 07 Sep 2026 23:59 UTC** | **H1 submissions close** · evaluation begins |
 | TBA | Winners announced |
 
 ## Track 1 — Miner (IPI Detection)
@@ -21,6 +25,7 @@
 |---|------|------|----------|--------|--------|-------|
 | 1 | 2026-08-20 | Registered on Base Sepolia | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ❌ Rejected | `registrationId 136` — YAML hash mismatch. Console's IPFS pin re-serialised the file before hashing. See iteration log. |
 | 2 | 2026-08-20 | Re-registered, self-hosted YAML | `8848` | `CONTENT_MODERATION`, `TEXT_CLASSIFICATION` | ✅ Active | `registrationId 145`, tx [`0x79a908a6...`](https://sepolia.basescan.org/tx/0x79a908a6ac0b45dad82048e25cb148dc3daf8a841510fbef31b4ad5c006f9d3f). Confirmed `activation_status: active` via `devnode.telegraphprotocol.com/api/miners/145`. |
+| 3 | 2026-09-01 | YAML: endpoint `intents` + `params.body` so engine routing can select `/scan` | `8848` | same | ⏳ Needs deploy + `updateMiner` then form submit | Catalog listed Elcaro for `CONTENT_MODERATION` but `/scan` declared no `intents`, so auto-routed asks could not select it. Direct 402 calls do not count as miner volume. |
 
 ## Track 2 — Eval Script (Adversarial IPI Test Suite)
 
@@ -30,9 +35,12 @@
 
 ## Track 3 — App (Agent Content Screener)
 
+Official bar: users & activity, usage, creativity, **must use Telegraph miners**, posts showcasing the project.
+
 | # | Date | What | Status | Notes |
 |---|------|------|--------|-------|
-| — | 2026-08-29 | Middleware demo: agent pre-filters retrieved content | ✅ Done | `app/middleware.py` + interactive walkthrough on [/integrate](https://elcaro.trustfall.xyz/integrate); replace/block/warn quarantine modes, signed verdicts, session-watch supervision |
+| 1 | 2026-08-29 | Middleware demo: agent pre-filters retrieved content | ✅ Product | `app/middleware.py` + [/integrate](https://elcaro.trustfall.xyz/integrate). Direct `POST /scan` — fine as a product, **does not** by itself satisfy “must use Telegraph miners”. |
+| 2 | 2026-09-01 | Live Telegraph catalog on /integrate | ⏳ Ship with frontend | `GET /api/telegraph/miners` reads `devnode…/api/miners?intent=CONTENT_MODERATION`. Counted volume still needs auto-routed `/engine/v1/ask` after YAML `updateMiner`. |
 
 ## Iteration log
 
@@ -117,3 +125,25 @@ Against the production miner (`api.elcaro.trustfall.xyz`):
 **Takeaway:** never ship a WASM ABI on native tests alone — instantiate the
 real artifact and round-trip it. The capacity/length mismatch would have
 scored zero silently in a validator.
+
+### 2026-09-01 — Track 1 form deadline is Sep 2; engine routing was a no-op
+
+**Judging rule (Ahmed Ali, Telegraph).** Direct calls — raw HTTPS to the
+miner, or `POST /engine/v1/ask/8848` with or without x402 — are not counted
+toward miner request volume. Auto-routed `POST /engine/v1/ask` is. An agent
+that uses the direct path still counts as an application.
+
+**YAML gap.** `/scan` had a description and top-level `supported_intents`,
+but no per-endpoint `intents:` or `params`. The official YAML guide says
+routing selects an endpoint by intent, so an endpoint with no `intents`
+list is never called. Confirmed on the live catalog: Elcaro is the only
+`CONTENT_MODERATION` miner, and `/scan` listed path/method/description
+only. Counted engine traffic could not land.
+
+**Fix (repo, not yet live).** `miner/telegraph.yaml` now declares
+`intents: [CONTENT_MODERATION, TEXT_CLASSIFICATION]` and `params.body`
+(`content` required). Deploying that file without `updateMiner()` will
+hash-mismatch and reject the miner. Sequence: deploy →
+`scripts/print_update_miner.sh` → `updateMiner` from the registering
+wallet → submit miner id `8848` + the live YAML on the Track 1 form
+before Wed 02 Sep 2026 11:59:59 UTC.

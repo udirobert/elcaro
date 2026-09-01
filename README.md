@@ -126,9 +126,10 @@ API key the flag is a safe no-op.
 Everything is live — no waitlists, no gated features:
 
 - **[Scan](https://elcaro.trustfall.xyz/scan)** — paste content, get a verdict.
-  The form carries stable semantic field names (`content`, `content_type`) so
-  it can be declared as a WebMCP form tool when browsers land the
-  [W3C WebML CG draft](https://github.com/webmachinelearning/webmcp).
+  The playground registers WebMCP tools (`scan_content`, `load_specimen`,
+  `list_specimens`, `explain_verdict`) so an agent in ChatGPT’s in-app
+  browser or Chrome (`chrome://flags/#enable-webmcp-testing`) scans through
+  the same UI a human is watching. Plan: [docs/webmcp.md](docs/webmcp.md).
 - **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
   specimen corpus against the live miner and watch every verdict.
 - **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,

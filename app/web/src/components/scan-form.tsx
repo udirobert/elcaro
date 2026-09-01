@@ -7,6 +7,7 @@ import { scanContent, isError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
+import { useWebMcpScan } from "@/lib/use-webmcp-scan";
 import { ScanResult } from "./scan-result";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
@@ -85,6 +86,9 @@ export function ScanForm() {
   const [scanStatusIndex, setScanStatusIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
+  const resultRef = useRef<ScanResponse | null>(null);
+  const scanningRef = useRef(false);
+  resultRef.current = result;
 
   // Was there any scan history at mount? Read via useSyncExternalStore so the
   // SSR pass (no localStorage) and the hydrated client pass agree on a stable
@@ -135,28 +139,70 @@ export function ScanForm() {
     });
   }, [shakeControls]);
 
-  async function handleScan() {
-    if (!content.trim()) return;
+  async function runScanWith(nextContent: string, nextType: ContentType) {
+    if (!nextContent.trim()) {
+      return { error: "Scan failed", detail: "content is empty" };
+    }
+    if (scanningRef.current) {
+      return { error: "Scan failed", detail: "a scan is already running" };
+    }
 
+    scanningRef.current = true;
     setDismissedOnboarding(true);
+    setContent(nextContent);
+    setContentType(nextType);
     setScanning(true);
     setScanStatusIndex(0);
     setResult(null);
     setError(null);
 
-    const response = await scanContent({ content, content_type: contentType });
+    try {
+      const response = await scanContent({
+        content: nextContent,
+        content_type: nextType,
+      });
 
-    if (isError(response)) {
-      setError(response.detail || response.error);
-      triggerShake();
-    } else {
-      setResult(response);
-      addToHistory(content, contentType, response);
-      setHistoryRefresh((n) => n + 1);
+      if (isError(response)) {
+        setError(response.detail || response.error);
+        triggerShake();
+      } else {
+        setResult(response);
+        addToHistory(nextContent, nextType, response);
+        setHistoryRefresh((n) => n + 1);
+      }
+
+      return response;
+    } finally {
+      scanningRef.current = false;
+      setScanning(false);
     }
-
-    setScanning(false);
   }
+
+  async function handleScan() {
+    await runScanWith(content, contentType);
+  }
+
+  function applySpecimen(id: string) {
+    const example = EXAMPLES.find((ex) => ex.id === id);
+    if (!example) {
+      return {
+        ok: false as const,
+        error: `Unknown specimen id ${JSON.stringify(id)}. Call list_specimens.`,
+      };
+    }
+    setDismissedOnboarding(true);
+    setResult(null);
+    setError(null);
+    setContent(example.content);
+    setContentType(example.content_type);
+    return { ok: true as const, label: example.label };
+  }
+
+  const webmcpLive = useWebMcpScan({
+    scan: runScanWith,
+    loadSpecimen: applySpecimen,
+    lastVerdict: () => resultRef.current,
+  });
 
   function loadExample(index: number) {
     const example = EXAMPLES[index];
@@ -201,6 +247,22 @@ export function ScanForm() {
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-ink-faint leading-relaxed">
+        {webmcpLive ? (
+          <span className="text-ink-muted">
+            Agent connected — tools on this page are live. A scan from the
+            agent fills this form so you see the same verdict.
+          </span>
+        ) : (
+          <span>
+            Agents can call{" "}
+            <span className="font-mono">scan_content</span> on this page
+            (ChatGPT in-app browser, or Chrome with WebMCP enabled). You
+            still paste below.
+          </span>
+        )}
+      </p>
+
       {/* First-visit onboarding — explains what to do, disappears after first use */}
       <AnimatePresence>
         {isFirstVisit && (

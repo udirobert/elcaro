@@ -71,10 +71,16 @@ blocks injection attempts while letting clean content through.
 
 ## Telegraph integration
 
-When deployed on the Telegraph network, this middleware calls the Elcaro miner
-via the standard miner API (`POST /scan`). Each scan is a paid request settled
-in USDC via x402. This drives real demand for the Elcaro miner (Track 1),
-which is a judging criterion for the hackathon.
+The middleware's default is a direct `POST /scan` on the miner URL. That is
+the right path for a local/dev agent and for the web UI.
+
+It is **not** the path Telegraph counts toward miner request volume. Direct
+calls — including 402-gated `POST /engine/v1/ask/8848` — are excluded so
+operators cannot farm their own traffic. Counted volume is auto-routed
+`POST /engine/v1/ask` (see [Using Telegraph](https://docs.telegraphprotocol.com/docs/using/x402-inference),
+the Consume Intelligence card on [integrate.telegraphprotocol.com](https://integrate.telegraphprotocol.com/),
+and `app/telegraph.py`). An agent that uses the direct path still counts as
+a Track 3 application; those scans just do not add miner volume.
 
 ## Integration with agent frameworks
 

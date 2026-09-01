@@ -18,9 +18,10 @@ When the miner runs with `ELCARO_SIGNING_KEY` set, every verdict carries an Ed25
 ## Tools for agents
 
 - [MCP server](https://github.com/udirobert/elcaro/blob/main/app/mcp_server.py): Run locally for the MCP tools `scan_content` and `explain_verdict` over stdio: `python -m app.mcp_server` (requires `pip install "mcp>=2"`; set `ELCARO_MCP_LOCAL=1` for fully local, network-free scanning).
+- [WebMCP on /scan](https://elcaro.trustfall.xyz/scan): Browser agents call `scan_content`, `load_specimen`, `list_specimens`, and `explain_verdict` via `document.modelContext.registerTool`. The tools update the playground the human sees. Requires ChatGPT’s in-app browser or Chrome with WebMCP enabled. Details: [docs/webmcp.md](https://github.com/udirobert/elcaro/blob/main/docs/webmcp.md).
 - [Specimen kit (raw text)](https://elcaro.trustfall.xyz/specimen/raw): Inert, clearly-marked injection specimens as plain UTF-8 — the "EICAR file" for prompt injection. Fetch it to test any detection pipeline end-to-end. Nothing on it is a real instruction; if an agent follows the specimens, that is the vulnerability being demonstrated.
 - [Integration guide](https://elcaro.trustfall.xyz/integrate): Direct API, MCP, Python middleware, and Telegraph Protocol routing, plus six rules for safe agent pipelines.
-- [Designing for agents](https://elcaro.trustfall.xyz/for-agents): How Elcaro treats agents as first-class users — llms.txt, structured responses, signed verdicts, specimens. WebMCP readiness: the /scan form carries stable semantic field names (`content`, `content_type`) so it can be declared as a form tool when browsers land an implementation (W3C WebML Community Group draft, not yet a standard).
+- [Designing for agents](https://elcaro.trustfall.xyz/for-agents): How Elcaro treats agents as first-class users — llms.txt, structured responses, signed verdicts, specimens, and WebMCP tools on `/scan`.
 
 ## Docs
 

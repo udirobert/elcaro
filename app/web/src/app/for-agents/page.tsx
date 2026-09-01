@@ -75,8 +75,8 @@ export default function ForAgentsPage() {
 
         <Principle
           number="07"
-          title="Keep forms tool-declarable"
-          body="WebMCP (W3C WebML Community Group draft, not yet a standard) will let sites expose HTML forms as agent-callable tools. Keep your form's field names, labels, and submit contract stable and semantic now, so declaring it as a tool later is trivial. Track the spec; prepare; don't ship against a draft."
+          title="Expose WebMCP tools on the human UI"
+          body="WebMCP (W3C WebML Community Group draft, implemented in ChatGPT’s in-app browser and behind chrome://flags/#enable-webmcp-testing) lets a site register JavaScript tools with document.modelContext.registerTool. Elcaro’s /scan playground registers scan_content, load_specimen, list_specimens, and explain_verdict so an agent and a human share one verdict — the form fills, the risk meter moves, the agent gets JSON. Stdio MCP remains for IDEs; it is not a substitute. See docs/webmcp.md."
         />
 
         <Principle
@@ -167,6 +167,10 @@ export default function ForAgentsPage() {
             These principles shape Elcaro&apos;s own surfaces — our{" "}
             <a href="/llms.txt" className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80">
               llms.txt
+            </a>
+            , our{" "}
+            <a href="/scan" className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80">
+              WebMCP scan tools
             </a>
             , our{" "}
             <a
