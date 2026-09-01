@@ -209,7 +209,15 @@ def test_telegraph_yaml_is_valid_yaml(client):
     response = client.get("/telegraph.yaml")
     parsed = yaml.safe_load(response.content)
     assert parsed["slug"] == "elcaro-ipi-detection"
-    assert parsed["endpoints"][0]["path"] == "/scan"
+    scan = parsed["endpoints"][0]
+    assert scan["path"] == "/scan"
+    # Engine routing selects an endpoint by intent. An endpoint with no
+    # intents: list is listed in the catalog and never called.
+    assert "CONTENT_MODERATION" in scan["intents"]
+    assert "TEXT_CLASSIFICATION" in scan["intents"]
+    body_params = scan["params"]["body"]
+    required_names = {p["name"] for p in body_params["required"]}
+    assert "content" in required_names
 
 
 # ── Verdict signing (R5) ────────────────────────────────────────────────────────

@@ -1,5 +1,13 @@
 # Telegraph Protocol miner registration — Elcaro (IPI detection)
 #
+# ┌─ ANY EDIT OF THIS FILE REQUIRES updateMiner() BEFORE OR WITH DEPLOY ────────┐
+# │ The on-chain yamlHash is SHA-256 of the bytes at yaml_url. Deploying a     │
+# │ changed file without updateMiner makes the next node rehydrate reject us:  │
+# │ "the document at the registered URL is not the one committed on chain."    │
+# │ Sequence: edit → deploy → curl -s $YAML_URL | sha256sum → updateMiner.     │
+# │ Do not push this change to the live miner until that tx is ready to send.  │
+# └───────────────────────────────────────────────────────────────────────────────┘
+#
 # ┌─ HOSTING: self-hosted HTTPS, NOT the console's IPFS pin ────────────────────┐
 # │ The integrate.telegraphprotocol.com wizard re-serialises an uploaded YAML   │
 # │ before pinning to IPFS (strips comments, reflows some fields), so the      │
@@ -86,11 +94,69 @@ limitations:
 errors:
   message_path: detail
 
+# `intents` on the endpoint is what makes engine auto-routing able to select
+# this path. Without it the miner is listed for CONTENT_MODERATION but /scan
+# is never chosen — counted /engine/v1/ask traffic never arrives (see
+# docs.telegraphprotocol.com/docs/miners/yaml-config, "Why description,
+# intents and params decide whether you get traffic"). `params.body` is the
+# request contract so the node does not guess field names.
 endpoints:
   - path: /scan
     external_path: /scan
     method: POST
-    description: Scan retrieved content for indirect prompt injection
+    description: >
+      Scan untrusted retrieved text for indirect prompt injection. Required
+      body field is `content` (the email, search snippet, page, document, or
+      code). Optional `content_type` weights risk by provenance. Returns
+      risk_score (0-1), risk_level (safe/low/suspicious/dangerous),
+      flagged_techniques, and a one-sentence summary.
+    intents: [CONTENT_MODERATION, TEXT_CLASSIFICATION]
+    params:
+      body:
+        required:
+          - name: content
+            type: string
+            intents: ["*"]
+            description: >
+              The untrusted text to scan. This is the only required field.
+        optional:
+          - name: content_type
+            type: string
+            intents: ["*"]
+            description: >
+              Provenance of the content. email, search_result, and webpage
+              weight highest; chat_message lowest. Defaults to document.
+            accepted_fields:
+              - value: email
+                intents: ["*"]
+                description: Untrusted inbound email.
+              - value: search_result
+                intents: ["*"]
+                description: Web or tool search snippet.
+              - value: webpage
+                intents: ["*"]
+                description: Fetched web page text.
+              - value: document
+                intents: ["*"]
+                description: Generic document. Default if omitted.
+              - value: code
+                intents: ["*"]
+                description: Source code or a diff.
+              - value: chat_message
+                intents: ["*"]
+                description: The user's own chat input (lowest weight).
+          - name: deep_analysis
+            type: boolean
+            intents: ["*"]
+            description: >
+              Run a semantic second pass on gray-zone results. Ignored unless
+              the operator configured a classifier.
+          - name: context
+            type: object
+            intents: ["*"]
+            description: >
+              Optional detail about the consuming agent or task. Informational
+              only. The engine may merge its own context object here.
 
 # Top-level only — the schema rejects these inside endpoints[].
 input_schema:
