@@ -149,6 +149,39 @@ function Section({
   );
 }
 
+// Collapsed variant of Section — native <details>, so the content stays in
+// the server-rendered HTML (agents and crawlers still see everything — the
+// page's own doctrine) with zero JS and no client state. 01 Direct API stays
+// an open Section as the primary path; the alternatives collapse so the page
+// reads as one visible code path, not six.
+function CollapsibleSection({
+  number,
+  title,
+  children,
+}: {
+  number: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group">
+      <summary className="flex items-baseline gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+        <span className="text-xs font-mono text-ink-faint">{number}</span>
+        <h2 className="text-lg font-bold text-ink group-hover:text-ink-muted transition-colors">
+          {title}
+        </h2>
+        <span
+          aria-hidden="true"
+          className="ml-auto self-center text-sm font-mono text-ink-faint group-open:rotate-45 transition-transform"
+        >
+          +
+        </span>
+      </summary>
+      <div className="space-y-4 pt-4">{children}</div>
+    </details>
+  );
+}
+
 export default function IntegratePage() {
   return (
     <main className="min-h-dvh flex flex-col">
@@ -235,8 +268,13 @@ export default function IntegratePage() {
           </p>
         </Section>
 
-        {/* Option 2 — Python middleware */}
-        <Section number="02" title="Python middleware (5 lines)">
+        <p className="text-[11px] font-mono text-ink-faint -mt-8">
+          Other paths — python middleware, telegraph, mcp, webmcp — are
+          collapsed below; click to expand.
+        </p>
+
+        {/* Option 2 — Python middleware (collapsed; see CollapsibleSection) */}
+        <CollapsibleSection number="02" title="Python middleware (5 lines)">
           <p className="text-sm text-ink-muted leading-relaxed">
             Drop-in wrapper for Python agents. Wraps your retrieval step,
             quarantines high-risk content, and returns a{" "}
@@ -274,10 +312,10 @@ export default function IntegratePage() {
             </a>
             .
           </p>
-        </Section>
+        </CollapsibleSection>
 
-        {/* Option 3 — Telegraph */}
-        <Section number="03" title="Via Telegraph Protocol">
+        {/* Option 3 — Telegraph (collapsed — deep x402 detail) */}
+        <CollapsibleSection number="03" title="Via Telegraph Protocol">
           <p className="text-sm text-ink-muted leading-relaxed">
             If you&apos;re already building on{" "}
             <a
@@ -338,10 +376,10 @@ export default function IntegratePage() {
             agent that must hit Elcaro, not counted as miner volume:
           </p>
           <CodeBlock code={CODE_TELEGRAPH_DIRECT} language="http" />
-        </Section>
+        </CollapsibleSection>
 
-        {/* Option 4 — MCP server */}
-        <Section number="04" title="Via MCP (agent frameworks)">
+        {/* Option 4 — MCP server (collapsed) */}
+        <CollapsibleSection number="04" title="Via MCP (agent frameworks)">
           <p className="text-sm text-ink-muted leading-relaxed">
             If your agent runs in an MCP-compatible framework — Claude
             Desktop, Cursor, Kiro, or any MCP client — run Elcaro as a local
@@ -378,10 +416,10 @@ export default function IntegratePage() {
             (as above) to run the detection engine in-process instead: no
             network calls, nothing leaves the machine.
           </p>
-        </Section>
+        </CollapsibleSection>
 
-        {/* Option 5 — WebMCP (browser agents) */}
-        <Section number="05" title="Via WebMCP (browser agents)">
+        {/* Option 5 — WebMCP (collapsed) */}
+        <CollapsibleSection number="05" title="Via WebMCP (browser agents)">
           <p className="text-sm text-ink-muted leading-relaxed">
             When the agent is in ChatGPT&apos;s in-app browser (or Chrome with{" "}
             <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
@@ -426,10 +464,10 @@ export default function IntegratePage() {
             .
           </p>
           <CodeBlock code={CODE_WEBMCP} language="javascript" />
-        </Section>
+        </CollapsibleSection>
 
-        {/* Best practices */}
-        <Section number="06" title="Six rules for safe agent pipelines">
+        {/* Best practices (collapsed — doctrine, not the task) */}
+        <CollapsibleSection number="06" title="Six rules for safe agent pipelines">
           <div className="stagger-children space-y-0 divide-y divide-border">
             {PRINCIPLES.map((p, i) => (
               <div key={i} className="py-4 grid grid-cols-[1fr_1.4fr] gap-8 items-start">
@@ -442,11 +480,8 @@ export default function IntegratePage() {
               </div>
             ))}
           </div>
-        </Section>
+        </CollapsibleSection>
 
-        {/* Threshold replay — feel the doctrine on your own scans (R7).
-            Moved up next to the code samples; renders a doctrine teaser
-            until this browser has ≥3 scans of history. */}
         {/* Supervision — the power-user view (R10) */}
         <div className="rounded-xl border border-border bg-surface p-4 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-xs text-ink-muted leading-relaxed max-w-md">
