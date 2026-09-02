@@ -15,7 +15,7 @@ export default function SupervisePage() {
       <SiteHeader />
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
-        <div className="space-y-2">
+        <div className="page-enter space-y-2">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Session watch</h1>
           <p className="text-base text-ink-muted leading-relaxed max-w-lg">
             What your agent was shielded from this session — scan count,

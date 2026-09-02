@@ -25,7 +25,7 @@ export default function ForAgentsPage() {
       <SiteHeader active="for-agents" />
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-12">
-        <div className="space-y-3">
+        <div className="page-enter space-y-3">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
             Designing for agents
           </h1>
@@ -37,6 +37,7 @@ export default function ForAgentsPage() {
           </p>
         </div>
 
+        <div className="stagger-children space-y-12">
         <Principle
           number="01"
           title="Publish an llms.txt"
@@ -160,6 +161,7 @@ export default function ForAgentsPage() {
               .
             </p>
           </div>
+        </div>
         </div>
 
         <div className="border-t border-border pt-8">

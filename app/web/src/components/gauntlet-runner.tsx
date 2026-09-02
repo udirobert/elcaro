@@ -125,7 +125,7 @@ export function GauntletRunner() {
   return (
     <div className="space-y-8">
       {/* Intro */}
-      <div className="space-y-3">
+      <div className="page-enter space-y-3">
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
           The Gauntlet
         </h1>
@@ -396,6 +396,11 @@ function SpecimenStage({
       className="relative h-64 sm:h-72"
       style={{ perspective: 1200 }}
       aria-live="polite"
+      aria-label={
+        phase === "idle"
+          ? "First specimen chambered, not yet scanned"
+          : undefined
+      }
     >
       {/* Ghost stack — completed specimens receding behind */}
       {ghosts.map((ghost, i) => {
@@ -426,9 +431,9 @@ function SpecimenStage({
             }
             animate={
               reduceMotion
-                ? { opacity: phase === "idle" ? 0.75 : 1 }
+                ? { opacity: 1 }
                 : {
-                    opacity: phase === "idle" ? 0.75 : 1,
+                    opacity: 1,
                     rotateX: 0,
                     y: 0,
                     scale: 1,
@@ -451,7 +456,9 @@ function SpecimenStage({
                 Specimen {front.letter} — {front.label}
               </p>
               <span className="text-[10px] font-mono text-ink-faint uppercase tracking-wide">
-                {front.content_type.replace(/_/g, " ")}
+                {phase === "idle"
+                  ? "Chambered"
+                  : front.content_type.replace(/_/g, " ")}
               </span>
             </div>
 

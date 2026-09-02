@@ -23,7 +23,7 @@ export default function SpecimenPage() {
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-10 space-y-10">
         {/* Intro */}
-        <div className="space-y-4">
+        <div className="page-enter space-y-4">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
             The Specimen Kit
           </h1>

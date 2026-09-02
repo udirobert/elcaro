@@ -63,6 +63,12 @@ body {
   }
 }
 
+/* Interior routes: one shared enter so Scan / Gauntlet / docs feel like
+   the same instrument as the landing, without ambient loops. */
+.page-enter {
+  animation: fade-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.03); }
@@ -109,6 +115,7 @@ body {
   .animate-breathe,
   .animate-count-in,
   .animate-marquee,
+  .page-enter,
   .stagger-children > * {
     animation: none !important;
   }
@@ -126,6 +133,7 @@ body {
 .stagger-children > *:nth-child(6) { animation-delay: 400ms; }
 .stagger-children > *:nth-child(7) { animation-delay: 480ms; }
 .stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 640ms; }
 
 /* Highlighted text (for inline flagging) */
 .highlight-dangerous {

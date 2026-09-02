@@ -156,7 +156,7 @@ export default function IntegratePage() {
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-16">
 
         {/* Hero */}
-        <div className="space-y-4">
+        <div className="page-enter space-y-4">
           <h1 className="text-3xl font-black tracking-tight text-ink">
             Add Elcaro to your agent
           </h1>
@@ -421,7 +421,7 @@ export default function IntegratePage() {
 
         {/* Best practices */}
         <Section number="06" title="Six rules for safe agent pipelines">
-          <div className="space-y-0 divide-y divide-border">
+          <div className="stagger-children space-y-0 divide-y divide-border">
             {PRINCIPLES.map((p, i) => (
               <div key={i} className="py-4 grid grid-cols-[1fr_1.4fr] gap-8 items-start">
                 <p className="text-sm font-semibold text-ink leading-snug">

@@ -281,7 +281,7 @@ export function ScanForm() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
+      <div className="page-enter space-y-2">
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
           Scan
         </h1>
@@ -291,7 +291,16 @@ export function ScanForm() {
         </p>
       </div>
 
-      {webmcpLive && <AgentSessionRail beat={beat} />}
+      {webmcpLive ? (
+        <AgentSessionRail beat={beat} />
+      ) : (
+        !hasContent &&
+        !result && (
+          <p className="text-xs text-ink-faint font-mono">
+            Armed — waiting for retrieved content
+          </p>
+        )
+      )}
 
       {/* First-visit onboarding — explains what to do, disappears after first use */}
       <AnimatePresence>
@@ -332,7 +341,11 @@ export function ScanForm() {
             }
           }}
           placeholder="Paste content here — an email, search result, or document your agent would read..."
-          className="w-full min-h-[200px] p-6 rounded-2xl bg-surface border border-border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-violet/50 focus:ring-1 focus:ring-violet/20 transition-all duration-200 placeholder:text-ink-faint"
+          className={`w-full min-h-[200px] p-6 rounded-2xl bg-surface border text-ink font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-ink/40 focus:ring-1 focus:ring-ink/10 transition-colors duration-200 placeholder:text-ink-faint ${
+            !hasContent && !scanning && !result
+              ? "border-ink/15"
+              : "border-border"
+          }`}
           style={{ fontVariantLigatures: "none" }}
           aria-label="Content to scan for prompt injection"
         />
@@ -410,7 +423,7 @@ export function ScanForm() {
               name="content_type"
               value={contentType}
               onChange={(e) => setContentType(e.target.value as ContentType)}
-              className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet/50 cursor-pointer transition-colors"
+              className="text-xs font-medium text-ink-muted bg-canvas border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ink/40 cursor-pointer transition-colors"
               aria-label="Content type"
             >
               {CONTENT_TYPES.map((ct) => (
@@ -426,9 +439,8 @@ export function ScanForm() {
             onClick={handleScan}
             disabled={scanning || !hasContent}
             className="relative px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
-            whileHover={hasContent && !scanning ? { scale: 1.03 } : {}}
-            whileTap={hasContent && !scanning ? { scale: 0.96 } : {}}
-            transition={SPRING}
+            whileTap={hasContent && !scanning ? { opacity: 0.9 } : {}}
+            transition={{ duration: 0.15 }}
           >
             {/* Button content — morphs between states */}
             <AnimatePresence mode="wait">
