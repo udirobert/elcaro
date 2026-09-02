@@ -68,13 +68,13 @@ export function TaxonomyGrid() {
               aria-pressed={isActive}
               className={`flex flex-col items-center gap-1 py-4 rounded-xl border transition-colors ${
                 isActive
-                  ? "border-violet/30 bg-violet/5"
+                  ? "border-ink/20 bg-ink/[0.03]"
                   : "border-border bg-surface hover:border-border-strong"
               }`}
             >
               <span
                 className={`text-2xl font-black transition-colors ${
-                  isActive ? "text-violet" : "text-ink-faint"
+                  isActive ? "text-ink" : "text-ink-faint"
                 }`}
               >
                 {t.letter}
@@ -102,7 +102,7 @@ export function TaxonomyGrid() {
           className="rounded-xl border border-border bg-surface p-5"
         >
           <div className="flex items-baseline gap-3">
-            <span className="text-2xl font-black text-violet">
+            <span className="text-2xl font-black text-ink">
               {current.letter}
             </span>
             <div className="space-y-1">

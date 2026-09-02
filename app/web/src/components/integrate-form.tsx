@@ -117,7 +117,7 @@ export function IntegrateForm() {
               <button
                 type="submit"
                 disabled={formState === "submitting" || !email.trim()}
-                className="px-5 py-2.5 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100 whitespace-nowrap"
+                className="px-5 py-2.5 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {formState === "submitting" ? (
                   <span className="flex items-center gap-2">

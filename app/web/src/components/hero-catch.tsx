@@ -60,7 +60,7 @@ export function HeroCatch() {
 
   return (
     <div
-      className="relative w-full max-w-md mx-auto rounded-xl border border-border bg-surface px-4 py-3 text-left overflow-hidden"
+      className="relative w-full rounded-xl border border-border bg-surface px-4 py-4 sm:px-5 sm:py-5 text-left overflow-hidden"
       aria-label="Live demonstration: Elcaro quarantining an injected instruction"
     >
       {/* Specimen header */}
@@ -87,7 +87,7 @@ export function HeroCatch() {
       >
         {text}
         {phase === "typing" && !reduceMotion && chars < specimen.text.length && (
-          <span className="text-violet">▍</span>
+          <span className="text-ink">▍</span>
         )}
       </p>
 

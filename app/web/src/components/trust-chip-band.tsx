@@ -167,7 +167,7 @@ export function TrustChipBand() {
             transition={{ duration: 0.25, ease: EASE_OUT }}
             className="overflow-hidden"
           >
-            <p className="text-xs text-ink-muted leading-relaxed text-center max-w-md mx-auto pt-2.5">
+            <p className="text-xs text-ink-muted leading-relaxed max-w-md pt-2.5">
               {activeDetail}
             </p>
           </motion.div>

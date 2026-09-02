@@ -19,7 +19,7 @@ export function SiteHeader({ active }: { active?: NavKey }) {
     <header className="px-6 py-5 flex items-center justify-between">
       <Link
         href="/"
-        className="text-sm font-bold tracking-tight text-ink hover:text-violet transition-colors"
+        className="text-sm font-bold tracking-tight text-ink hover:text-ink-muted transition-colors"
       >
         elcaro
       </Link>

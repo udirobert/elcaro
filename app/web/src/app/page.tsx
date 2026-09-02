@@ -6,74 +6,73 @@ import { TrustChipBand } from "@/components/trust-chip-band";
 import { TaxonomyGrid } from "@/components/taxonomy-grid";
 import { AdaptiveCTA } from "@/components/adaptive-cta";
 
+const PRIMARY_BTN =
+  "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors";
+const SECONDARY_BTN =
+  "inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border text-sm font-semibold text-ink-muted hover:text-ink hover:border-border-strong transition-colors";
+
 export default function HomePage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      {/* Header — shared chrome, consistent wayfinding */}
       <SiteHeader />
 
-      {/* Spacious, editorial hero — the product demonstrated, not described */}
-      <section className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="max-w-xl text-center space-y-8 w-full">
-          {/* Headline — large, bold, minimal */}
-          <h1 className="text-5xl sm:text-6xl font-black tracking-tight leading-[1.08]">
-            See what your
-            <br />
-            <span className="bg-gradient-to-r from-violet to-coral bg-clip-text text-transparent">
+      {/* Split hero: copy left, live catch right. Mobile stacks catch under the title. */}
+      <section className="flex-1 px-6 py-16 lg:py-20">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 lg:gap-x-16 gap-y-8 lg:items-start">
+          <header className="order-1 space-y-4 max-w-md">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+              IPI detection · miner 8848
+            </p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-ink">
+              See what your
+              <br />
               agent can&apos;t
-            </span>
-          </h1>
+            </h1>
+          </header>
 
-          {/* One sentence — that's all */}
-          <p className="text-lg text-ink-muted leading-relaxed max-w-md mx-auto">
-            Hidden instructions live inside emails, search results, and documents
-            your agent retrieves. Elcaro finds them first.
-          </p>
-
-          {/* Live catch — the demo is the hero */}
-          <HeroCatch />
-
-          {/* CTAs — Gauntlet first: proof before participation */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/gauntlet"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet to-coral text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            >
-              Run the Gauntlet
-              <span className="text-canvas/60">→</span>
-            </Link>
-            <Link
-              href="/scan"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            >
-              Try a scan
-              <span className="text-ink-faint">→</span>
-            </Link>
-            <Link
-              href="/integrate"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border text-sm font-semibold text-ink-muted hover:text-ink hover:border-border-strong transition-colors"
-            >
-              Add to your agent
-            </Link>
+          <div className="order-2 lg:order-2 lg:row-span-2 lg:self-center">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint mb-3 lg:mb-4">
+              Live catch
+            </p>
+            <HeroCatch />
           </div>
 
-          {/* The name, explained — quiet, not a gimmick */}
-          <p className="text-xs text-ink-faint pt-2">
-            elcaro is{" "}
-            <em className="text-ink-muted not-italic font-medium">oracle</em>,
-            reversed. An oracle speaks the answer. Elcaro checks what was
-            whispered to the agent before it decides to believe it.
-          </p>
+          <div className="order-3 space-y-6 max-w-md">
+            <p className="text-base text-ink-muted leading-relaxed">
+              Hidden instructions live inside emails, search results, and
+              documents your agent retrieves. Elcaro finds them first.
+            </p>
 
-          {/* Trust-chip band — proof that earns its space, verifiable on demand */}
-          <TrustChipBand />
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+              <Link href="/gauntlet" className={PRIMARY_BTN}>
+                Run the Gauntlet
+                <span className="text-canvas/60">→</span>
+              </Link>
+              <Link href="/scan" className={SECONDARY_BTN}>
+                Try a scan
+              </Link>
+              <Link
+                href="/integrate"
+                className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors underline-offset-2 hover:underline"
+              >
+                Add to your agent
+              </Link>
+            </div>
+
+            <p className="text-xs text-ink-faint">
+              elcaro is{" "}
+              <em className="text-ink-muted not-italic font-medium">oracle</em>,
+              reversed. An oracle speaks the answer. Elcaro checks what was
+              whispered to the agent before it decides to believe it.
+            </p>
+
+            <TrustChipBand />
+          </div>
         </div>
       </section>
 
-      {/* Specimen marquee — the threats, ambient */}
       <SpecimenMarquee />
 
-      {/* Why now — the problem, with receipts */}
       <section className="px-6 py-16 bg-surface">
         <div className="max-w-2xl mx-auto">
           <div className="grid sm:grid-cols-2 gap-8">
@@ -88,7 +87,7 @@ export default function HomePage() {
                   href="https://nvd.nist.gov/vuln/detail/CVE-2025-32711"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-ink-faint hover:text-violet underline underline-offset-2 transition-colors"
+                  className="text-ink-faint hover:text-ink underline underline-offset-2 transition-colors"
                 >
                   CVE-2025-32711
                 </a>
@@ -105,29 +104,26 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-          <p className="text-sm text-ink-muted text-center mt-10 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm text-ink-muted mt-10 max-w-lg leading-relaxed">
             The model isn&apos;t the attack surface. The data your agent
             reads is — and almost nothing scans it before the agent acts.
           </p>
         </div>
       </section>
 
-      {/* The technique taxonomy — compact grid, expand on interest */}
       <section className="border-t border-border px-6 py-20">
         <div className="max-w-2xl mx-auto">
-          <p className="text-xs text-ink-faint uppercase tracking-widest mb-10 text-center">
+          <p className="text-xs text-ink-faint uppercase tracking-widest mb-10">
             Six classes of injection detected
           </p>
           <TaxonomyGrid />
         </div>
       </section>
 
-      {/* Closing CTA — adapts to the visitor's journey */}
       <section className="border-t border-border px-6 py-20">
         <AdaptiveCTA />
       </section>
 
-      {/* Footer — shared chrome */}
       <SiteFooter />
     </main>
   );

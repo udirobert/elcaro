@@ -141,8 +141,8 @@ export function GauntletRunner() {
         {phase !== "running" ? (
           <motion.button
             onClick={runGauntlet}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet to-coral text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            whileTap={{ scale: 0.97 }}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors"
+            whileTap={{ opacity: 0.9 }}
           >
             {phase === "done" ? "Run the Gauntlet again" : "Run the Gauntlet"}
             <span>→</span>
@@ -313,7 +313,7 @@ export function GauntletRunner() {
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <button
                 onClick={handleShare}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors"
               >
                 {copied ? "✓ Copied" : "Share this result"}
               </button>
@@ -471,7 +471,7 @@ function SpecimenStage({
             {/* Scanning pulse while the payload is in flight */}
             {isFrontRunning && (
               <motion.div
-                className="absolute inset-0 rounded-2xl border-2 border-violet/40 pointer-events-none"
+                className="absolute inset-0 rounded-2xl border-2 border-ink/30 pointer-events-none"
                 animate={{ opacity: [0.25, 0.7, 0.25] }}
                 transition={{ duration: 1.2, repeat: Infinity }}
               />

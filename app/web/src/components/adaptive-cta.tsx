@@ -75,26 +75,24 @@ export function AdaptiveCTA() {
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: EASE_OUT }}
-      className="max-w-xl mx-auto text-center space-y-6"
+      className="max-w-2xl mx-auto space-y-6"
     >
-      <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+      <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-ink">
         {copy.headline}
         {journey === "fresh" && (
           <>
             <br />
-            <span className="bg-gradient-to-r from-violet to-coral bg-clip-text text-transparent">
-              right now.
-            </span>
+            right now.
           </>
         )}
       </h2>
-      <p className="text-sm text-ink-muted leading-relaxed max-w-md mx-auto">
+      <p className="text-sm text-ink-muted leading-relaxed max-w-md">
         {copy.subtext}
       </p>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <Link
           href={copy.primary.href}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet to-coral text-canvas text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors"
         >
           {copy.primary.label}
           <span className="text-canvas/60">→</span>
