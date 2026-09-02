@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { getHistory, QUARANTINE_THRESHOLD } from "@/lib/history";
 
 // Threshold replay (docs/ux-audit.md, R7) — turns the "0.5 blocks / 0.3 flags"
@@ -13,7 +14,29 @@ const NEVER_PASS_AT = 0.7;
 
 export function ThresholdReplay() {
   const history = getHistory();
-  if (history.length < 3) return null; // not enough signal to be useful
+  // Not enough local signal to replay yet — teach the doctrine instead of
+  // vanishing (this card now sits high on /integrate, not at the bottom).
+  if (history.length < 3) {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
+        <p className="text-sm font-semibold text-ink">Replay the threshold on your scans</p>
+        <p className="text-xs text-ink-muted leading-relaxed">
+          Run a few scans and this card replays your own session history at
+          candidate thresholds — you see exactly what a{" "}
+          <span className="font-mono text-ink">{FLAG_AT.toFixed(1)}</span> flag
+          vs a <span className="font-mono text-ink">{QUARANTINE_THRESHOLD.toFixed(1)}</span>{" "}
+          block would have changed. The score never moves; only the quarantine
+          decision does. Nothing is stored server-side.
+        </p>
+        <Link
+          href="/scan"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-violet underline underline-offset-2 hover:text-violet/80 transition-colors"
+        >
+          Open the scan playground →
+        </Link>
+      </div>
+    );
+  }
 
   // At FLAG_AT, how many currently-passing scans (score in [0.3, 0.5)) would
   // flip to quarantined?

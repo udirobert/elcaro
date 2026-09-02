@@ -4,6 +4,8 @@ import { IntegrateForm } from "@/components/integrate-form";
 import { ThresholdReplay } from "@/components/threshold-replay";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { TelegraphRail } from "@/components/telegraph-rail";
+import { PageHeader } from "@/components/page-header";
+import { SpecimenMarquee } from "@/components/specimen-marquee";
 
 export const metadata: Metadata = {
   title: "Integrate",
@@ -155,27 +157,34 @@ export default function IntegratePage() {
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-16">
 
-        {/* Hero */}
-        <div className="page-enter space-y-4">
-          <h1 className="text-3xl font-black tracking-tight text-ink">
-            Add Elcaro to your agent
-          </h1>
-          <p className="text-base text-ink-muted leading-relaxed max-w-lg">
-            One scan call between your agent&apos;s retrieval step and its
-            reasoning loop. Under 2ms. No API key. Works today.
-          </p>
-          <div className="flex items-center gap-3 pt-1">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-safe bg-safe-bg px-2.5 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-safe" />
-              Live on Telegraph Protocol
-            </span>
-            <span className="text-xs text-ink-faint font-mono">
-              id 8848 · registrationId 406
-            </span>
-          </div>
+        {/* Hero — same mono eyebrow as the landing hero, so the interior
+            opens with the same instrument voice */}
+        <div className="space-y-4">
+          <PageHeader eyebrow="Integration · miner 8848" title="Add Elcaro to your agent">
+            <p className="text-base text-ink-muted leading-relaxed max-w-lg">
+              One scan call between your agent&apos;s retrieval step and its
+              reasoning loop. Under 2ms. No API key. Works today.
+            </p>
+            <div className="flex items-center gap-3 pt-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-safe bg-safe-bg px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-safe" />
+                Live on Telegraph Protocol
+              </span>
+              <span className="text-xs text-ink-faint font-mono">
+                id 8848 · registrationId 406
+              </span>
+            </div>
+          </PageHeader>
         </div>
 
+        {/* Ambient ticker of real injection strings — reuses the landing's
+            marquee so the threat feels present while you read the docs */}
+        <SpecimenMarquee />
+
         <TelegraphRail />
+
+        {/* Feel the doctrine early, not buried at the bottom (R7) */}
+        <ThresholdReplay />
 
         {/* Test first — the Specimen Kit */}
         <div className="rounded-xl border border-border bg-surface p-5 space-y-2">
@@ -435,9 +444,9 @@ export default function IntegratePage() {
           </div>
         </Section>
 
-        {/* Threshold replay — feel the doctrine on your own scans (R7) */}
-        <ThresholdReplay />
-
+        {/* Threshold replay — feel the doctrine on your own scans (R7).
+            Moved up next to the code samples; renders a doctrine teaser
+            until this browser has ≥3 scans of history. */}
         {/* Supervision — the power-user view (R10) */}
         <div className="rounded-xl border border-border bg-surface p-4 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-xs text-ink-muted leading-relaxed max-w-md">

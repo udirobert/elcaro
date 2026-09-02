@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { PageHeader } from "@/components/page-header";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Designing for agents",
@@ -7,7 +9,20 @@ export const metadata: Metadata = {
     "How to treat AI agents as first-class users of your website — llms.txt, structured responses, signed data, and test specimens.",
 };
 
-function Principle({ number, title, body }: { number: string; title: string; body: string }) {
+function Principle({
+  number,
+  title,
+  body,
+  practice,
+}: {
+  number: string;
+  title: string;
+  body: string;
+  // Proof, not promise — a link to the Elcaro surface that practices the
+  // principle. Faint mono line under the body, always visible (hover-only
+  // affordances don't exist on touch).
+  practice?: { label: string; href: string; external?: boolean };
+}) {
   return (
     <div className="space-y-2">
       <div className="flex items-baseline gap-3">
@@ -15,6 +30,18 @@ function Principle({ number, title, body }: { number: string; title: string; bod
         <h2 className="text-lg font-bold text-ink">{title}</h2>
       </div>
       <p className="text-sm text-ink-muted leading-relaxed pl-7">{body}</p>
+      {practice && (
+        <p className="pl-7">
+          <Link
+            href={practice.href}
+            target={practice.external ? "_blank" : undefined}
+            rel={practice.external ? "noopener noreferrer" : undefined}
+            className="text-[11px] font-mono text-ink-faint hover:text-violet transition-colors"
+          >
+            we practice this: {practice.label} →
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
@@ -25,35 +52,35 @@ export default function ForAgentsPage() {
       <SiteHeader active="for-agents" />
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-12">
-        <div className="page-enter space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-            Designing for agents
-          </h1>
+        <PageHeader eyebrow="Agent-first surfaces · elcaro" title="Designing for agents">
           <p className="text-base text-ink-muted leading-relaxed">
             AI agents are becoming a user class alongside humans — they browse,
             retrieve, summarize, and act on web content. But almost no site
             designs for them. Here&apos;s what we&apos;ve learned building Elcaro, and
             what we practice on our own surfaces.
           </p>
-        </div>
+        </PageHeader>
 
         <div className="stagger-children space-y-12">
         <Principle
           number="01"
           title="Publish an llms.txt"
           body="A plain-text file at /llms.txt that tells agents what your product is, what your API does, and how to discover your tools. It's the machine-readable equivalent of a landing page. Ours describes the scan API, the MCP server, the specimen kit, and the quarantine doctrine — all in one fetch."
+          practice={{ label: "/llms.txt", href: "/llms.txt" }}
         />
 
         <Principle
           number="02"
           title="Return structured data, not just HTML"
           body="An agent consuming your API should get JSON with typed fields, not prose to parse. Elcaro's verdicts carry risk_score, risk_level, flagged_techniques with evidence, TTP mappings, and remediation — structured by construction, so agents can act on them without scraping."
+          practice={{ label: "POST /scan returns the verdict", href: "/integrate" }}
         />
 
         <Principle
           number="03"
           title="Sign what you can; treat in-band text as display"
           body="In-band text — content inside the agent's input stream — is spoofable. An attacker can write a fake 'quarantine notice' or 'scan result' into a page. If your product produces text that agents trust, sign it: Ed25519 over a canonical payload, with a public key at a stable URL. The signature is the trust signal; the text is for reading."
+          practice={{ label: "GET /pubkey · POST /verify", href: "/integrate" }}
         />
 
         <Principle
@@ -66,18 +93,21 @@ export default function ForAgentsPage() {
           number="05"
           title="Publish test specimens"
           body="A page of inert, clearly-marked test fixtures at a fixed URL — the 'EICAR file' for your domain. Agents, IDEs, and guard hooks can fetch it to verify detection works end-to-end. Elcaro's specimen kit is plain UTF-8, no JavaScript, and explicitly safe for agents to read."
+          practice={{ label: "the specimen kit", href: "/specimen" }}
         />
 
         <Principle
           number="06"
           title="Expose an MCP server"
           body="The Model Context Protocol is the default integration path for agent frameworks. Expose your core capability as MCP tools with descriptions written for the model choosing tools, not the human reading docs. Tool descriptions are distribution copy."
+          practice={{ label: "app/mcp_server.py", href: "https://github.com/udirobert/elcaro/blob/main/app/mcp_server.py", external: true }}
         />
 
         <Principle
           number="07"
           title="Expose WebMCP tools on the human UI"
           body="WebMCP (W3C WebML Community Group draft, implemented in ChatGPT’s in-app browser and behind chrome://flags/#enable-webmcp-testing) lets a site register JavaScript tools with document.modelContext.registerTool. Elcaro’s /scan playground registers scan_content, load_specimen, list_specimens, explain_verdict, and contrast_intent. The last one is the joint review: the agent declares the action it was about to take; the human sees that next to what the hidden instruction asked for. Stdio MCP remains for IDEs; it is not a substitute. See docs/webmcp.md."
+          practice={{ label: "the /scan playground", href: "/scan" }}
         />
 
         <Principle
