@@ -100,6 +100,9 @@ export function ScanForm() {
   const resultRef = useRef<ScanResponse | null>(null);
   const scanningRef = useRef(false);
 
+  // Keep the mutable ref in sync with the state value. The synchronous writes in
+  // event handlers are for tool call chains; this effect covers shared-verdict
+  // hydration and any other state transitions.
   useEffect(() => {
     resultRef.current = result;
   });
@@ -169,6 +172,7 @@ export function ScanForm() {
     setScanning(true);
     setScanStatusIndex(0);
     setResult(null);
+    resultRef.current = null;
     setIntentContrast(null);
     setError(null);
 
@@ -183,6 +187,7 @@ export function ScanForm() {
         triggerShake();
       } else {
         setResult(response);
+        resultRef.current = response;
         addToHistory(nextContent, nextType, response);
         setHistoryRefresh((n) => n + 1);
       }
@@ -208,6 +213,7 @@ export function ScanForm() {
     }
     setDismissedOnboarding(true);
     setResult(null);
+    resultRef.current = null;
     setIntentContrast(null);
     setError(null);
     setContent(example.content);
@@ -238,6 +244,7 @@ export function ScanForm() {
     const example = EXAMPLES[index];
     setDismissedOnboarding(true);
     setResult(null);
+    resultRef.current = null;
     setIntentContrast(null);
     setError(null);
     setContent("");
@@ -260,6 +267,7 @@ export function ScanForm() {
     setContent(entry.content);
     setContentType(entry.content_type);
     setResult(entry.response);
+    resultRef.current = entry.response;
     setIntentContrast(null);
     setError(null);
   }

@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getModelContext, type WebMcpDebugCall } from "./webmcp";
-import {
-  registerScanTools,
-  type ScanToolHandlers,
-} from "./webmcp-register";
+import { registerScanTools, type ScanToolHandlers } from "./webmcp-register";
 
 const REGISTERED_TOOLS = [
   "scan_content",
@@ -124,7 +121,7 @@ export function useWebMcpScan(handlers: ScanToolHandlers): boolean {
         setLive(true);
       })
       .catch((err) => {
-        console.warn("WebMCP: registerTool failed", err);
+        console.warn("WebMCP: registerScanTools failed", err);
       });
 
     return () => {
