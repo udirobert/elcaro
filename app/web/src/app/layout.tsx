@@ -75,6 +75,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    webmcp: "/.well-known/webmcp.json",
+  },
 };
 
 interface LayoutProps {

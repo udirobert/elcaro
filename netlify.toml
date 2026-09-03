@@ -46,6 +46,9 @@
     # interest-cohort: opt out of FLoC/Topics API.
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
 
+    # WebMCP discovery — tells agentic browsers this site exposes WebMCP tools.
+    X-WebMCP = "enabled"
+
     # Content Security Policy.
     # default-src 'self': everything must originate here by default.
     # script-src 'self' 'unsafe-inline': Next.js inline scripts (hydration)
