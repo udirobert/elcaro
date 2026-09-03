@@ -18,6 +18,7 @@ import {
 } from "./agent-session";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
+import { WebMcpDebug } from "./webmcp-debug";
 
 // Motion tokens — consistent across the app
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
@@ -98,7 +99,10 @@ export function ScanForm() {
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
   const scanningRef = useRef(false);
-  resultRef.current = result;
+
+  useEffect(() => {
+    resultRef.current = result;
+  });
 
   // Was there any scan history at mount? Read via useSyncExternalStore so the
   // SSR pass (no localStorage) and the hydrated client pass agree on a stable
@@ -292,7 +296,10 @@ export function ScanForm() {
       </div>
 
       {webmcpLive ? (
-        <AgentSessionRail beat={beat} />
+        <>
+          <AgentSessionRail beat={beat} />
+          <WebMcpDebug live={webmcpLive} />
+        </>
       ) : (
         !hasContent &&
         !result && (

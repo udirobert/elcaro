@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:webmcp-smoke": "webmcp-evals smoke -u http://localhost:3000/scan -e evals/webmcp/evals.json -v",
+    "test:webmcp-browser": "webmcp-evals browser -u http://localhost:3000/scan -e evals/webmcp/evals.json --open",
+    "test:webmcp-local": "webmcp-evals local -t evals/webmcp/schema.json -e evals/webmcp/evals.json"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -24,6 +27,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "webmcp-evals": "^0.0.4"
   }
 }

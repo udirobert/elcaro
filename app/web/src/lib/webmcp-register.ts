@@ -10,7 +10,7 @@
 import type { ContentType, ScanError, ScanResponse } from "./types";
 import { EXAMPLES } from "./constants";
 import { isError } from "./api";
-import { explainVerdict, buildIntentContrast, type IntentContrast } from "./webmcp-doctrine";
+import { explainVerdict, type IntentContrast } from "./webmcp-doctrine";
 import {
   type ModelContext,
   type ModelContextTool,
