@@ -217,7 +217,12 @@ export function ScanForm() {
     setError(null);
     setContent(example.content);
     setContentType(example.content_type);
-    return { ok: true as const, label: example.label };
+    return {
+      ok: true as const,
+      label: example.label,
+      content: example.content,
+      content_type: example.content_type,
+    };
   }
 
   const webmcpLive = useWebMcpScan({

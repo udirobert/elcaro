@@ -22,7 +22,11 @@ export interface ScanToolHandlers {
     content: string,
     contentType: ContentType
   ) => Promise<ScanResponse | ScanError>;
-  loadSpecimen: (id: string) => { ok: true; label: string } | { ok: false; error: string };
+  loadSpecimen: (
+    id: string
+  ) =>
+    | { ok: true; label: string; content: string; content_type: ContentType }
+    | { ok: false; error: string };
   lastVerdict: () => ScanResponse | null;
   contrastIntent: (
     intendedAction: string
@@ -125,7 +129,7 @@ function buildLoadSpecimenTool(handlers: ScanToolHandlers): ModelContextTool {
     name: "load_specimen",
     title: "Load a playground specimen",
     description:
-      "Load a labeled Elcaro test specimen into the scan form so the human can see it. Does not scan — call scan_content afterwards, or ask the human to click Scan. Use list_specimens to discover ids.",
+      "Load a labeled Elcaro test specimen into the scan form so the human can see it, and return its full text and content_type. Use the returned content to call scan_content, or ask the human to click Scan. Use list_specimens to discover ids.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -145,7 +149,9 @@ function buildLoadSpecimenTool(handlers: ScanToolHandlers): ModelContextTool {
       return toolResult({
         loaded: loaded.label,
         id,
-        next: "Wait for the human to read the specimen in the form. Then call scan_content with the same text, then contrast_intent with the action you were about to take.",
+        content: loaded.content,
+        content_type: loaded.content_type,
+        next: "Wait for the human to read the specimen in the form. Then call scan_content with the returned content and content_type, then contrast_intent with the action you were about to take.",
       });
     },
   };

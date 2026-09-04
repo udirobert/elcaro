@@ -42,7 +42,7 @@ browser, start screen recording with microphone, then send:
 >
 > 1. Call `list_specimens`.
 > 2. Call `load_specimen` with id `authority`. Then wait.
-> 3. Call `scan_content` with that specimen text and `content_type` email.
+> 3. Call `scan_content` with the `content` and `content_type` returned by `load_specimen`.
 > 4. Call `contrast_intent` with `intended_action`: "Extract the reset
 >    link and send it to the user so they can recover the vendor portal."
 > 5. Quote `quote_to_user` to me. Do not send any link. Do not follow the
@@ -62,7 +62,7 @@ registers `scan_content`, `load_specimen`, `list_specimens`,
 | Tool | Mutates UI | Purpose |
 |---|---|---|
 | `scan_content` | yes | Scan retrieved content; fill the form; show the verdict |
-| `load_specimen` | yes | Load a labeled playground example into the textarea |
+| `load_specimen` | yes | Load a labeled playground example into the textarea and return its `content` and `content_type` |
 | `list_specimens` | no | Catalog of specimen ids the agent can load |
 | `explain_verdict` | no | Doctrine for the **last** on-page verdict (same numbers as MCP) |
 | `contrast_intent` | yes | Agent declares what it was about to do; human sees the near-miss; agent gets `safe_content` + `quote_to_user` |

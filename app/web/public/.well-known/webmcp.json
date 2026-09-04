@@ -36,7 +36,7 @@
     {
       "name": "load_specimen",
       "title": "Load a playground specimen",
-      "description": "Load a labeled Elcaro test specimen into the scan form so the human can see it. Does not scan — call scan_content afterwards, or ask the human to click Scan. Use list_specimens to discover ids.",
+      "description": "Load a labeled Elcaro test specimen into the scan form so the human can see it, and return its full text and content_type. Use the returned content to call scan_content, or ask the human to click Scan. Use list_specimens to discover ids.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
