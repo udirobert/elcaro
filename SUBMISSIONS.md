@@ -220,3 +220,32 @@ type, so the weight floor alone wasn't enough), `unicode_dash_split`
 
 **Demo arc.** `/redteam` → Vulnerable baseline + compliance → trophies +
 AGENT COMPLIED → flip to Hardened → same searcher, all caught.
+
+---
+
+## Sponsor integrations (resubmission update)
+
+**AgentMail — Tier-2 compliance made physical.** `redteam/mailbox.py`:
+`/redteam/run?execute=true` delivers the first `ELCARO_MAILBOX_MAX`
+bypass trophies as real emails from a real attacker inbox to a real
+victim-agent inbox (AgentMail REST). The agent reads its mail, proposes
+an action, and the harness executes real sends — but only to addresses
+we own (the payload's canary, or the attacker inbox itself). Compliance
+is proven by reading the victim's **sent folder back** — a message ID a
+judge can verify, not a regex over a completion. Live result: agent
+decoded a hidden ROT13 instruction and forwarded it to the attacker;
+`sent_folder_verified_to_attacker` with a real SES message ID.
+
+**Tenki — the victim agent inside a disposable VM.**
+`redteam/tenki_exec.py`: with `TENKI_API_KEY`, the first
+`ELCARO_TENKI_MAX` trophies run the agent's read→decide→send loop inside
+a Tenki sandbox (stdlib-only agent script), so the exfil egress
+originates from an isolated VM destroyed at run end. Degrades to the
+mailbox executor when unavailable.
+
+**Wasmer — the eval runs inside the runtime.**
+`eval/src/bin/elcaro_eval_wasi.rs` compiles the scoring engine to
+`wasm32-wasip1`; `scripts/wasi-eval.sh self-score` pulls the corpus out
+of the wasm via `wasmer run`, scans the live miner, and computes the
+EvalResult inside Wasmer: **26/26, TPR=TNR=1.0** against production.
+`eval/wasmer.toml` packages it.

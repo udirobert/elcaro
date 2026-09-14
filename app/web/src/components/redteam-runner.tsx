@@ -349,8 +349,8 @@ export function RedteamRunner() {
                 return (
                   <div key={e.id ?? e.ts} className="px-4 py-3">
                     <div className="flex items-center gap-3 flex-wrap">
-                      {detail === "email_sent_to_canary" ||
-                      detail === "email_sent_to_canary_from_sandbox" ? (
+                      {detail?.includes("sent_folder_verified") ||
+                      detail?.startsWith("email_sent_to") ? (
                         <span className="px-2 py-0.5 rounded-md text-xs font-black text-canvas" style={{ backgroundColor: LEVEL_COLORS.dangerous }}>
                           {isSandbox
                             ? "REAL EMAIL SENT FROM ISOLATED VM"
