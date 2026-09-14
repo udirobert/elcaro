@@ -62,6 +62,21 @@ docs/ops.md
 # Logs
 *.log
 
+# Video files and generated media artifacts
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.flac
+*.ogg
+/demo-video/
+
 
 # Node.js (app/web)
 node_modules/

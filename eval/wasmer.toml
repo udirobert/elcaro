@@ -1,0 +1,14 @@
+[package]
+name = "elcaro/elcaro-eval"
+version = "0.1.0"
+description = "Elcaro adversarial IPI eval — score a miner against the injection corpus. WASI binary: responses JSON on stdin, EvalResult JSON on stdout."
+license = "MIT"
+
+[[module]]
+name = "elcaro_eval"
+source = "target/wasm32-wasip1/release/elcaro_eval.wasm"
+abi = "wasi"
+
+[[command]]
+name = "elcaro_eval"
+module = "elcaro_eval"

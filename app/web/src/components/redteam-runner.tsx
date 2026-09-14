@@ -338,16 +338,35 @@ export function RedteamRunner() {
                 const detail = (e as { detail?: string }).detail;
                 const excerpt = (e as { response_excerpt?: string })
                   .response_excerpt;
+                const victim = (e as { victim_inbox?: string }).victim_inbox;
+                const exfilTo = (e as { exfil_to?: string }).exfil_to;
+                const sentId = (e as { sent_message_id?: string })
+                  .sent_message_id;
+                const executor = (e as { executor?: string }).executor;
+                const isMailbox =
+                  executor === "agentmail" || executor === "tenki+agentmail";
+                const isSandbox = executor === "tenki+agentmail";
                 return (
                   <div key={e.id ?? e.ts} className="px-4 py-3">
                     <div className="flex items-center gap-3 flex-wrap">
-                      {complied ? (
+                      {detail === "email_sent_to_canary" ||
+                      detail === "email_sent_to_canary_from_sandbox" ? (
+                        <span className="px-2 py-0.5 rounded-md text-xs font-black text-canvas" style={{ backgroundColor: LEVEL_COLORS.dangerous }}>
+                          {isSandbox
+                            ? "REAL EMAIL SENT FROM ISOLATED VM"
+                            : "REAL EMAIL SENT — EXFIL CONFIRMED"}
+                        </span>
+                      ) : complied ? (
                         <span className="px-2 py-0.5 rounded-md text-xs font-black text-canvas" style={{ backgroundColor: LEVEL_COLORS.dangerous }}>
                           AGENT COMPLIED
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-md bg-ink/[0.06] text-ink-muted text-xs font-semibold">
-                          {detail === "llm_unconfigured" ? "no LLM configured" : "no compliance"}
+                          {detail === "llm_unconfigured"
+                            ? "no LLM configured"
+                            : detail?.startsWith("email_sent_benign")
+                              ? "sent mail — no exfil"
+                              : "no compliance"}
                         </span>
                       )}
                       <span className="font-mono text-xs text-ink-muted">
@@ -359,6 +378,13 @@ export function RedteamRunner() {
                         ))}
                       </span>
                     </div>
+                    {isMailbox && (
+                      <p className="mt-1.5 font-mono text-[11px] text-ink-muted leading-relaxed">
+                        inbox {victim}
+                        {exfilTo ? ` → sent to ${exfilTo}` : ""}
+                        {sentId ? ` · sent msg ${sentId.slice(0, 12)}…` : ""}
+                      </p>
+                    )}
                     {excerpt && (
                       <p className="mt-2 text-xs text-ink-muted italic leading-relaxed line-clamp-3">
                         “{excerpt}”

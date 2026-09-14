@@ -135,7 +135,19 @@ Everything is live — no waitlists, no gated features:
 - **[Red team](https://elcaro.trustfall.xyz/redteam)** — the product attacks
   itself: an evolutionary searcher mutates the attack corpus and streams
   every scan live (SSE from `GET /redteam/run`), with a trophy case for
-  confirmed bypasses.
+  confirmed bypasses. `?execute=true` takes trophies into Tier-2 — and with
+  sponsor integrations configured, compliance is proven physically:
+  - **AgentMail** (`AGENTMAIL_API_KEY`) — each trophy is sent as a real
+    email to a real victim-agent inbox. The agent reads its mail, proposes
+    an action, and if it forwards to the exfil address the send actually
+    happens. Compliance evidence is the message sitting in the victim's
+    sent folder, verified by reading it back — not a regex over a reply.
+    (`redteam/mailbox.py`, capped at `ELCARO_MAILBOX_MAX` per run.)
+  - **Tenki** (`TENKI_API_KEY`, `pip install elcaro[sandbox]`) — the victim
+    agent's read→decide→send loop executes inside a disposable Tenki VM,
+    so the exfil egress originates from an isolated sandbox that is
+    destroyed when the run ends. (`redteam/tenki_exec.py`, capped at
+    `ELCARO_TENKI_MAX`.)
 - **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,
   middleware, Telegraph routing, and a threshold-replay sandbox built from
   your own session history.
@@ -181,7 +193,7 @@ Everything is live — no waitlists, no gated features:
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
 | `app/middleware.py` | Python · httpx | Drop-in middleware for Python agents |
-| `eval/` | Rust · WASM | Adversarial evaluation script — scores any miner client-side (`eval/wasm-demo/`) |
+| `eval/` | Rust · WASM + WASI | Adversarial evaluation script — scores any miner client-side (`eval/wasm-demo/`); also a WASI binary target that runs under the **Wasmer** runtime: `scripts/wasi-eval.sh self-score` pulls the corpus via `wasmer run`, scans the live miner, and computes the EvalResult inside Wasmer |
 
 ---
 

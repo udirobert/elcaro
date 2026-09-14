@@ -406,8 +406,10 @@ async def redteam_run(
         from redteam.corpus import load_seeds
         from redteam.executor import execute_trophies
         from redteam.journal import QueueJournal
+        from redteam.mailbox import execute_trophies_mailbox
         from redteam.oracle import LocalOracle
         from redteam.search import run_search
+        from redteam.tenki_exec import execute_trophies_tenki
     except ImportError:
         raise HTTPException(503, "redteam package not installed on this miner.") from None
 
@@ -433,7 +435,27 @@ async def redteam_run(
                 if execute:
                     # Tier-2: does an agent actually comply with what
                     # slipped through? Records stream before run_end.
-                    await execute_trophies(await run, journal)
+                    # With AGENTMAIL_API_KEY configured, the first
+                    # ELCARO_MAILBOX_MAX trophies get the mailbox
+                    # treatment — real inboxes, real sends, sent-folder
+                    # evidence. The rest take the text path.
+                    trophies = await run
+                    # Tenki first (agent inside a disposable VM), then
+                    # AgentMail on the host, then the plain text executor
+                    # for whatever remains.
+                    done_ids = {
+                        r.execution.candidate_id
+                        for r in await execute_trophies_tenki(trophies, journal)
+                    }
+                    done_ids |= {
+                        r.execution.candidate_id
+                        for r in await execute_trophies_mailbox(
+                            [t for t in trophies if t.cand.id not in done_ids],
+                            journal,
+                        )
+                    }
+                    remaining = [t for t in trophies if t.cand.id not in done_ids]
+                    await execute_trophies(remaining, journal)
                     while not journal.records.empty():
                         rec = journal.records.get_nowait()
                         yield f"data: {json.dumps(rec, ensure_ascii=False)}\n\n"

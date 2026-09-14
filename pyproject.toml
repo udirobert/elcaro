@@ -24,6 +24,11 @@ mcp = [
     "mcp>=2.0.0",
     "httpx>=0.25.0",
 ]
+sandbox = [
+    # Tier-2 sandboxed victim agent — Tenki disposable VMs (optional;
+    # redteam/tenki_exec.py no-ops without TENKI_API_KEY + this package).
+    "tenki>=1.0.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
