@@ -122,3 +122,34 @@ as WebMCP.
 
 Do not submit until the tools are on the deployed Netlify site and the
 video is recorded against that URL.
+
+## AI Security Hackathon (hackathons.team) — Sep 13, 2026
+
+One day, in person, EF 501 Folsom St SF. Theme: agentic security.
+Sponsors: **Wasmer, Tenki Cloud, AgentMail** (EF = venue).
+
+**Day-of build:** the self-red-team system — `redteam/` searcher,
+vulnerable-baseline oracle, Tier-2 compliance over SSE, and the closed
+`type_arbitrage` hole (found + fixed live). Demo arc: `/redteam`
+vulnerable run → trophies → hardened rerun → zero bypasses.
+
+**Resubmission update (sponsor integrations, all live-verified):**
+
+- **AgentMail** — Tier-2 compliance made physical. Bypass trophies go
+  out as real emails to a real victim-agent inbox; a compliant agent's
+  forward is proven by reading the victim's sent folder back
+  (`sent_folder_verified_to_attacker`, real SES message IDs).
+  `redteam/mailbox.py` · `AGENTMAIL_API_KEY` · capped `ELCARO_MAILBOX_MAX`.
+- **Tenki** — the victim agent's read→decide→send loop runs inside a
+  disposable Tenki VM; exfil egress originates from the sandbox.
+  Verified: `sent_folder_verified_from_sandbox`, session
+  `01a09d9e-a888-…`. `redteam/tenki_exec.py` · `TENKI_API_KEY`.
+- **Wasmer** — the eval compiles to `wasm32-wasip1`
+  (`eval/src/bin/elcaro_eval_wasi.rs`); `scripts/wasi-eval.sh
+  self-score` pulls the corpus via `wasmer run`, scans the live miner,
+  scores inside the runtime: 26/26, TPR=TNR=1.0. `eval/wasmer.toml`.
+
+**Video:** `demo-video/` — ~85s narrated + captioned. Arc: title →
+hidden `SYSTEM:` instruction → live `/scan` quarantine → "who attacks
+the firewall?" → vulnerable-baseline hunt (30 bypasses) → hardened (0)
+→ sponsor evidence card (real journal records) → signed verdict → URL.
