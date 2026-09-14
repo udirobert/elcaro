@@ -126,6 +126,34 @@ export function ScanResult({ result, content }: ScanResultProps) {
         </motion.p>
       )}
 
+      {/* Normalization disclosure — when the engine had to strip evasion
+          machinery (invisible chars, lookalikes, encodings) to read the
+          content, say so. Transparency is part of the verdict. */}
+      {result.normalizations_applied &&
+        result.normalizations_applied.length > 0 && (
+          <motion.p
+            className="text-xs text-ink-muted leading-relaxed"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35, duration: 0.3 }}
+          >
+            Normalized before scanning:{" "}
+            {result.normalizations_applied
+              .map(
+                (n) =>
+                  ({
+                    zero_width_strip: "invisible characters removed",
+                    confusable_fold: "lookalike characters folded to ASCII",
+                    token_desplit: "split keywords rejoined",
+                    rot13_decode: "ROT13 text decoded",
+                    hex_decode: "hex blob decoded",
+                    base64_decode: "base64 blob decoded",
+                  })[n] ?? n
+              )
+              .join(" · ")}
+          </motion.p>
+        )}
+
       {/* Evidence — only shown for the safe case, where "we checked and found
           nothing" is the useful signal. When there ARE findings, each one
           already carries its own evidence snippet on expand below, so

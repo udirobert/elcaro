@@ -18,10 +18,14 @@ Endpoints:
     GET  /telegraph.yaml — raw registration config, served byte-for-byte
     GET  /pubkey       — verdict-signing public key (404 when running unsigned)
     POST /verify       — verify a signed verdict against this miner's key
+    GET  /redteam/seeds — corpus cases the self-red-team run mutates
+    GET  /redteam/run  — SSE stream: the searcher attacks this engine live
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import time
 from collections import deque
@@ -30,6 +34,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
@@ -350,6 +355,69 @@ async def verify(request: VerifyRequest):
             else "Signature does not match — the verdict was altered, or signed by a different key."
         ),
     }
+
+
+# ── Self red-team (SSE) ─────────────────────────────────────────────────────────
+#
+# The product attacks itself: the redteam/ searcher mutates the shipped
+# corpus and scans every candidate against THIS engine instance, streaming
+# journal lines as Server-Sent Events. Bounded: fixed corpus (no caller
+# content), hard scan cap, one run at a time.
+
+_REDTEAM_BUDGET_MAX = 300
+_redteam_lock = asyncio.Lock()
+
+
+@app.get("/redteam/seeds")
+async def redteam_seeds():
+    """The corpus cases a run mutates — seed picker for the /redteam UI."""
+    try:
+        from redteam.corpus import load_seeds
+    except ImportError:
+        raise HTTPException(503, "redteam package not installed on this miner.") from None
+    return [
+        {"id": s.id, "description": s.description, "content_type": s.content_type}
+        for s in load_seeds()
+    ]
+
+
+@app.get("/redteam/run")
+async def redteam_run(budget: int = 120, seed: int | None = None):
+    """Run the adversarial searcher against this engine — SSE stream.
+
+    Query params: budget (scans, hard-capped at _REDTEAM_BUDGET_MAX),
+    seed (RNG seed for reproducible runs). Emits one `data:` line per
+    journal record; the stream ends with kind=run_end.
+    """
+    try:
+        from redteam.corpus import load_seeds
+        from redteam.journal import QueueJournal
+        from redteam.oracle import LocalOracle
+        from redteam.search import run_search
+    except ImportError:
+        raise HTTPException(503, "redteam package not installed on this miner.") from None
+
+    if _redteam_lock.locked():
+        raise HTTPException(429, "a redteam run is already in progress — try again shortly")
+
+    budget = max(10, min(budget, _REDTEAM_BUDGET_MAX))
+    journal = QueueJournal()
+    seeds = load_seeds()
+
+    async def stream():
+        async with _redteam_lock:
+            run = asyncio.create_task(run_search(seeds, LocalOracle(), journal, budget, seed))
+            try:
+                while True:
+                    rec = await journal.records.get()
+                    yield f"data: {json.dumps(rec, ensure_ascii=False)}\n\n"
+                    if rec.get("kind") == "run_end":
+                        break
+            finally:
+                if not run.done():
+                    run.cancel()
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 # ── Run ─────────────────────────────────────────────────────────────────────────

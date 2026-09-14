@@ -76,6 +76,9 @@ def test_scan_clean_content(client):
 
 
 def test_scan_system_prompt_bypass(client):
+    """content_type arbitrage is closed: a payload labeled system_prompt
+    must be scanned like anything else — the caller declares the type,
+    so it cannot soften the verdict (redteam/ found this hole)."""
     response = client.post(
         "/scan",
         json={
@@ -85,9 +88,8 @@ def test_scan_system_prompt_bypass(client):
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["risk_score"] == 0.0
-    assert body["risk_level"] == "safe"
-    assert body["indicators"] == []
+    assert body["risk_score"] >= 0.5
+    assert body["quarantined"] is True
 
 
 def test_scan_invalid_request_returns_422(client):

@@ -9,7 +9,12 @@ Scoring model:
     - Obfuscation (D) alongside any other class = risk multiplier
     - Conditional triggers (F) paired with imperative actions (C) = high risk
     - Content type adjusts the baseline (email/search_result/webpage = 1.0,
-      code = 0.7, chat_message = 0.3, system_prompt = 0.0)
+      code = 0.7, chat_message = 0.7). Caller-declared types can no longer
+      drop the weight below 0.7 — content_type arbitrage was a single-
+      operator bypass found by redteam/.
+    - Evasion normalization (core/normalize.py) runs before detection:
+      zero-width strip, confusable fold, token de-split, declared-encoding
+      decode. Detectors see the reconstructed text.
 """
 
 from __future__ import annotations
@@ -23,7 +28,8 @@ from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
 from core.detectors.task_reframe import TaskReframeDetector
 from core.llm_classifier import LlmClassifier
-from core.quarantine import quarantine_decision
+from core.normalize import normalization_indicators, normalize
+from core.quarantine import DEFAULT_RISK_THRESHOLD, quarantine_decision
 from core.schemas import (
     ContentType,
     DetectionIndicator,
@@ -41,9 +47,28 @@ CONTENT_TYPE_WEIGHTS: dict[ContentType, float] = {
     ContentType.WEBPAGE: 1.0,
     ContentType.DOCUMENT: 0.8,
     ContentType.CODE: 0.7,
-    ContentType.CHAT_MESSAGE: 0.3,
-    ContentType.SYSTEM_PROMPT: 0.0,
+    ContentType.CHAT_MESSAGE: 0.7,
+    ContentType.SYSTEM_PROMPT: 1.0,
 }
+
+# Retrieved content is untrusted by definition: the caller declares the
+# content type, so a payload mislabeled "chat_message" or "system_prompt"
+# must not soften the verdict. The floor keeps real weight differences
+# (document 0.8, code 0.7) while closing the arbitrage hole.
+CONTENT_TYPE_WEIGHT_FLOOR = 0.7
+
+# Detectors gate whole pattern families on an "untrusted type" allowlist
+# (authority imperatives, turn spoofing, HTML-comment smuggling skip
+# system_prompt/chat_message/code entirely). A caller-declared label must
+# not disable detection: content scanned under a privileged type that
+# comes back below quarantine is rescanned as the canonical untrusted
+# type and the higher verdict stands.
+PRIVILEGED_SCAN_TYPES = {
+    ContentType.CODE,
+    ContentType.CHAT_MESSAGE,
+    ContentType.SYSTEM_PROMPT,
+}
+CANONICAL_UNTRUSTED_TYPE = ContentType.EMAIL
 
 # Risk level thresholds
 RISK_THRESHOLDS = {
@@ -108,35 +133,30 @@ class IpiDetectionEngine:
         content = request.content
         content_type = request.content_type
 
-        # System prompts are trusted by definition — do not scan
-        if content_type == ContentType.SYSTEM_PROMPT:
-            return ScanResponse(
-                risk_score=0.0,
-                risk_level=RiskLevel.SAFE,
-                flagged_techniques=[],
-                indicators=[],
-                content_type=content_type,
-                deep_analysis_used=False,
-                latency_ms=int((time.monotonic() - start_time) * 1000),
-                safe_content=content,
-                quarantined=False,
-                human_summary=(
-                    "Elcaro treats this system prompt as trusted and skips "
-                    "scanning it (risk 0.00 — safe)."
-                ),
-            )
+        # Normalize evasion surface before detection: zero-width chars
+        # removed, confusables folded, split tokens rejoined, declared
+        # encodings decoded and appended. Detectors run on the normalized
+        # text; safe_content/quarantine still reference the original.
+        norm = normalize(content)
+        scan_content = norm.content
 
         # Run all detectors
         all_indicators: list[DetectionIndicator] = []
         for detector in self.detectors:
-            indicators = detector.detect(content, content_type)
+            indicators = detector.detect(scan_content, content_type)
             all_indicators.extend(indicators)
+
+        # Normalization artifacts are evidence too: the original content
+        # carried evasion machinery even if the normalized text no longer
+        # shows it. Synthesized OBFUSCATION indicators keep that visible.
+        all_indicators.extend(normalization_indicators(norm.applied))
 
         # Compute raw risk score
         raw_score = self._compute_score(all_indicators)
 
-        # Apply content type weighting
-        weight = CONTENT_TYPE_WEIGHTS.get(content_type, 1.0)
+        # Apply content type weighting — floored so a caller-declared type
+        # cannot soften the scan of untrusted retrieved content.
+        weight = max(CONTENT_TYPE_WEIGHTS.get(content_type, 1.0), CONTENT_TYPE_WEIGHT_FLOOR)
         weighted_score = min(raw_score * weight, 1.0)
 
         # Determine flagged technique classes
@@ -144,6 +164,31 @@ class IpiDetectionEngine:
 
         # Apply risk multipliers
         weighted_score = self._apply_multipliers(weighted_score, flagged_classes, all_indicators)
+
+        # Privileged-type arbitrage floor: if the declared type suppressed
+        # pattern families and the content slipped under the quarantine
+        # line, rescan as the canonical untrusted type and take the
+        # higher verdict. Costs a second detector pass only on the
+        # under-threshold privileged-type path.
+        if weighted_score < DEFAULT_RISK_THRESHOLD and content_type in PRIVILEGED_SCAN_TYPES:
+            rescan: list[DetectionIndicator] = []
+            for detector in self.detectors:
+                rescan.extend(detector.detect(scan_content, CANONICAL_UNTRUSTED_TYPE))
+            if rescan:
+                rescan.extend(normalization_indicators(norm.applied))
+                rescan_classes = list({ind.technique_class for ind in rescan})
+                rescan_score = self._apply_multipliers(
+                    min(self._compute_score(rescan), 1.0),
+                    rescan_classes,
+                    rescan,
+                )
+                if rescan_score > weighted_score:
+                    weighted_score = rescan_score
+                    seen = {(i.technique_name, i.evidence.matched_text) for i in all_indicators}
+                    all_indicators.extend(
+                        i for i in rescan if (i.technique_name, i.evidence.matched_text) not in seen
+                    )
+                    flagged_classes = list({ind.technique_class for ind in all_indicators})
 
         # Determine risk level
         risk_level = self._risk_level(weighted_score)
@@ -194,6 +239,7 @@ class IpiDetectionEngine:
             safe_content=decision.safe_content,
             quarantined=decision.quarantined,
             human_summary=decision.human_summary,
+            normalizations_applied=norm.applied,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

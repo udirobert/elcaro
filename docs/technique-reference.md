@@ -157,6 +157,24 @@ Default thresholds:
 - 0.5–0.7: `suspicious` — multiple indicators, warrants LLM second pass
 - 0.7–1.0: `dangerous` — clear injection attempt, do not process
 
+## Evasion normalization
+
+Before any detector runs, `core/normalize.py` reconstructs the text the
+detectors should have seen:
+
+| Step | What it does |
+|---|---|
+| `zero_width_strip` | Removes invisible format characters (ZWSP, ZWJ, BOM…) that break `\b` anchors |
+| `confusable_fold` | Cyrillic/Greek lookalikes → ASCII, then NFKC (fullwidth `ＳＹＳＴＥＭ` → `SYSTEM`) |
+| `token_desplit` | Unicode dashes → `-`, then single-char-dash runs rejoin (`S‑Y‑S‑T‑E‑M` → `SYSTEM`) |
+| `rot13_decode` / `hex_decode` / `base64_decode` | Declared or blob-shaped encodings decoded and appended so every detector sees the plaintext |
+
+Normalization is for detection only — `safe_content` always references the
+original content. Fired steps are returned in `normalizations_applied` and
+each synthesizes an obfuscation indicator (the artifact is itself evidence of
+evasion). Pure-Cyrillic documents fold silently — mixing scripts is the
+signal, not the script.
+
 ## Content types and contextual weighting
 
 The same text can be benign or malicious depending on context. Elcaro accepts a
@@ -169,5 +187,14 @@ The same text can be benign or malicious depending on context. Elcaro accepts a
 | code | 0.7 | Comments can carry injection but lower baseline |
 | document | 0.8 | Docs/KB articles can be edited by attackers |
 | webpage | 1.0 | Fully untrusted external content |
-| chat_message | 0.3 | User's own message (trusted by default, lower risk) |
-| system_prompt | 0.0 | Trusted by definition — do not scan |
+| chat_message | 0.7 | Floored — a caller-declared label can't soften untrusted content |
+| system_prompt | 1.0 | Scanned — declaring content a system prompt cannot grant trust |
+
+Two safeguards close the type-arbitrage hole the red team found
+(`redteam/` — a payload labeled `system_prompt` used to return 0.0):
+
+1. **Weight floor** — no declared type drops the multiplier below 0.7.
+2. **Privileged-type rescan** — detectors gate imperative-pattern families on
+   untrusted types; content that slips under the quarantine line as
+   `code`/`chat_message`/`system_prompt` is rescanned as `email` and the
+   higher verdict stands.

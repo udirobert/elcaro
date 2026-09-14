@@ -251,7 +251,9 @@ def build_server(*, miner_url: str = DEFAULT_MINER_URL, use_local: bool = False)
             content: The text the agent retrieved and is about to process.
             content_type: Provenance of the content — one of: email,
                 search_result, webpage, document, code, chat_message,
-                system_prompt. Affects risk weighting; be specific.
+                system_prompt. Affects risk weighting; be specific — the
+                declared type cannot lower the verdict below the untrusted
+                floor (content is rescanned as untrusted when it matters).
             deep_analysis: Run the LLM second pass for ambiguous results
                 (slower; the default rule-based scan is deterministic).
         """

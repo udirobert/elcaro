@@ -243,6 +243,16 @@ class ScanResponse(BaseModel):
         default=False,
         description="Whether risk_score met or exceeded the quarantine threshold (0.5)",
     )
+    normalizations_applied: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Evasion-normalization steps applied before detection "
+            "(core/normalize.py): e.g. zero_width_strip, confusable_fold, "
+            "token_desplit, rot13_decode, hex_decode, base64_decode. Empty "
+            "means the content was scanned as-is. Detection ran on the "
+            "normalized text; safe_content still references the original."
+        ),
+    )
     scanned_at: int | None = Field(
         default=None,
         description="Unix timestamp of the scan. Set by the miner API; part of the signed payload.",

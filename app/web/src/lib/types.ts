@@ -64,6 +64,9 @@ export interface ScanResponse {
   scanned_at?: number;
   signature?: string;
   key_id?: string;
+  // Evasion normalizations applied before detection (core/normalize.py).
+  // Optional — responses from older miners predate the field.
+  normalizations_applied?: string[];
 }
 
 export interface ScanRequest {

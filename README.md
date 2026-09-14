@@ -132,6 +132,10 @@ Everything is live — no waitlists, no gated features:
   then declares the action it was about to take. Plan: [docs/webmcp.md](docs/webmcp.md).
 - **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
   specimen corpus against the live miner and watch every verdict.
+- **[Red team](https://elcaro.trustfall.xyz/redteam)** — the product attacks
+  itself: an evolutionary searcher mutates the attack corpus and streams
+  every scan live (SSE from `GET /redteam/run`), with a trophy case for
+  confirmed bypasses.
 - **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,
   middleware, Telegraph routing, and a threshold-replay sandbox built from
   your own session history.
@@ -172,7 +176,8 @@ Everything is live — no waitlists, no gated features:
 
 | Layer | Stack | Purpose |
 |---|---|---|
-| `core/` | Python · Pydantic · regex | Detection engine — six detectors, scoring, quarantine policy |
+| `core/` | Python · Pydantic · regex | Detection engine — six detectors, evasion normalization, scoring, quarantine policy |
+| `redteam/` | Python · asyncio | Adversarial searcher — mutates the corpus, hunts bypasses, drafts patches |
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
 | `app/middleware.py` | Python · httpx | Drop-in middleware for Python agents |

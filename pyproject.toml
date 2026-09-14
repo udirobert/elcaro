@@ -37,7 +37,7 @@ all = [
 ]
 
 [tool.setuptools]
-packages = ["core", "core.detectors"]
+packages = ["core", "core.detectors", "redteam"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -70,4 +70,5 @@ exclude = ["*.md"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S", "E501"]         # injection payloads are intentionally long strings
+"redteam/*" = ["S311"]            # RNG drives mutation search, not crypto
 "app/demo.py" = ["T201"]          # allow print() in the demo script
