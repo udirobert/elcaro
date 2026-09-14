@@ -200,6 +200,7 @@ async def execute_trophies_tenki(
                 metadata={"purpose": "ipi-victim-agent"},
                 allow_inbound=False,
                 allow_outbound=True,
+                timeout=180,  # cold VM boot can exceed the default wait budget
             )
         except Exception as exc:
             # A sandbox we can't create must not kill the run — degrade to
