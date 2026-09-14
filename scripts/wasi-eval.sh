@@ -69,6 +69,12 @@ build() {
 need_wasm() { [ -f "$WASM" ] || build; }
 
 need_wasmer() {
+  # The official installer puts wasmer in ~/.wasmer/bin and only patches
+  # interactive shell profiles, so non-interactive shells miss it.
+  if ! command -v wasmer >/dev/null 2>&1 && [ -x "$HOME/.wasmer/bin/wasmer" ]; then
+    PATH="$HOME/.wasmer/bin:$PATH"
+    export PATH
+  fi
   command -v wasmer >/dev/null 2>&1 ||
     die "wasmer CLI not found. Install: brew install wasmer"
 }
