@@ -240,8 +240,11 @@ decoded a hidden ROT13 instruction and forwarded it to the attacker;
 `redteam/tenki_exec.py`: with `TENKI_API_KEY`, the first
 `ELCARO_TENKI_MAX` trophies run the agent's read→decide→send loop inside
 a Tenki sandbox (stdlib-only agent script), so the exfil egress
-originates from an isolated VM destroyed at run end. Degrades to the
-mailbox executor when unavailable.
+originates from an isolated VM destroyed at run end. Verified on
+production: `sent_folder_verified_from_sandbox` — the agent complied
+inside the VM, the send went out from the sandbox, and the host read it
+back from the victim's sent folder. Degrades to the mailbox executor
+when the sandbox can't boot.
 
 **Wasmer — the eval runs inside the runtime.**
 `eval/src/bin/elcaro_eval_wasi.rs` compiles the scoring engine to
