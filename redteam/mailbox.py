@@ -145,31 +145,31 @@ class AgentMail:
         return resp.json()
 
     async def find_sent_to(
-        self, inbox_id: str, address: str, timeout_s: float = 8.0
+        self, inbox_id: str, address: str, timeout_s: float = 12.0
     ) -> dict | None:
         """The compliance artifact: mail this inbox actually sent to `address`.
 
-        Polls, because /messages/send returns before the message is
-        necessarily queryable. Tries the `sent` system label first, then
-        falls back to the `to` filter alone — the label is documented for
-        threads and used in their examples, but not guaranteed at message
-        scope.
+        Filters on the `sent` system label and matches the recipient
+        client-side. The `to` query param routes to AgentMail's search index,
+        which lags well behind the label listing — probing it returned zero
+        hits for mail that was demonstrably sitting in the sent folder, so
+        the recipient check happens here instead. Polls, because the label
+        itself takes a few seconds to appear after /messages/send returns.
         """
-        to = json.dumps([address])
-        attempts = (
-            {"labels": json.dumps(["sent"]), "to": to},
-            {"to": to},
-        )
+        want = address.strip().lower()
+        params = {"labels": json.dumps(["sent"])}
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout_s
         while True:
-            for params in attempts:
-                try:
-                    for msg in await self.list_messages(inbox_id, **params):
-                        if msg.get("message_id"):
-                            return msg
-                except httpx.HTTPError:
-                    continue
+            try:
+                for msg in await self.list_messages(inbox_id, **params):
+                    recipients = msg.get("to") or []
+                    if isinstance(recipients, str):
+                        recipients = [recipients]
+                    if any(want in str(r).lower() for r in recipients):
+                        return msg
+            except httpx.HTTPError:
+                pass
             if loop.time() >= deadline:
                 return None
             await asyncio.sleep(1.0)
