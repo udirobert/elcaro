@@ -66,8 +66,12 @@ function ScoreChip({ score, bypass }: { score: number; bypass?: boolean }) {
 export function RedteamRunner() {
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [mode, setMode] = useState<"vulnerable" | "hardened">("vulnerable");
+  const [execute, setExecute] = useState(false);
+  const [oracle, setOracle] = useState<string | null>(null);
   const [feed, setFeed] = useState<RunRecord[]>([]);
   const [trophies, setTrophies] = useState<Map<string, RunRecord>>(new Map());
+  const [executions, setExecutions] = useState<RunRecord[]>([]);
   const [stats, setStats] = useState({ scans: 0, budget: 0 });
   const [expanded, setExpanded] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -83,11 +87,16 @@ export function RedteamRunner() {
     esRef.current?.close();
     setFeed([]);
     setTrophies(new Map());
+    setExecutions([]);
     setStats({ scans: 0, budget: 0 });
     setExpanded(null);
+    setOracle(null);
     setPhase("running");
 
-    const es = new EventSource("/api/redteam/run?budget=150");
+    const params = new URLSearchParams({ budget: "150" });
+    if (mode === "vulnerable") params.set("baseline", "vulnerable");
+    if (execute) params.set("execute", "true");
+    const es = new EventSource(`/api/redteam/run?${params}`);
     esRef.current = es;
 
     es.onmessage = (evt) => {
@@ -98,12 +107,18 @@ export function RedteamRunner() {
         return;
       }
       if (rec.kind === "run_start") {
-        setStats((s) => ({ ...s, budget: (rec as { budget?: number }).budget ?? 0 }));
+        const r = rec as { budget?: number; oracle?: string };
+        setStats((s) => ({ ...s, budget: r.budget ?? 0 }));
+        setOracle(r.oracle ?? null);
         return;
       }
       if (rec.kind === "run_end") {
         setPhase("done");
         es.close();
+        return;
+      }
+      if (rec.kind === "execution") {
+        setExecutions((e) => [...e, rec]);
         return;
       }
       if (rec.kind === "scan" || rec.kind === "trophy") {
@@ -148,33 +163,79 @@ export function RedteamRunner() {
       </div>
 
       {/* Run control */}
-      <div className="flex items-center gap-4 flex-wrap">
-        {phase !== "running" ? (
-          <motion.button
-            onClick={run}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors"
-            whileTap={{ opacity: 0.9 }}
-          >
-            {phase === "done" ? "Attack again" : "Attack the engine"}
-            <span>→</span>
-          </motion.button>
-        ) : (
-          <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold">
-            <motion.span
-              className="w-3 h-3 rounded-full border-2 border-canvas/40 border-t-canvas"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
-            />
-            Searching — {stats.scans}
-            {stats.budget ? `/${stats.budget}` : ""} candidates
-          </div>
-        )}
+      <div className="space-y-3">
+        {/* Target selector — the before/after arc: the same searcher hits
+            either the pre-hardening engine semantics or the live one */}
+        <div className="inline-flex rounded-xl border border-border overflow-hidden text-sm">
+          {(
+            [
+              { key: "vulnerable", label: "Vulnerable baseline" },
+              { key: "hardened", label: "Hardened engine" },
+            ] as const
+          ).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              disabled={phase === "running"}
+              className={`px-4 py-2 font-semibold transition-colors ${
+                mode === m.key
+                  ? "bg-ink text-canvas"
+                  : "bg-surface text-ink-muted hover:text-ink"
+              } disabled:opacity-50`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
 
-        {phase === "error" && (
-          <p className="text-sm text-dangerous">
-            The scanner is unreachable right now — try again in a moment.
-          </p>
-        )}
+        <div className="flex items-center gap-4 flex-wrap">
+          {phase !== "running" ? (
+            <motion.button
+              onClick={run}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors"
+              whileTap={{ opacity: 0.9 }}
+            >
+              {phase === "done" ? "Attack again" : "Attack the engine"}
+              <span>→</span>
+            </motion.button>
+          ) : (
+            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold">
+              <motion.span
+                className="w-3 h-3 rounded-full border-2 border-canvas/40 border-t-canvas"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+              />
+              Searching — {stats.scans}
+              {stats.budget ? `/${stats.budget}` : ""} candidates
+            </div>
+          )}
+
+          <label className="inline-flex items-center gap-2 text-xs text-ink-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={execute}
+              onChange={(e) => setExecute(e.target.checked)}
+              disabled={phase === "running"}
+              className="accent-ink"
+            />
+            test agent compliance on bypasses
+          </label>
+
+          {oracle && (
+            <span className="text-xs text-ink-muted">
+              target:{" "}
+              {oracle === "BaselineOracle"
+                ? "pre-hardening engine (before today's fixes)"
+                : "live hardened engine"}
+            </span>
+          )}
+
+          {phase === "error" && (
+            <p className="text-sm text-dangerous">
+              The scanner is unreachable right now — try again in a moment.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Stats strip */}
@@ -259,6 +320,58 @@ export function RedteamRunner() {
         )}
       </AnimatePresence>
 
+      {/* Executions — Tier-2: did an agent actually comply? */}
+      <AnimatePresence>
+        {executions.length > 0 && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE_OUT }}
+            className="rounded-2xl border border-border bg-surface overflow-hidden"
+          >
+            <div className="px-4 py-3 border-b border-border">
+              <h2 className="text-sm font-bold">Agent compliance check</h2>
+            </div>
+            <div className="divide-y divide-border">
+              {executions.map((e) => {
+                const complied = (e as { complied?: boolean }).complied;
+                const detail = (e as { detail?: string }).detail;
+                const excerpt = (e as { response_excerpt?: string })
+                  .response_excerpt;
+                return (
+                  <div key={e.id ?? e.ts} className="px-4 py-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {complied ? (
+                        <span className="px-2 py-0.5 rounded-md text-xs font-black text-canvas" style={{ backgroundColor: LEVEL_COLORS.dangerous }}>
+                          AGENT COMPLIED
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-ink/[0.06] text-ink-muted text-xs font-semibold">
+                          {detail === "llm_unconfigured" ? "no LLM configured" : "no compliance"}
+                        </span>
+                      )}
+                      <span className="font-mono text-xs text-ink-muted">
+                        {e.seed_id}
+                      </span>
+                      <span className="flex gap-1 flex-wrap">
+                        {(e.ops ?? []).map((op, i) => (
+                          <OpChip key={`${op}-${i}`} op={op} />
+                        ))}
+                      </span>
+                    </div>
+                    {excerpt && (
+                      <p className="mt-2 text-xs text-ink-muted italic leading-relaxed line-clamp-3">
+                        “{excerpt}”
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Live feed */}
       {feed.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface overflow-hidden">
@@ -297,7 +410,10 @@ export function RedteamRunner() {
             ? "No bypasses this run — every mutation was caught. The structural evasion classes (encoding, homoglyphs, token splitting, type arbitrage) are closed by the normalization layer; what survives is semantic indirection."
             : `${trophyList.length} bypass${
                 trophyList.length === 1 ? "" : "es"
-              } survived — these feed straight into the corpus and the next patch round. A detector that can't be attacked can't be trusted.`}
+              } against the ${
+                oracle === "BaselineOracle" ? "pre-hardening" : "live"
+              } engine. Flip to “Hardened engine” and run again — the same
+              searcher, the fixes live.`}
         </p>
       )}
     </div>

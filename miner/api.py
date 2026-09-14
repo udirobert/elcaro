@@ -382,15 +382,29 @@ async def redteam_seeds():
 
 
 @app.get("/redteam/run")
-async def redteam_run(budget: int = 120, seed: int | None = None):
+async def redteam_run(
+    budget: int = 120,
+    seed: int | None = None,
+    baseline: str | None = None,
+    execute: bool = False,
+):
     """Run the adversarial searcher against this engine — SSE stream.
 
-    Query params: budget (scans, hard-capped at _REDTEAM_BUDGET_MAX),
-    seed (RNG seed for reproducible runs). Emits one `data:` line per
-    journal record; the stream ends with kind=run_end.
+    Query params:
+      budget   — scans, hard-capped at _REDTEAM_BUDGET_MAX
+      seed     — RNG seed for reproducible runs
+      baseline — "vulnerable" runs against the pre-hardening engine
+                 semantics (redteam/baseline.py); anything else uses the
+                 live engine
+      execute  — after the search, feed each trophy to the Tier-2
+                 compliance oracle (no-op without ELCARO_LLM_API_KEY)
+
+    Emits one `data:` line per journal record; ends with kind=run_end.
     """
     try:
+        from redteam.baseline import BaselineOracle
         from redteam.corpus import load_seeds
+        from redteam.executor import execute_trophies
         from redteam.journal import QueueJournal
         from redteam.oracle import LocalOracle
         from redteam.search import run_search
@@ -403,16 +417,28 @@ async def redteam_run(budget: int = 120, seed: int | None = None):
     budget = max(10, min(budget, _REDTEAM_BUDGET_MAX))
     journal = QueueJournal()
     seeds = load_seeds()
+    oracle = BaselineOracle() if baseline == "vulnerable" else LocalOracle()
 
     async def stream():
         async with _redteam_lock:
-            run = asyncio.create_task(run_search(seeds, LocalOracle(), journal, budget, seed))
+            run = asyncio.create_task(run_search(seeds, oracle, journal, budget, seed))
+            run_end: dict | None = None
             try:
                 while True:
                     rec = await journal.records.get()
-                    yield f"data: {json.dumps(rec, ensure_ascii=False)}\n\n"
                     if rec.get("kind") == "run_end":
+                        run_end = rec
                         break
+                    yield f"data: {json.dumps(rec, ensure_ascii=False)}\n\n"
+                if execute:
+                    # Tier-2: does an agent actually comply with what
+                    # slipped through? Records stream before run_end.
+                    await execute_trophies(await run, journal)
+                    while not journal.records.empty():
+                        rec = journal.records.get_nowait()
+                        yield f"data: {json.dumps(rec, ensure_ascii=False)}\n\n"
+                if run_end is not None:
+                    yield f"data: {json.dumps(run_end, ensure_ascii=False)}\n\n"
             finally:
                 if not run.done():
                     run.cancel()

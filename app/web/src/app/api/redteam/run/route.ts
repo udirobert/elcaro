@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const upstream = new URL(`${MINER_URL}/redteam/run`);
-  const budget = url.searchParams.get("budget");
-  const seed = url.searchParams.get("seed");
-  if (budget) upstream.searchParams.set("budget", budget);
-  if (seed) upstream.searchParams.set("seed", seed);
+  for (const key of ["budget", "seed", "baseline", "execute"]) {
+    const v = url.searchParams.get(key);
+    if (v) upstream.searchParams.set(key, v);
+  }
 
   let minerResponse: Response;
   try {
