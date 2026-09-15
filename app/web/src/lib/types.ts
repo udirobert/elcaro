@@ -77,6 +77,11 @@ export interface ScanResponse {
   // when serv_used=true. Used by the UI to show the delta:
   // "SERV saw X, rules saw Y, final is Z" — the upsell signal.
   serv_rule_score_before?: number;
+  // Approximate SERV cost for this scan when serv_used=true. All values in
+  // USDC (USD-pegged). None when SERV was not used or cost could not be
+  // estimated. Keys: input_tokens, output_tokens, input_cost_usdc,
+  // output_cost_usdc, total_usdc.
+  serv_cost?: { input_tokens?: number; output_tokens?: number; input_cost_usdc?: number; output_cost_usdc?: number; total_usdc?: number } | null;
 }
 
 export interface ScanRequest {

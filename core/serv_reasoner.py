@@ -25,6 +25,9 @@ Design contract (mirrors core/llm_classifier.py for symmetry):
   TTP IDs, a better remediation string, and a suggested ``safe_content``
   payload. When present they layer onto the verdict; when absent the
   rule verdict stands.
+- Cost transparency. Every successful SERV call returns a
+  :class:`ServCostEstimate` so callers always know what SERV costs
+  before they act — no surprise billing.
 
 The wrapper deliberately stays small. SERV's chat-completions surface
 is OpenAI-compatible, so the call shape is the same one Elcaro's existing
@@ -57,6 +60,59 @@ AUTH_COOLDOWN_S = 60.0
 RULE_WEIGHT = 0.5
 RULE_FLOOR_FACTOR = 0.5
 
+# ── SERV pricing (gpt-5.4-mini via OpenServ) ─────────────────────────────────
+# These prices are per 1M tokens. ServReasoner computes per-call cost from
+# the token counts it tracks.
+SERV_INPUT_PRICE_PER_M = 1.0  # USD
+SERV_OUTPUT_PRICE_PER_M = 6.0  # USD
+
+# Rough token estimate: 1 token ≈ 4 characters for English text.
+# This is a heuristic — real counts come from the model response metadata.
+TOKENS_PER_CHAR = 0.25
+
+
+@dataclass
+class ServCostEstimate:
+    """Cost estimate for a SERV second-pass call.
+
+    Fields are all floats in USD. None means the cost was not calculable
+    (e.g. SERV was unavailable). Callers should treat None as "no extra
+    cost" for that field.
+
+    Used by the engine to surface cost transparency in the ScanResponse so
+    callers always know what SERV costs before they act.
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    input_cost_usdc: float | None = None
+    output_cost_usdc: float | None = None
+    total_usdc: float | None = None
+
+    @classmethod
+    def estimate_from_content(
+        cls, content: str, response_text: str | None = None
+    ) -> ServCostEstimate:
+        """Build a cost estimate from rough character counts.
+
+        Uses TOKENS_PER_CHAR heuristic since SERV may not return token
+        counts in all responses. When response_text is provided the output
+        estimate is more accurate; otherwise both sides use the heuristic.
+        """
+        input_chars = len(content)
+        output_chars = len(response_text) if response_text else 0
+        input_tokens = max(1, int(input_chars * TOKENS_PER_CHAR))
+        output_tokens = max(1, int(output_chars * TOKENS_PER_CHAR))
+        input_cost = input_tokens * SERV_INPUT_PRICE_PER_M / 1_000_000
+        output_cost = output_tokens * SERV_OUTPUT_PRICE_PER_M / 1_000_000
+        return cls(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_cost_usdc=round(input_cost, 8),
+            output_cost_usdc=round(output_cost, 8),
+            total_usdc=round(input_cost + output_cost, 8),
+        )
+
 
 @dataclass
 class ServClassificationResult:
@@ -83,6 +139,9 @@ class ServClassificationResult:
     techniques_enriched: list[str] = field(default_factory=list)
     remediation_refined: str | None = None
     safe_content_suggestion: str | None = None
+    # Cost estimate for this SERV call — surfaced in the response so
+    # callers always know what SERV costs before they act.
+    cost_estimate: ServCostEstimate | None = None
 
 
 class ServReasoner:
@@ -177,6 +236,8 @@ class ServReasoner:
         Returns a :class:`ServClassificationResult` whose ``confidence`` is
         0.0 on any provider / parse / auth failure — the engine then
         keeps the rule-based score unchanged (``serv_used=False``).
+        A :class:`ServCostEstimate` is attached when SERV succeeds so the
+        caller can surface the cost transparently.
         """
         if not self.is_available():
             return ServClassificationResult(
@@ -200,6 +261,10 @@ class ServReasoner:
         # delta (rule vs SERV) in the UI — this is the monetization signal.
         llm_score_raw = llm_score
 
+        # Build a cost estimate from the request + response sizes.
+        raw_text = raw.get("reasoning", "") or ""
+        cost = ServCostEstimate.estimate_from_content(user_message, raw_text)
+
         # Blend and floor — rules retain veto power.
         adjusted = RULE_WEIGHT * rule_score + (1 - RULE_WEIGHT) * llm_score
         adjusted = max(adjusted, rule_score * RULE_FLOOR_FACTOR)
@@ -217,6 +282,7 @@ class ServReasoner:
             techniques_enriched=_as_str_list(raw.get("ttps")),
             remediation_refined=_as_optional_str(raw.get("remediation")),
             safe_content_suggestion=_as_optional_str(raw.get("safe_content")),
+            cost_estimate=cost,
         )
 
     # ── Internals ────────────────────────────────────────────────────────────

@@ -313,6 +313,25 @@ class IpiDetectionEngine:
             serv_attempted=serv_attempted,
             serv_used=serv_used,
             serv_rule_score_before=serv_result.llm_score_raw if serv_result else None,
+            serv_cost={
+                "input_tokens": serv_result.cost_estimate.input_tokens
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "output_tokens": serv_result.cost_estimate.output_tokens
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "input_cost_usdc": serv_result.cost_estimate.input_cost_usdc
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "output_cost_usdc": serv_result.cost_estimate.output_cost_usdc
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "total_usdc": round(serv_result.cost_estimate.total_usdc, 8)
+                if serv_result and serv_result.cost_estimate
+                else None,
+            }
+            if serv_result and serv_result.cost_estimate
+            else None,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

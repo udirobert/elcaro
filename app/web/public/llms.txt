@@ -15,10 +15,11 @@ When `serv_enabled=true` **and** the miner is configured with `SERV_ENABLED=1` +
 - `serv_attempted`: whether SERV was called for this scan
 - `serv_used`: whether SERV's verdict contributed to the final score
 - `serv_rule_score_before`: the raw SERV LLM score before the 50/50 blend — the signal that proves SERV added value
+- `serv_cost`: approximate cost in USDC — `{input_tokens, output_tokens, input_cost_usdc, output_cost_usdc, total_usdc}`. All values are approximations based on character counts; real token counts come from the provider.
 
 The blend is `0.5 * rule_score + 0.5 * serv_score`, floored at `0.5 * rule_score` (rules always keep veto power). SERV also layers refined TTPs, remediation, and `safe_content` onto the verdict when present.
 
-Use `serv_enabled=true` with the gray-zone specimen on `/scan` to see the delta: rules see ~0.42, SERV sees ~0.71 (authoritative framing in compliance language). Cost: ~$10–20 per 10 k scans (pay SERV directly, no Elcaro markup). Docs: [docs/serv-reasoning.md](https://github.com/udirobert/elcaro/blob/main/docs/serv-reasoning.md).
+Cost transparency: every SERV-enhanced scan returns `serv_cost.total_usdc` so callers always know what SERV costs before they act. A typical scan (~600 input chars, ~200 output chars) costs ~$0.002 USDC. At scale (~10 k scans/day with 20% gray-zone hit rate) that's ~$4/day in SERV costs, plus the base 0.01 USDC per scan routed through Telegraph. Operators pay SERV directly; Elcaro takes no markup.
 - [GET /redteam/run](https://api.elcaro.trustfall.xyz/redteam/run): Self red-team — streams an SSE journal (`data:` per record: scan / trophy / execution / run_end) of an evolutionary searcher attacking this engine. Params: `budget` (scans, ≤300), `seed` (deterministic run), `baseline=vulnerable` (target the pre-hardening engine semantics — the before/after contrast), `execute=true` (Tier-2: feed each bypass to an LLM and score whether the agent complies). Fixed corpus only.
 - [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
 - [GET /pubkey](https://api.elcaro.trustfall.xyz/pubkey): The miner's Ed25519 verdict-signing public key (404 when running unsigned).

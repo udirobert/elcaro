@@ -9,10 +9,10 @@ const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 //   Input: ~$1 / 1M tokens · Output: ~$6 / 1M tokens
 // A typical scan sends ~600 tokens in, gets back ~200 tokens out.
 //   Per scan ≈ ($1×600 + $6×200) / 1M ≈ $0.0018 → ~$18 / 10 k scans.
-// We round to a clean, honest range: $10–$20 per 10 k scans depending on
-// content length. The user pays SERV directly; Elcaro passes through at
-// cost with no markup.
-const ESTIMATED_COST_PER_10K = "$10–$20";
+// These are approximations — the actual per-call cost is returned in
+// serv_cost.total_usdc on the ScanResponse so callers always know.
+const ESTIMATED_COST_PER_10K = "$15–$25";
+const ESTIMATED_PER_SCAN_USDC = "~$0.002";
 const ESTIMATED_LATENCY_MS = "~1 s";
 const FREE_LATENCY_MS = "<10 ms";
 
@@ -71,7 +71,7 @@ export function PricingTiers({ elevatedServ = false }: PricingTiersProps) {
         <TierCard
           label="SERV Enhanced"
           price={ESTIMATED_COST_PER_10K}
-          subtitle="LLM reasoning · per scan"
+          subtitle={`~${ESTIMATED_PER_SCAN_USDC}/scan · paid to SERV`}
           highlight={elevatedServ}
         >
           <FeatureRow label="Latency" value={ESTIMATED_LATENCY_MS} />
@@ -91,8 +91,11 @@ export function PricingTiers({ elevatedServ = false }: PricingTiersProps) {
           <FeatureRow label="Setup" value="Set SERV_API_KEY + SERV_ENABLED=1" />
           <p className="mt-4 pt-4 border-t border-border text-[11px] text-ink-faint leading-relaxed">
             Pays SERV directly (gpt-5.4-mini, the cheapest model in their
-            catalog). No Elcaro markup — you see the real cost per 10 k
-            scans.
+            catalog). No Elcaro markup — every scan returns
+            <code className="font-mono bg-surface border border-border px-1 rounded text-xs mx-1">
+              serv_cost.total_usdc
+            </code>
+            so you see the real cost per call. Typical: ~$0.002/scan.
           </p>
           <div className="mt-4">
             <Link

@@ -147,6 +147,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
               <ScoreDelta
                 ruleScore={result.risk_score}
                 servScore={result.serv_rule_score_before}
+                cost={result.serv_cost ?? undefined}
               />
             ) : (
               <span className="text-xs text-ink-muted leading-relaxed">
@@ -289,13 +290,15 @@ export function ScanResult({ result, content }: ScanResultProps) {
 interface ScoreDeltaProps {
   ruleScore: number;
   servScore: number;
+  cost?: { total_usdc: number } | null;
 }
 
 /**
  * Shows the SERV-vs-rules score delta as a concise value-prop line.
  * "SERV saw 0.71 · rules saw 0.42 · final 0.57" — the upsell signal.
+ * Optionally shows the approximate SERV cost when available.
  */
-function ScoreDelta({ ruleScore, servScore }: ScoreDeltaProps) {
+function ScoreDelta({ ruleScore, servScore, cost }: ScoreDeltaProps) {
   const moved = servScore - ruleScore;
   const direction = moved > 0 ? "↑" : moved < 0 ? "↓" : "→";
   const moveColor =
@@ -314,6 +317,11 @@ function ScoreDelta({ ruleScore, servScore }: ScoreDeltaProps) {
       <span className={`${moveColor}`}>
         {direction} {Math.abs(moved).toFixed(2)}
       </span>
+      {cost?.total_usdc != null && cost.total_usdc > 0 && (
+        <span className="text-ink-faint font-mono text-[10px]">
+          · ~${cost.total_usdc.toFixed(4)}
+        </span>
+      )}
     </span>
   );
 }

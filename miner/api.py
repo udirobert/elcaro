@@ -78,6 +78,9 @@ class Metrics:
     total_errors: int = 0
     total_scans: int = 0
     serv_calls: int = 0  # second-pass calls that actually contributed to a verdict
+    serv_cost_total_usdc: float = (
+        0.0  # cumulative SERV cost in USDC (approximate, from char counts)
+    )
     risk_level_counts: dict[str, int] = field(
         default_factory=lambda: {"safe": 0, "low": 0, "suspicious": 0, "dangerous": 0}
     )
@@ -97,6 +100,9 @@ class Metrics:
         )
         if response.latency_ms is not None:
             self.latencies_ms.append(response.latency_ms)
+        # Track cumulative SERV spend so operators can monitor costs.
+        if response.serv_cost and response.serv_cost.get("total_usdc"):
+            self.serv_cost_total_usdc += float(response.serv_cost["total_usdc"])
 
     def record_error(self) -> None:
         self.total_errors += 1
@@ -112,6 +118,7 @@ class Metrics:
             "total_scans": self.total_scans,
             "total_errors": self.total_errors,
             "serv_calls": self.serv_calls,
+            "serv_cost_total_usdc": round(self.serv_cost_total_usdc, 6),
             "error_rate": (
                 round(self.total_errors / self.total_requests, 4)
                 if self.total_requests > 0

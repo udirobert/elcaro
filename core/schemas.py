@@ -301,6 +301,19 @@ class ScanResponse(BaseModel):
             "the signal that proves SERV added value."
         ),
     )
+    # Cost transparency for SERV-enhanced scans. Present only when serv_used=True.
+    # All values are in USDC (USD-pegged stablecoin). None means the scan
+    # did not use SERV or the cost could not be estimated.
+    serv_cost: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Cost estimate for the SERV second pass, present only when "
+            "serv_used=True. Keys: input_tokens, output_tokens, "
+            "input_cost_usdc, output_cost_usdc, total_usdc. Values are "
+            "approximations based on character counts — real token counts "
+            "are available from the provider if the response includes them."
+        ),
+    )
     scanned_at: int | None = Field(
         default=None,
         description="Unix timestamp of the scan. Set by the miner API; part of the signed payload.",

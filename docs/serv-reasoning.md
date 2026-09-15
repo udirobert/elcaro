@@ -59,11 +59,37 @@ credit.
 | Path | Cost | Latency | When it runs |
 |---|---|---|---|
 | Free (rules only) | $0 | <10 ms | Always — the default |
-| SERV Enhanced | ~$10–20 / 10 k scans | ~1 s | Gray-zone cases only (score 0.3–0.7) when `serv_enabled=true` |
+| SERV Enhanced | ~$0.002 / scan · ~$15–25 / 10 k scans | ~1 s | Gray-zone cases only (score 0.3–0.7) when `serv_enabled=true` |
 
 Cost estimate based on `gpt-5.4-mini` pricing (~$1/$6 per M tokens input/
-output). A typical scan sends ~600 tokens in, gets ~200 tokens out. You
-pay SERV directly — Elcaro takes no markup.
+output). A typical scan sends ~600 tokens in, gets ~200 tokens out.
+
+### Cost transparency
+
+Every SERV-enhanced scan returns `serv_cost.total_usdc` in the response so
+callers always know the exact cost before they act. The value is an
+approximation based on character counts (the provider's real token count
+may differ slightly). The operator can also track cumulative spend via
+`GET /metrics` → `serv_cost_total_usdc`.
+
+Example response fragment:
+```json
+{
+  "serv_used": true,
+  "serv_rule_score_before": 0.71,
+  "serv_cost": {
+    "input_tokens": 150,
+    "output_tokens": 50,
+    "input_cost_usdc": 0.00015,
+    "output_cost_usdc": 0.0003,
+    "total_usdc": 0.00045
+  }
+}
+```
+
+At scale: 10 k scans/day with a 20% gray-zone hit rate → ~2 k SERV calls
+→ ~$0.90/day in SERV costs. The operator pays SERV directly; Elcaro takes
+no markup on the pass-through.
 
 ## API contract
 
