@@ -215,3 +215,24 @@ POST /sandbox
 - `/sandbox` 是供外部系统调用的 API，也可供开发者验证逻辑
 
 成本估算：一次完整沙盒测试约 8 次 LLM 调用，约 $0.02 USDC（使用 gpt-5.4-mini）。
+
+## Feature Flags & Analytics
+
+### SERV availability gate
+The `/vulnerable` page queries `GET /config` on mount to check whether
+SERV is configured. When `serv_available: false` the Sandbox Test mode
+is disabled (greyed out, shows "Requires SERV config") so users aren't
+confused by a dead button.
+
+### Client-side analytics
+Events tracked (stored in localStorage, flushed to
+`POST /api/analytics`):
+- `analysis.completed` — mode (quick/sandbox), score, serv_available flag
+- `analysis.shared` — score, mode (viral loop signal)
+- `analysis.upgrade_click` — destination page (/scan, /integrate, /gauntlet)
+
+Events are batch-flushed every 5 events or on page hide/unload. No PII
+is sent (no prompts, no IPs beyond x-forwarded-for header). Raw events
+are stored as JSONL in `.analytics/events.jsonl`.
+
+Query counts with `GET /api/analytics`.

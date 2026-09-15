@@ -136,6 +136,8 @@ export interface SandboxResult {
   injections_caught: number;
   false_positives: number;
   simulation_mode: string;
+  // Whether SERV is configured and LLM simulation was used.
+  serv_available: boolean;
   total_input_tokens: number;
   total_output_tokens: number;
   estimated_cost_usdc: number;

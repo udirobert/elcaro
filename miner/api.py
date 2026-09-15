@@ -272,6 +272,16 @@ async def health():
     return {"status": "healthy", "miner": "elcaro", "version": "0.1.0"}
 
 
+@app.get("/config")
+async def config():
+    """Return miner configuration status for client-side feature flags."""
+    serv = ServReasoner.from_env()
+    return {
+        "serv_available": serv is not None,
+        "version": "0.1.0",
+    }
+
+
 # Resolved once at import time: miner/api.py -> miner/ -> miner/telegraph.yaml
 _TELEGRAPH_YAML_PATH = Path(__file__).resolve().parent / "telegraph.yaml"
 
@@ -593,6 +603,8 @@ class SandboxResponse(BaseModel):
     injections_caught: int
     false_positives: int
     simulation_mode: str
+    # Whether SERV is configured and LLM simulation was used.
+    serv_available: bool
     total_input_tokens: int
     total_output_tokens: int
     estimated_cost_usdc: float
@@ -636,6 +648,7 @@ async def sandbox(request: SandboxRequest):
         injections_caught=result.injections_caught,
         false_positives=result.false_positives,
         simulation_mode=result.simulation_mode,
+        serv_available=result.serv_available,
         total_input_tokens=result.total_input_tokens,
         total_output_tokens=result.total_output_tokens,
         estimated_cost_usdc=result.estimated_cost_usdc,

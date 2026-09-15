@@ -177,6 +177,8 @@ class SandboxResult:
     pattern_analysis: VulnerabilityResult | None
     # Whether a real SERV model was used for simulation, or rules alone.
     simulation_mode: str
+    # Whether SERV is configured and LLM simulation is available.
+    serv_available: bool
     # Total tokens consumed (approximate).
     total_input_tokens: int
     total_output_tokens: int
@@ -567,6 +569,7 @@ def run_sandbox(config: SandboxConfig) -> SandboxResult:
         false_positives=false_positives,
         pattern_analysis=pattern_analysis,
         simulation_mode="llm" if use_llm else "rules",
+        serv_available=use_llm,
         total_input_tokens=total_input_tokens,
         total_output_tokens=total_output_tokens,
         estimated_cost_usdc=round(estimated_cost, 6),
