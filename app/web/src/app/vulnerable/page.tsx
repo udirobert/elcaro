@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function VulnerablePage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      <SiteHeader active="vulnerable" />
+      <SiteHeader />
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-10 space-y-10">
         {/* Hero */}

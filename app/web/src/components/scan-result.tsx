@@ -290,7 +290,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
 interface ScoreDeltaProps {
   ruleScore: number;
   servScore: number;
-  cost?: { total_usdc: number } | null;
+  cost?: { total_usdc?: number } | null;
 }
 
 /**

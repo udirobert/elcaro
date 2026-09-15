@@ -579,7 +579,6 @@ async def vulnerable(request: VulnerableRequest):
 
 class SandboxRequest(BaseModel):
     prompt: str = Field(..., description="The agent's system prompt")
-    specimens: list[dict] | None = None
     run_pattern_analysis: bool = True
 
 
@@ -619,7 +618,7 @@ async def sandbox(request: SandboxRequest):
         prompt_text=request.prompt,
         run_pattern_analysis=request.run_pattern_analysis,
     )
-    result = run_sandbox(config)
+    result = await asyncio.to_thread(run_sandbox, config)
 
     specimens = []
     for s in result.specimens:

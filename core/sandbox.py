@@ -25,6 +25,7 @@ from typing import Final
 import httpx
 
 from core.schemas import ContentType
+from core.serv_reasoner import SERV_INPUT_PRICE_PER_M, SERV_OUTPUT_PRICE_PER_M, TOKENS_PER_CHAR
 from core.vulnerability import VulnerabilityResult
 from core.vulnerability import analyze as analyze_patterns
 
@@ -432,9 +433,10 @@ def _simulate_with_rules(
             f"Proceeding with normal operations."
         )
 
-    # Estimate tokens (rough character heuristic)
-    input_tokens = max(1, len(system_prompt) // 4 + len(specimen.content) // 4)
-    output_tokens = max(1, len(response) // 4)
+    # Estimate tokens (rough character heuristic, shared with ServReasoner)
+    input_chars = len(system_prompt) + len(specimen.content)
+    input_tokens = max(1, int(input_chars * TOKENS_PER_CHAR))
+    output_tokens = max(1, int(len(response) * TOKENS_PER_CHAR))
     return (response, input_tokens, output_tokens)
 
 
@@ -559,8 +561,11 @@ def run_sandbox(config: SandboxConfig) -> SandboxResult:
     # Clamp to 0-100
     final_score = max(0, min(100, final_score))
 
-    # Estimated cost (SERV pricing: $1 input, $6 output per M tokens)
-    estimated_cost = total_input_tokens * 1 / 1_000_000 + total_output_tokens * 6 / 1_000_000
+    # Estimated cost (shared SERV pricing constants)
+    estimated_cost = (
+        total_input_tokens * SERV_INPUT_PRICE_PER_M / 1_000_000
+        + total_output_tokens * SERV_OUTPUT_PRICE_PER_M / 1_000_000
+    )
 
     return SandboxResult(
         gullibility_score=final_score,

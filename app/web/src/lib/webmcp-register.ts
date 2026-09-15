@@ -140,7 +140,7 @@ function buildLoadSpecimenTool(handlers: ScanToolHandlers): ModelContextTool {
       properties: {
         id: {
           type: "string",
-          enum: ["authority", "delimiter", "conditional", "gray_zone", "clean_email", "clean_code"],
+          enum: EXAMPLES.map((ex) => ex.id),
           description:
             "Specimen id from list_specimens. Use 'gray_zone' to demonstrate SERV Reasoning (the rule engine scores it ~0.42, SERV upgrades to ~0.71).",
         },

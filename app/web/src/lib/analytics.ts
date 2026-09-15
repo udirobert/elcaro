@@ -17,21 +17,23 @@ export type AnalyticsEvent =
   | { type: "analysis.shared"; score: number; mode: "quick" | "sandbox" }
   | { type: "analysis.upgrade_click"; from_score: number; destination: "/scan" | "/integrate" | "/gauntlet" };
 
+type StoredEvent = AnalyticsEvent & { _ts: number };
+
 const STORAGE_KEY = "elcaro_analytics_v1";
 const FLUSH_THRESHOLD = 5;
 const EVENT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-function getBuffer(): AnalyticsEvent[] {
+function getBuffer(): StoredEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as AnalyticsEvent[];
+    return JSON.parse(raw) as StoredEvent[];
   } catch {
     return [];
   }
 }
 
-function setBuffer(events: AnalyticsEvent[]): void {
+function setBuffer(events: StoredEvent[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
   } catch {
@@ -40,14 +42,14 @@ function setBuffer(events: AnalyticsEvent[]): void {
   }
 }
 
-function prune(buffer: AnalyticsEvent[]): AnalyticsEvent[] {
+function prune(buffer: StoredEvent[]): StoredEvent[] {
   const now = Date.now();
-  return buffer.filter((e) => now - (e as unknown as { _ts?: number })._ts < EVENT_TTL_MS);
+  return buffer.filter((e) => now - e._ts < EVENT_TTL_MS);
 }
 
 let _flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-function scheduleFlush(buffer: AnalyticsEvent[]): void {
+function scheduleFlush(): void {
   if (_flushTimer) clearTimeout(_flushTimer);
   _flushTimer = setTimeout(() => flushBuffer(), 2000);
 }
@@ -73,15 +75,14 @@ export async function flushBuffer(): Promise<void> {
 function track(event: AnalyticsEvent): void {
   const buffer = prune(getBuffer());
   // Attach timestamp internally (not part of the public type)
-  const enriched = { ...event, _ts: Date.now() } as AnalyticsEvent & { _ts: number };
+  const enriched: StoredEvent = { ...event, _ts: Date.now() };
   buffer.push(enriched);
+  setBuffer(buffer);
 
   if (buffer.length >= FLUSH_THRESHOLD) {
-    setBuffer([]);
     void flushBuffer();
   } else {
-    setBuffer(buffer);
-    scheduleFlush(buffer);
+    scheduleFlush();
   }
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { appendFile, mkdir } from "fs/promises";
+import { appendFile, mkdir, readFile, stat } from "fs/promises";
 import { join } from "path";
 
 const EVENTS_DIR = join(process.cwd(), ".analytics");
@@ -42,15 +42,22 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   // Admin-only — returns event count (no PII)
+  const adminToken = process.env.ANALYTICS_ADMIN_TOKEN;
+  if (!adminToken || req.headers.get("x-admin-token") !== adminToken) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   try {
-    const stat = await import("fs/promises").then((m) => m.stat(EVENTS_FILE)).catch(() => null);
-    const count = stat ? (await import("fs/promises").then((m) => m.readFile(EVENTS_FILE, "utf8")))
-      .split("\n").filter(Boolean).length : 0;
-    return NextResponse.json({ events_tracked: count, file_age_hours: stat
-      ? Math.round((Date.now() - stat.mtimeMs) / 3600000)
-      : null });
+    const fileStat = await stat(EVENTS_FILE).catch(() => null);
+    const count = fileStat
+      ? (await readFile(EVENTS_FILE, "utf8")).split("\n").filter(Boolean).length
+      : 0;
+    return NextResponse.json({
+      events_tracked: count,
+      file_age_hours: fileStat ? Math.round((Date.now() - fileStat.mtimeMs) / 3600000) : null,
+    });
   } catch {
     return NextResponse.json({ events_tracked: 0 });
   }
