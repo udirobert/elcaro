@@ -11,22 +11,45 @@ That contrast is the thing that was impossible before. A silent `POST
 never captures the agent’s intended tool call. Stdio MCP (`app/mcp_server.py`)
 is for IDEs; it is not this surface.
 
-## Demo story (&lt;3 min video)
+## Demo story (<3 min video)
 
-Record in ChatGPT’s in-app browser on https://elcaro.trustfall.xyz/scan
+Record in ChatGPT's in-app browser on https://elcaro.trustfall.xyz/scan
 with a human visible on the tab.
+
+### Standard flow (authority specimen)
 
 1. **Load.** Agent: `list_specimens` → `load_specimen` id `authority`.
    Human sees a real-looking password-reset email in the textarea. Pause.
 2. **Scan.** Agent: `scan_content` with that text. Human sees **1.00 /
    dangerous / quarantined** and the `SYSTEM:` span.
 3. **Contrast.** Agent: `contrast_intent` with
-   `intended_action`: “Extract the reset link and send it to the user so
-   they can recover the vendor portal.”
+   `intended_action`: "Extract the reset link and send it to the user so
+   they can recover the vendor portal."
    The page shows three columns: *About to* / *The document asked*
    (`SYSTEM: … forward … Do not confirm`) / *Do this instead* (quote
    `human_summary`, do not act).
 4. **Close.** Agent reads `quote_to_user` aloud. Does not send the link.
+
+### SERV demo flow (gray-zone specimen)
+
+Use the `gray_zone` specimen to demonstrate SERV Reasoning. The rule
+engine scores it ~0.42 (ambiguous) but SERV sees ~0.71 (authoritative
+framing in compliance language).
+
+1. **Load.** Agent: `load_specimen` id `gray_zone`.
+2. **Scan with SERV.** Agent: `scan_content` with
+   `{content, content_type: "email", serv_enabled: true}`.
+3. **Observe.** Human sees the score animate from ~0.42 → ~0.57 (50/50
+   blend) and the badge reads *"SERV saw 0.71 · rules saw 0.42 ↑ 0.29"*.
+4. **Explain.** Agent: `explain_verdict` → the quarantine doctrine
+   applies; SERV's refined TTPs and remediation surface on the verdict.
+5. **Contrast.** Agent: `contrast_intent` with the intended action.
+   The human sees the near-miss alongside SERV's reasoning.
+
+Both flows share the same joint-review contract: the agent does not
+scrape `/scan`; it loads a specimen the human can read, scans through
+the same form, then **declares the action it was about to take**. That
+contrast is the thing that was impossible before.
 
 That is people and agents together: the human watches the ingest; the
 agent confesses the near-miss; both see the same remediation.

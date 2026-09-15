@@ -3,7 +3,7 @@
   "site": {
     "name": "Elcaro",
     "description": "Detect indirect prompt injection in content retrieved by AI agents.",
-    "agent_instructions": "This site exposes WebMCP tools on the /scan playground. Start with list_specimens, then load_specimen → scan_content → explain_verdict → contrast_intent. The agent and human share the same page: the agent calls tools, the human watches the form."
+    "agent_instructions": "This site exposes WebMCP tools on the /scan playground. Start with list_specimens (specimens are annotated with triggers_serv), then load_specimen → scan_content (optionally pass serv_enabled=true for gray-zone cases) → explain_verdict → contrast_intent. The agent and human share the same page: the agent calls tools, the human watches the form. Use the gray_zone specimen to demonstrate SERV: the rule engine scores it ~0.42 but SERV upgrades to ~0.71."
   },
   "registration": {
     "method": "document.modelContext.registerTool",
@@ -27,6 +27,11 @@
             "enum": ["email", "search_result", "webpage", "document", "code", "chat_message", "system_prompt"],
             "default": "email",
             "description": "Provenance of the content. Use email for mail, webpage for fetched HTML, search_result for SERP snippets."
+          },
+          "serv_enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Optional: when true and the miner is configured with SERV_API_KEY, borderline cases (score 0.3–0.7) get a second LLM pass. The response includes serv_rule_score_before so you can see the delta between rule score and SERV score. Use true with the gray_zone specimen to demonstrate SERV."
           }
         },
         "required": ["content"]
@@ -36,15 +41,15 @@
     {
       "name": "load_specimen",
       "title": "Load a playground specimen",
-      "description": "Load a labeled Elcaro test specimen into the scan form so the human can see it, and return its full text and content_type. Use the returned content to call scan_content, or ask the human to click Scan. Use list_specimens to discover ids.",
+      "description": "Load a labeled Elcaro test specimen into the scan form so the human can see it, and return its full text and content_type. Use the returned content to call scan_content, or ask the human to click Scan. Use list_specimens to discover ids. Use 'gray_zone' to demonstrate SERV: the rule engine scores it ~0.42 but SERV upgrades to ~0.71.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
-            "enum": ["authority", "delimiter", "conditional", "clean_email", "clean_code"],
-            "description": "Specimen id from list_specimens."
+            "enum": ["authority", "delimiter", "conditional", "gray_zone", "clean_email", "clean_code"],
+            "description": "Specimen id from list_specimens. Use 'gray_zone' to demonstrate SERV Reasoning."
           }
         },
         "required": ["id"]
@@ -53,7 +58,7 @@
     {
       "name": "list_specimens",
       "title": "List playground specimens",
-      "description": "List Elcaro playground specimens (id, label, whether it is an injection). Read-only. Joint-review flow: load_specimen → wait for the human → scan_content → contrast_intent.",
+      "description": "List Elcaro playground specimens (id, label, whether it is an injection, whether it triggers SERV Reasoning). Read-only. Each specimen includes triggers_serv: true for the gray_zone specimen (lands in the 0.3–0.7 band so SERV's LLM second pass activates). Joint-review flow: load_specimen → wait for the human → scan_content → contrast_intent. Use the gray_zone specimen to demonstrate SERV.",
       "inputSchema": { "type": "object", "additionalProperties": false, "properties": {} },
       "annotations": { "readOnlyHint": true }
     },

@@ -11,7 +11,16 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/scan", "/integrate"],
+        allow: [
+          "/",
+          "/scan",
+          "/integrate",
+          "/gauntlet",
+          "/specimen",
+          "/supervise",
+          "/for-agents",
+          "/redteam",
+        ],
         // API routes are not pages — no value crawling them
         disallow: ["/api/"],
       },

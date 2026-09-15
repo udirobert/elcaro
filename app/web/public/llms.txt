@@ -6,7 +6,19 @@ Every scan returns a structured verdict: risk score, risk level, the techniques 
 
 ## Scan API
 
-- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, scanned_at, signature?, key_id?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
+- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean, "serv_enabled"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, scanned_at, signature?, key_id?, serv_available?, serv_attempted?, serv_used?, serv_rule_score_before?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
+
+## SERV Reasoning (optional LLM second pass)
+
+When `serv_enabled=true` **and** the miner is configured with `SERV_ENABLED=1` + `SERV_API_KEY`, borderline cases (rule score 0.3–0.7) get a second LLM pass via OpenServ's `gpt-5.4-mini`. The response gains:
+- `serv_available`: whether the miner has SERV configured at all
+- `serv_attempted`: whether SERV was called for this scan
+- `serv_used`: whether SERV's verdict contributed to the final score
+- `serv_rule_score_before`: the raw SERV LLM score before the 50/50 blend — the signal that proves SERV added value
+
+The blend is `0.5 * rule_score + 0.5 * serv_score`, floored at `0.5 * rule_score` (rules always keep veto power). SERV also layers refined TTPs, remediation, and `safe_content` onto the verdict when present.
+
+Use `serv_enabled=true` with the gray-zone specimen on `/scan` to see the delta: rules see ~0.42, SERV sees ~0.71 (authoritative framing in compliance language). Cost: ~$10–20 per 10 k scans (pay SERV directly, no Elcaro markup). Docs: [docs/serv-reasoning.md](https://github.com/udirobert/elcaro/blob/main/docs/serv-reasoning.md).
 - [GET /redteam/run](https://api.elcaro.trustfall.xyz/redteam/run): Self red-team — streams an SSE journal (`data:` per record: scan / trophy / execution / run_end) of an evolutionary searcher attacking this engine. Params: `budget` (scans, ≤300), `seed` (deterministic run), `baseline=vulnerable` (target the pre-hardening engine semantics — the before/after contrast), `execute=true` (Tier-2: feed each bypass to an LLM and score whether the agent complies). Fixed corpus only.
 - [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
 - [GET /pubkey](https://api.elcaro.trustfall.xyz/pubkey): The miner's Ed25519 verdict-signing public key (404 when running unsigned).
