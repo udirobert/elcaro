@@ -98,3 +98,20 @@ export interface ScanError {
   error: string;
   detail?: string;
 }
+
+// ── Vulnerability analyzer ────────────────────────────────────────────────────
+export interface VulnerabilityClassScore {
+  letter: string;
+  name: string;
+  score: number; // 0 = hardened, 100 = gullible
+  findings: string[];
+}
+
+export interface VulnerabilityResult {
+  gullibility_score: number;
+  classes: VulnerabilityClassScore[];
+  protective_patterns_found: string[];
+  missing_patterns: string[];
+  recommendations: string[];
+  prompt_length: number;
+}

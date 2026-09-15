@@ -31,3 +31,30 @@ export function isError(
 ): result is ScanError {
   return "error" in result;
 }
+
+import type { VulnerabilityResult } from "./types";
+
+export async function analyzeVulnerability(
+  prompt: string
+): Promise<VulnerabilityResult | ScanError> {
+  try {
+    const response = await fetch("/api/vulnerable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { error: "Analysis failed", detail: data.detail || data.error };
+    }
+
+    return data as VulnerabilityResult;
+  } catch (err) {
+    return {
+      error: "Network error",
+      detail: err instanceof Error ? err.message : "Could not reach the analyzer",
+    };
+  }
+}

@@ -45,6 +45,7 @@ from core.signing import (
     sha256_hex,
     verify_verdict,
 )
+from core.vulnerability import analyze as analyze_vulnerability
 
 # ── App ─────────────────────────────────────────────────────────────────────────
 
@@ -508,7 +509,56 @@ async def redteam_run(
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+class VulnerableRequest(BaseModel):
+    """A system prompt to evaluate for injection gullibility."""
+
+    prompt: str = Field(
+        ...,
+        description="The agent's system prompt to analyze",
+        json_schema_extra={"examples": ["You are a helpful assistant..."]},
+    )
+
+
+class VulnerabilityClass(BaseModel):
+    letter: str
+    name: str
+    score: int
+    findings: list[str]
+
+
+class VulnerabilityResult(BaseModel):
+    gullibility_score: int
+    classes: list[VulnerabilityClass]
+    protective_patterns_found: list[str]
+    missing_patterns: list[str]
+    recommendations: list[str]
+    prompt_length: int
+
+
 # ── Run ─────────────────────────────────────────────────────────────────────────
+
+
+@app.post("/vulnerable", response_model=VulnerabilityResult)
+async def vulnerable(request: VulnerableRequest):
+    """Analyze a system prompt for injection-gullibility patterns."""
+    result = analyze_vulnerability(request.prompt)
+    return VulnerabilityResult(
+        gullibility_score=result.gullibility_score,
+        classes=[
+            VulnerabilityClass(
+                letter=c.letter,
+                name=c.name,
+                score=c.score,
+                findings=c.findings,
+            )
+            for c in result.classes
+        ],
+        protective_patterns_found=result.protective_patterns_found,
+        missing_patterns=result.missing_patterns,
+        recommendations=result.recommendations,
+        prompt_length=result.prompt_length,
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
