@@ -19,7 +19,7 @@ export default function SpecimenPage() {
   return (
     <main className="min-h-dvh flex flex-col">
       {/* Shared chrome */}
-      <SiteHeader />
+      <SiteHeader active="specimen" />
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-10 space-y-10">
         {/* Intro */}

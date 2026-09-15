@@ -20,14 +20,25 @@ const MAX_ENTRIES = 50;
 // sync — the server computes the actual quarantine decision from that line.
 export const QUARANTINE_THRESHOLD = 0.5;
 
+// Cached by raw string so repeated calls (e.g. useSyncExternalStore's
+// getSnapshot, which must return a stable reference when nothing changed)
+// don't re-parse and hand back a new array/object graph every call — that
+// makes React treat the store as perpetually changing and throw an
+// infinite-loop error.
+let cachedRaw: string | null = null;
+let cachedHistory: HistoryEntry[] = [];
+
 export function getHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedHistory;
+  cachedRaw = raw;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    cachedHistory = raw ? JSON.parse(raw) : [];
   } catch {
-    return [];
+    cachedHistory = [];
   }
+  return cachedHistory;
 }
 
 export function addToHistory(

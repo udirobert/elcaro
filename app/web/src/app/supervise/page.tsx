@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function SupervisePage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      <SiteHeader />
+      <SiteHeader active="supervise" />
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
         <PageHeader eyebrow="Local session · nothing leaves this browser" title="Session watch">
