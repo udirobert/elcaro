@@ -69,3 +69,11 @@ export function clearHistory(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(STORAGE_KEY);
 }
+
+// Count how many of the last N scans were SERV-refined. Used by the
+// session-level SERV badge so users see their investment accumulating.
+export function countServRefined(lastN: number = 10): number {
+  if (typeof window === "undefined") return 0;
+  const history = getHistory();
+  return history.slice(0, lastN).filter((e) => e.response.serv_used).length;
+}

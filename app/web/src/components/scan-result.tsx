@@ -8,6 +8,7 @@ import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
 import { NextSteps } from "./next-steps";
 import { getReviewerMode, recordExpandAll, setReviewerMode } from "@/lib/reviewer";
+import { countServRefined, getHistory } from "@/lib/history";
 
 interface ScanResultProps {
   result: ScanResponse;
@@ -111,7 +112,17 @@ export function ScanResult({ result, content }: ScanResultProps) {
         score={result.risk_score}
         level={result.risk_level}
         latencyMs={result.latency_ms}
+        // Animate from SERV's raw score to the blended final score so users
+        // see the needle move — the visual proof that SERV changed something.
+        ruleScoreBefore={result.serv_rule_score_before ?? null}
       />
+
+      {/* Session SERV counter — shows accumulated value after SERV has been
+          used across multiple scans. Only appears when there's a meaningful
+          history so it doesn't clutter a fresh session. */}
+      {result.serv_used && (
+        <SessionServCount />
+      )}
 
       {/* SERV Reasoning attribution — visible only when SERV contributed.
           Shows the score delta so the user can see exactly what SERV added:
@@ -358,5 +369,28 @@ function ServReasoningPanel({ result }: { result: ScanResponse }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ── Session SERV counter ──────────────────────────────────────────────────────
+// Shows accumulated SERV value across the current session. Only appears when
+// there's a meaningful count so fresh sessions stay clean.
+function SessionServCount() {
+  const refined = countServRefined(10);
+  const total = getHistory().slice(0, 10).length;
+
+  // Don't show if we haven't seen enough data yet
+  if (total < 2 || refined === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+      className="inline-flex items-center gap-2 text-[11px] text-violet font-medium bg-violet/5 border border-violet/15 rounded-full px-3 py-1"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-violet shrink-0" />
+      SERV refined {refined} of {total} recent scans
+    </motion.div>
   );
 }

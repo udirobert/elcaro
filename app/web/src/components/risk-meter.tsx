@@ -8,6 +8,10 @@ interface RiskMeterProps {
   score: number;
   level: RiskLevel;
   latencyMs: number;
+  // When present, animate from this starting score to the final score —
+  // used by the SERV score-blend animation so users see the rules' score
+  // move toward the blended result.
+  ruleScoreBefore?: number | null;
 }
 
 const LEVEL_COLORS: Record<RiskLevel, string> = {
@@ -33,14 +37,19 @@ const LEVEL_ACTION: Record<RiskLevel, string> = {
   dangerous: "quarantined",
 };
 
-export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
+export function RiskMeter({ score, level, latencyMs, ruleScoreBefore }: RiskMeterProps) {
   const motionScore = useMotionValue(0);
   const displayScore = useTransform(motionScore, (v) => v.toFixed(2));
   const [showLatency, setShowLatency] = useState(false);
 
   useEffect(() => {
+    // If a rule score was provided, animate from there to the final score
+    // so the user sees SERV move the needle.
+    const start = ruleScoreBefore !== null && ruleScoreBefore !== undefined
+      ? ruleScoreBefore
+      : 0;
     const controls = animate(motionScore, score, {
-      duration: 0.7,
+      duration: score !== start ? 0.9 : 0.7,
       ease: [0.16, 1, 0.3, 1],
     });
 
@@ -50,7 +59,7 @@ export function RiskMeter({ score, level, latencyMs }: RiskMeterProps) {
       controls.stop();
       clearTimeout(timeout);
     };
-  }, [score, motionScore]);
+  }, [score, motionScore, ruleScoreBefore]);
 
   const color = LEVEL_COLORS[level];
 

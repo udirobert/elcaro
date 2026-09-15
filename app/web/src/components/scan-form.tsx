@@ -262,6 +262,12 @@ export function ScanForm() {
     setContent("");
     setContentType(example.content_type);
 
+    // Auto-suggest SERV for the gray-zone demo — the whole point is to
+    // show what the LLM catches that rules miss. Gently nudge the toggle.
+    if (example.is_serv_demo && !servEnabled) {
+      setTimeout(() => setServEnabled(true), 400);
+    }
+
     // Type in character by character — gives a sense of the content arriving
     let i = 0;
     const chars = example.content;
@@ -424,15 +430,22 @@ export function ScanForm() {
               <motion.button
                 key={i}
                 onClick={() => loadExample(i)}
-                className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors flex items-center gap-1.5 ${
                   example.is_injection
-                    ? "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
+                    ? example.is_serv_demo
+                      ? "text-violet bg-violet/10 hover:bg-violet/20 border border-violet/20"
+                      : "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
                     : "text-safe/70 bg-safe-bg hover:text-safe"
                 }`}
                 whileTap={{ scale: 0.92 }}
                 transition={SPRING}
               >
                 {example.label}
+                {example.is_serv_demo && (
+                  <span className="text-[9px] opacity-70" title="Lands in the gray zone — toggle SERV Reasoning to see the LLM second pass">
+                    ⚡
+                  </span>
+                )}
               </motion.button>
             ))}
           </div>

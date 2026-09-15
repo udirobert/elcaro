@@ -22,6 +22,7 @@ export default function HomePage() {
           <header className="order-1 space-y-4 max-w-md">
             <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
               IPI detection · miner 8848
+              <span className="ml-2 text-violet/70">· now with SERV Reasoning</span>
             </p>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-ink">
               See what your
