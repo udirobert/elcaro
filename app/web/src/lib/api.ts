@@ -58,3 +58,28 @@ export async function analyzeVulnerability(
     };
   }
 }
+
+import type { SandboxResult } from "./types";
+
+export async function runSandbox(
+  prompt: string,
+  runPatternAnalysis = true
+): Promise<SandboxResult | ScanError> {
+  try {
+    const response = await fetch("/api/sandbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, run_pattern_analysis: runPatternAnalysis }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { error: "Sandbox failed", detail: data.detail || data.error };
+    }
+    return data as SandboxResult;
+  } catch (err) {
+    return {
+      error: "Network error",
+      detail: err instanceof Error ? err.message : "Could not reach the sandbox",
+    };
+  }
+}

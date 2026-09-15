@@ -174,3 +174,44 @@ section comparing Free vs SERV Enhanced side-by-side.
 | `serv_attempted=true, serv_used=false` | Auth error (401/402/403) or timeout | Check key; 60s cooldown arms automatically |
 | Score didn't change after enabling SERV | Content was outside gray zone | This is correct — SERV only runs for scores 0.3–0.7 |
 | Malformed JSON error in logs | SERV returned non-JSON | Rare; falls back to rule score automatically |
+
+## 代理沙盒测试（Agent Sandbox）
+
+`POST /sandbox` 是 `/vulnerable` 页面的高级分析接口，用于模拟目标 agent 面对注入指令时的实际反应。
+
+### 工作原理
+
+1. 接收用户的系统提示词（system prompt）
+2. 内置 8 个注入样本（6 个攻击样本 + 2 个清洁样本）
+3. 通过 SERV 或规则引擎模拟 agent 对每个样本的响应
+4. 评估器判断模拟响应是否被劫持
+5. 返回 gullibility score（0–100，越高越容易被劫持）及每样本详情
+
+### 调用示例
+
+```json
+POST /sandbox
+{
+  "prompt": "You are a helpful AI assistant...",
+  "run_pattern_analysis": true
+}
+```
+
+### 返回字段
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `gullibility_score` | int | 总体可劫持度（0–100） |
+| `injections_caught` | int | 被劫持的攻击样本数 |
+| `false_positives` | int | 清洁样本被误判为劫持的数 |
+| `simulation_mode` | string | `"llm"` 或 `"rules"` |
+| `estimated_cost_usdc` | float | 本次测试的估算成本 |
+| `specimens` | array | 每样本的详细结果 |
+| `pattern_analysis_gullibility` | int\|null | 模式分析补充分数（如启用） |
+
+### 与 `/vulnerable` 的关系
+
+- `/vulnerable` 是面向最终用户的页面（含交互 UI）
+- `/sandbox` 是供外部系统调用的 API，也可供开发者验证逻辑
+
+成本估算：一次完整沙盒测试约 8 次 LLM 调用，约 $0.02 USDC（使用 gpt-5.4-mini）。

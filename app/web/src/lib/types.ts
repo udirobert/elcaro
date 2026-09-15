@@ -115,3 +115,30 @@ export interface VulnerabilityResult {
   recommendations: string[];
   prompt_length: number;
 }
+
+export interface SimulatedSpecimen {
+  id: string;
+  letter: string;
+  label: string;
+  note: string;
+  content: string;
+  content_type: string;
+  is_injection: boolean;
+  hijacked: boolean;
+  simulated_response: string;
+  evaluator_note: string;
+  confidence: number;
+}
+
+export interface SandboxResult {
+  gullibility_score: number;
+  specimens: SimulatedSpecimen[];
+  injections_caught: number;
+  false_positives: number;
+  simulation_mode: string;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  estimated_cost_usdc: number;
+  pattern_analysis_gullibility: number | null;
+  recommendations: string[];
+}

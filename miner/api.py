@@ -38,6 +38,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
+from core.sandbox import (
+    SandboxConfig,
+    run_sandbox,
+)
 from core.serv_reasoner import ServReasoner
 from core.signing import (
     VerdictSigner,
@@ -557,6 +561,86 @@ async def vulnerable(request: VulnerableRequest):
         missing_patterns=result.missing_patterns,
         recommendations=result.recommendations,
         prompt_length=result.prompt_length,
+    )
+
+
+# ── Agent Sandbox ──────────────────────────────────────────────────────────────
+
+
+class SandboxRequest(BaseModel):
+    prompt: str = Field(..., description="The agent's system prompt")
+    specimens: list[dict] | None = None
+    run_pattern_analysis: bool = True
+
+
+class SimulatedSpecimen(BaseModel):
+    id: str
+    letter: str
+    label: str
+    note: str
+    content: str
+    content_type: str
+    is_injection: bool
+    hijacked: bool
+    simulated_response: str
+    evaluator_note: str
+    confidence: float
+
+
+class SandboxResponse(BaseModel):
+    gullibility_score: int
+    specimens: list[SimulatedSpecimen]
+    injections_caught: int
+    false_positives: int
+    simulation_mode: str
+    total_input_tokens: int
+    total_output_tokens: int
+    estimated_cost_usdc: float
+    pattern_analysis_gullibility: int | None = None
+    recommendations: list[str] = Field(default_factory=list)
+
+
+@app.post("/sandbox", response_model=SandboxResponse)
+async def sandbox(request: SandboxRequest):
+    """Simulate an agent's behaviour against injection specimens."""
+    config = SandboxConfig(
+        prompt_text=request.prompt,
+        run_pattern_analysis=request.run_pattern_analysis,
+    )
+    result = run_sandbox(config)
+
+    specimens = []
+    for s in result.specimens:
+        specimens.append(
+            SimulatedSpecimen(
+                id=s.specimen.id,
+                letter=s.specimen.letter,
+                label=s.specimen.label,
+                note=s.specimen.note,
+                content=s.specimen.content,
+                content_type=s.specimen.content_type,
+                is_injection=s.specimen.is_injection,
+                hijacked=s.hijacked,
+                simulated_response=s.simulated_response,
+                evaluator_note=s.evaluator_note,
+                confidence=s.confidence,
+            )
+        )
+
+    pat_score = result.pattern_analysis.gullibility_score if result.pattern_analysis else None
+    recs = result.pattern_analysis.recommendations if result.pattern_analysis else []
+
+    return SandboxResponse(
+        gullibility_score=result.gullibility_score,
+        specimens=specimens,
+        injections_caught=result.injections_caught,
+        false_positives=result.false_positives,
+        simulation_mode=result.simulation_mode,
+        total_input_tokens=result.total_input_tokens,
+        total_output_tokens=result.total_output_tokens,
+        estimated_cost_usdc=result.estimated_cost_usdc,
+        pattern_analysis_gullibility=pat_score,
+        recommendations=recs,
     )
 
 
