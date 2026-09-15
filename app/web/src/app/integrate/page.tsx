@@ -6,6 +6,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { TelegraphRail } from "@/components/telegraph-rail";
 import { PageHeader } from "@/components/page-header";
 import { SpecimenMarquee } from "@/components/specimen-marquee";
+import { PricingTiers } from "@/components/pricing-tiers";
 
 export const metadata: Metadata = {
   title: "Integrate",
@@ -237,6 +238,9 @@ export default function IntegratePage() {
             fetched, so you can watch detection fire end-to-end.
           </p>
         </div>
+
+        {/* Tiers — show the free vs SERV trade-off before the code */}
+        <PricingTiers elevatedServ={true} />
 
         {/* Option 1 — Direct API */}
         <Section number="01" title="Direct API call">

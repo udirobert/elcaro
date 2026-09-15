@@ -38,6 +38,7 @@ from core.schemas import (
     ScanResponse,
     TechniqueClass,
 )
+from core.serv_reasoner import ServReasoner
 
 # ── Content type risk multipliers ──────────────────────────────────────────────
 
@@ -85,11 +86,21 @@ GRAY_ZONE_HIGH = 0.7
 # Sentinel distinguishing "no classifier argument given" (auto-configure from
 # env) from an explicit classifier=None (second pass forcibly disabled).
 _CLASSIFIER_UNSET = object()
+_SERV_UNSET = object()
 
 
 def _load_classifier_from_env() -> LlmClassifier | None:
     """Build the LLM classifier from ELCARO_LLM_* env vars, if configured."""
     return LlmClassifier.from_env()
+
+
+def _load_serv_reasoner_from_env() -> ServReasoner | None:
+    """Build the SERV reasoner from SERV_* env vars, if configured.
+
+    Returns None when SERV is disabled (no SERV_ENABLED or no SERV_API_KEY) —
+    the engine treats that as "stay on the rule-only fast path".
+    """
+    return ServReasoner.from_env()
 
 
 # ── Scoring engine ─────────────────────────────────────────────────────────────
@@ -103,11 +114,18 @@ class IpiDetectionEngine:
             second pass. When omitted, one is built from ``ELCARO_LLM_*`` env
             vars; if no API key is configured the second pass stays off and
             ``deep_analysis_used`` is always False.
-        _CLASSIFIER_UNSET: sentinel — pass ``classifier=None`` explicitly to
-            force-disable the second pass regardless of env configuration.
+        serv_reasoner: Optional :class:`ServReasoner` for the progressive-
+            enhancement second pass. Takes priority over ``classifier`` when
+            both are configured: SERV is the premium tier, the ELCARO_LLM_*
+            key is the fallback tier. Built from SERV_* env vars by default.
+            Pass ``serv_reasoner=None`` to force-disable regardless of env.
     """
 
-    def __init__(self, classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET) -> None:
+    def __init__(
+        self,
+        classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET,
+        serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
+    ) -> None:
         self.detectors = [
             AuthorityDetector(),
             DelimiterDetector(),
@@ -119,6 +137,9 @@ class IpiDetectionEngine:
         if classifier is _CLASSIFIER_UNSET:
             classifier = _load_classifier_from_env()
         self.classifier: LlmClassifier | None = classifier  # type: ignore[assignment]
+        if serv_reasoner is _SERV_UNSET:
+            serv_reasoner = _load_serv_reasoner_from_env()
+        self.serv_reasoner: ServReasoner | None = serv_reasoner  # type: ignore[assignment]
 
     def scan(self, request: ScanRequest) -> ScanResponse:
         """Scan content for indirect prompt injection indicators.
@@ -193,22 +214,46 @@ class IpiDetectionEngine:
         # Determine risk level
         risk_level = self._risk_level(weighted_score)
 
-        # Check if deep analysis is needed or was requested. The LLM second
-        # pass only runs when explicitly requested, the score is in the gray
-        # zone, and a classifier is configured (ELCARO_LLM_API_KEY). On any
-        # provider failure the classifier returns the rule score unchanged.
+        # Second-pass judge selection.
+        #
+        # SERV is the premium tier — when configured AND requested it runs
+        # the gray-zone / deep-analysis pass INSTEAD of the LLM classifier,
+        # so the two paths are alternatives, not additive. The rule verdict
+        # is always authoritative; both providers can only refine within the
+        # rule-floor window (max(adjusted, 0.5 * rule)). On any provider
+        # failure (timeout, 401 / 402 / 403, malformed JSON) the rule score
+        # stands unchanged and `serv_used` / `deep_analysis_used` stay False.
+        serv_available = self.serv_reasoner is not None
+        serv_attempted = False
+        serv_used = False
         deep_analysis_used = False
-        if (
-            request.deep_analysis
-            and GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH
-            and self.classifier is not None
-        ):
+        serv_result = None  # captured for the enrichment pass below
+
+        # Trigger condition: caller opts in to a second pass
+        # (deep_analysis / serv_enabled) AND the score is borderline. Outside
+        # the gray zone the rule verdict is conclusive — don't pay for a
+        # second opinion. This mirrors the original LlmClassifier contract.
+        serv_requested = bool(request.deep_analysis or request.serv_enabled)
+        in_gray_zone = GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH
+        should_run_second_pass = serv_requested and in_gray_zone
+
+        if should_run_second_pass and self.serv_reasoner is not None:
+            serv_attempted = True
+            serv_result = self.serv_reasoner.classify(
+                content, content_type.value, all_indicators, weighted_score
+            )
+            if serv_result.confidence > 0.0:
+                weighted_score = serv_result.adjusted_score
+                risk_level = self._risk_level(weighted_score)
+                deep_analysis_used = True
+                serv_used = True
+        elif should_run_second_pass and self.classifier is not None:
+            # SERV not configured — fall back to the existing OpenAI-style
+            # classifier path. Preserves ELCARO_LLM_* users who haven't
+            # enabled SERV.
             llm_result = self.classifier.classify(
                 content, content_type.value, all_indicators, weighted_score
             )
-            # Only the LLM's verdict counts if it actually answered; a
-            # provider failure (confidence 0.0) is a silent no-op and the
-            # rule-based score stands.
             if llm_result.confidence > 0.0:
                 weighted_score = llm_result.adjusted_score
                 risk_level = self._risk_level(weighted_score)
@@ -227,6 +272,30 @@ class IpiDetectionEngine:
             content, weighted_score, risk_level, flagged_classes, content_type
         )
 
+        # SERV enrichment layers onto the verdict AFTER quarantine_decision
+        # so its safe_content suggestion (when present) replaces the rule-
+        # derived quarantine notice — the operator asked for SERV's view.
+        # Top-indicator remediation is upgraded the same way. Both are
+        # optional: missing values leave the rule-derived fields intact.
+        if serv_used and serv_result is not None:
+            if serv_result.safe_content_suggestion:
+                decision = decision.__class__(
+                    safe_content=serv_result.safe_content_suggestion,
+                    quarantined=decision.quarantined,
+                    human_summary=decision.human_summary,
+                )
+            if serv_result.remediation_refined and all_indicators:
+                top = max(
+                    all_indicators,
+                    key=lambda i: (
+                        {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[
+                            i.severity.value
+                        ],
+                        i.confidence,
+                    ),
+                )
+                top.remediation = serv_result.remediation_refined
+
         return ScanResponse(
             risk_score=round(weighted_score, 4),
             risk_level=risk_level,
@@ -240,6 +309,10 @@ class IpiDetectionEngine:
             quarantined=decision.quarantined,
             human_summary=decision.human_summary,
             normalizations_applied=norm.applied,
+            serv_available=serv_available,
+            serv_attempted=serv_attempted,
+            serv_used=serv_used,
+            serv_rule_score_before=serv_result.llm_score_raw if serv_result else None,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

@@ -67,12 +67,26 @@ export interface ScanResponse {
   // Evasion normalizations applied before detection (core/normalize.py).
   // Optional — responses from older miners predate the field.
   normalizations_applied?: string[];
+  // SERV Reasoning observability — populated when the miner has been
+  // configured with SERV_API_KEY + SERV_ENABLED=1. Optional for the same
+  // backward-compatibility reasons as the fields above.
+  serv_available?: boolean;
+  serv_attempted?: boolean;
+  serv_used?: boolean;
+  // The raw SERV LLM score before blending with the rule score. Present
+  // when serv_used=true. Used by the UI to show the delta:
+  // "SERV saw X, rules saw Y, final is Z" — the upsell signal.
+  serv_rule_score_before?: number;
 }
 
 export interface ScanRequest {
   content: string;
   content_type: ContentType;
   deep_analysis?: boolean;
+  // Progressive-enhancement toggle: when true, ask the miner to consult SERV
+  // Reasoning for borderline / deep-analysis cases. Default off — the free
+  // fast path is unaffected when SERV is not configured.
+  serv_enabled?: boolean;
 }
 
 export interface ScanError {

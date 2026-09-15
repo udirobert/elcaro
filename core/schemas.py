@@ -182,6 +182,15 @@ class ScanRequest(BaseModel):
         default=False,
         description="If true, run LLM second pass for ambiguous (gray-zone) results",
     )
+    serv_enabled: bool = Field(
+        default=False,
+        description=(
+            "Optional progressive-enhancement toggle: when true AND the server is "
+            "configured with SERV_API_KEY + SERV_ENABLED=1, the engine uses SERV "
+            "Reasoning as the second-pass judge for borderline cases. Default off; "
+            "the free fast path is unaffected (no network call, no key required)."
+        ),
+    )
     context: str | dict[str, Any] | None = Field(
         default=None,
         description="Optional context about the consuming agent or task. Accepts a "
@@ -251,6 +260,45 @@ class ScanResponse(BaseModel):
             "token_desplit, rot13_decode, hex_decode, base64_decode. Empty "
             "means the content was scanned as-is. Detection ran on the "
             "normalized text; safe_content still references the original."
+        ),
+    )
+    # ── SERV Reasoning observability ─────────────────────────────────────────
+    # Mirrors the deep_analysis_used contract: these fields tell the caller
+    # exactly what the optional SERV path did (or didn't do) so dashboards
+    # can distinguish "no SERV configured" from "SERV configured but
+    # failed" from "SERV configured and contributed to the verdict".
+    serv_available: bool = Field(
+        default=False,
+        description=(
+            "True when the miner is configured with SERV_API_KEY and "
+            "SERV_ENABLED=1 — the SERV second pass is ready to run."
+        ),
+    )
+    serv_attempted: bool = Field(
+        default=False,
+        description=(
+            "True when the engine attempted to call SERV for this scan "
+            "(gray-zone AND serv_enabled / deep_analysis). False when the "
+            "request stayed on the free rule-only fast path."
+        ),
+    )
+    serv_used: bool = Field(
+        default=False,
+        description=(
+            "True when the SERV call succeeded and contributed to the "
+            "verdict (TTP refinement, remediation, safe_content). False "
+            "when SERV was unavailable, in cooldown, timed out, returned a "
+            "credit-exhaustion error, or was not requested. On failure the "
+            "rule-based score stands unchanged."
+        ),
+    )
+    serv_rule_score_before: float | None = Field(
+        default=None,
+        description=(
+            "The raw SERV LLM score before the 50/50 blend with the rule "
+            "score. Present only when serv_used=True. Lets the caller show "
+            "the delta: rule score vs SERV score vs final blended score — "
+            "the signal that proves SERV added value."
         ),
     )
     scanned_at: int | None = Field(

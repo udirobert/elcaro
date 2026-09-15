@@ -14,6 +14,7 @@ from core.schemas import (
     ScanResponse,
     TechniqueClass,
 )
+from core.serv_reasoner import ServClassificationResult, ServReasoner
 from core.taxonomy import IpiDetectionEngine
 
 __all__ = [
@@ -24,4 +25,6 @@ __all__ = [
     "RiskLevel",
     "TechniqueClass",
     "DetectionIndicator",
+    "ServReasoner",
+    "ServClassificationResult",
 ]

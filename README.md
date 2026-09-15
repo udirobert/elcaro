@@ -162,6 +162,11 @@ Everything is live — no waitlists, no gated features:
 - **[MCP server](app/mcp_server.py)** — `scan_content` and `explain_verdict`
   over stdio: `python -m app.mcp_server` (set `ELCARO_MCP_LOCAL=1` for fully
   local, network-free scanning).
+- **[SERV Reasoning](https://docs.openserv.ai/serv-reasoning)** — optional
+  LLM second-pass for borderline cases. Set `SERV_ENABLED=1` +
+  `SERV_API_KEY` on your miner; the `/scan` checkbox activates it. The UI
+  shows the score delta (rules vs SERV) so you see exactly what the LLM
+  added. See [docs/serv-reasoning.md](docs/serv-reasoning.md).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
   affects agent compliance with injected instructions. Executed 2026-08-30
@@ -222,7 +227,7 @@ cp .env.example .env                  # optional config (LLM key, signing, MCP)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"
 
-python -m pytest                     # tests (124 passing)
+python -m pytest                     # tests (165 passing)
 ruff check && ruff format --check    # lint
 
 # Frontend

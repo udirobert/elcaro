@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError } from "@/lib/api";
@@ -94,6 +95,12 @@ export function ScanForm() {
   const [intentContrast, setIntentContrast] = useState<IntentContrast | null>(
     null
   );
+  // Progressive-enhancement toggle: when on, the miner consults SERV
+  // Reasoning for borderline cases (only fires when the miner has been
+  // configured with SERV_API_KEY + SERV_ENABLED=1 — defaults to a no-op
+  // on the free path). Default off — opt-in keeps the free fast path
+  // visible.
+  const [servEnabled, setServEnabled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
@@ -179,6 +186,7 @@ export function ScanForm() {
       const response = await scanContent({
         content: nextContent,
         content_type: nextType,
+        serv_enabled: servEnabled,
       });
 
       if (isError(response)) {
@@ -449,6 +457,58 @@ export function ScanForm() {
               ))}
             </select>
           </label>
+
+          {/* SERV Reasoning toggle — progressive enhancement, opt-in. No-op
+              when the miner isn't configured with SERV_API_KEY. Off by default
+              so the free fast path stays visible. */}
+          <div className="flex flex-col gap-1">
+            <label
+              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+              title="Progressive enhancement: ask the miner to consult SERV Reasoning for borderline cases. Free fast path when off; safe no-op when the miner isn't SERV-configured."
+            >
+              <input
+                type="checkbox"
+                checked={servEnabled}
+                onChange={(e) => setServEnabled(e.target.checked)}
+                className="h-3 w-3 rounded border-border accent-violet cursor-pointer"
+                aria-label="Use SERV Reasoning"
+              />
+              <span className="font-medium">SERV Reasoning</span>
+            </label>
+            {/* Contextual nudge: SERV is requested but the miner has none configured.
+                Only surfaces after a scan confirms serv_available=false. */}
+            {servEnabled &&
+              result !== null &&
+              result.serv_available === false &&
+              result.serv_attempted === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-violet font-medium leading-relaxed"
+                >
+                  Miner not configured for SERV — enable
+                  {' '}SERV_ENABLED=1 + SERV_API_KEY{' '}on your deployment, then re-scan. See{' '}
+                  <Link href="/integrate" className="underline underline-offset-1 hover:text-violet/80">
+                    pricing tiers
+                  </Link>.
+                </motion.p>
+              )}
+            {/* Miner has SERV configured but it errored this run */}
+            {servEnabled &&
+              result?.serv_attempted &&
+              !result.serv_used &&
+              result.serv_available && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-ink-faint leading-relaxed"
+                >
+                  SERV was attempted but did not contribute this scan — rule verdict stands.
+                </motion.p>
+              )}
+          </div>
 
           {/* Scan button */}
           <motion.button

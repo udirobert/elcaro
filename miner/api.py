@@ -38,6 +38,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
+from core.serv_reasoner import ServReasoner
 from core.signing import (
     VerdictSigner,
     canonical_verdict_payload,
@@ -76,6 +77,7 @@ class Metrics:
     total_requests: int = 0
     total_errors: int = 0
     total_scans: int = 0
+    serv_calls: int = 0  # second-pass calls that actually contributed to a verdict
     risk_level_counts: dict[str, int] = field(
         default_factory=lambda: {"safe": 0, "low": 0, "suspicious": 0, "dangerous": 0}
     )
@@ -109,6 +111,7 @@ class Metrics:
             "total_requests": self.total_requests,
             "total_scans": self.total_scans,
             "total_errors": self.total_errors,
+            "serv_calls": self.serv_calls,
             "error_rate": (
                 round(self.total_errors / self.total_requests, 4)
                 if self.total_requests > 0
@@ -173,6 +176,22 @@ MINER_INFO = {
 # ── Detection engine (module-level singleton — regex compiled once) ──────────────
 
 _engine = IpiDetectionEngine()
+
+# ── SERV Reasoning second pass (optional progressive enhancement) ──────────────
+#
+# Built from SERV_ENABLED + SERV_API_KEY at import time. None means SERV is
+# disabled — the engine stays purely rule-based and the free path is
+# unchanged (no network call, no key required). When SERV is configured the
+# engine uses it as the premium second-pass judge; the ELCARO_LLM_* fallback
+# still works for users who haven't enabled SERV.
+_serv_reasoner = ServReasoner.from_env()
+if _serv_reasoner is not None:
+    MINER_INFO["serv_reasoning"] = {
+        "provider": "openserv",
+        "endpoint": _serv_reasoner.base_url + "/chat/completions",
+        "model": _serv_reasoner.model,
+        "toggle": "?serv=1 or body.serv_enabled",
+    }
 
 # ── Verdict signing (optional — unsigned when ELCARO_SIGNING_KEY is unset) ──────
 #
@@ -278,29 +297,43 @@ async def metrics():
 
 
 @app.post("/scan", response_model=ScanResponse)
-async def scan(request: ScanRequest) -> ScanResponse:
+async def scan(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
     """Scan content for indirect prompt injection.
 
     Accepts content and content type, returns risk score, flagged techniques,
     and detailed indicators. Optionally runs an LLM second pass for ambiguous
     (gray-zone) results.
 
+    Query params:
+      serv — when set, overrides ``request.serv_enabled``. ``?serv=1``
+             forces the SERV path; ``?serv=0`` forces it off for this call.
+             Has no effect when the miner was not configured with
+             SERV_API_KEY + SERV_ENABLED=1 at boot.
+
     This is the primary endpoint the Telegraph protocol routes requests to.
     """
+    if serv is not None:
+        request = request.model_copy(update={"serv_enabled": serv})
     result = _engine.scan(request)
     _metrics.record_scan(result)
+    if result.serv_used:
+        _metrics.serv_calls += 1
     return _sign_response(request.content, result)
 
 
 @app.post("/v1/infer", response_model=ScanResponse)
-async def infer(request: ScanRequest) -> ScanResponse:
+async def infer(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
     """Telegraph-compatible inference endpoint.
 
     Some Telegraph miners expose /v1/infer as the standard inference endpoint.
     This is an alias for /scan.
     """
+    if serv is not None:
+        request = request.model_copy(update={"serv_enabled": serv})
     result = _engine.scan(request)
     _metrics.record_scan(result)
+    if result.serv_used:
+        _metrics.serv_calls += 1
     return _sign_response(request.content, result)
 
 

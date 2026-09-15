@@ -113,6 +113,60 @@ export function ScanResult({ result, content }: ScanResultProps) {
         latencyMs={result.latency_ms}
       />
 
+      {/* SERV Reasoning attribution — visible only when SERV contributed.
+          Shows the score delta so the user can see exactly what SERV added:
+          "SERV saw 0.71, rules saw 0.42, final is 0.57" — this is the
+          monetization signal. Off by default; free scans show nothing here.
+
+          When serv_rule_score_before is present the badge is value-dense;
+          when absent (older miner, edge case) it falls back to the generic
+          message. */}
+      {result.serv_used && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
+          className="rounded-lg border border-violet/20 bg-violet/5 overflow-hidden"
+        >
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span className="font-mono text-xs font-bold text-violet shrink-0">
+              SERV Reasoning
+            </span>
+            {typeof result.serv_rule_score_before === "number" ? (
+              <ScoreDelta
+                ruleScore={result.risk_score}
+                servScore={result.serv_rule_score_before}
+              />
+            ) : (
+              <span className="text-xs text-ink-muted leading-relaxed">
+                second-tier judge refined this verdict
+              </span>
+            )}
+          </div>
+          {/* Collapsible reasoning — the "why" behind SERV's score */}
+          <ServReasoningPanel result={result} />
+        </motion.div>
+      )}
+      {/* SERV configured but failed — only show when the call was attempted
+          and returned confidence=0 (network / credit / parse error). Keeps
+          the user informed that their toggle was honoured but the upstream
+          couldn't contribute; rule verdict still stands. */}
+      {result.serv_attempted && !result.serv_used && result.serv_available && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
+          className="flex items-start gap-2 text-xs text-ink-faint bg-canvas border border-border rounded-lg px-3 py-2"
+        >
+          <span className="font-mono font-semibold shrink-0 mt-px">
+            SERV fallback
+          </span>
+          <span className="text-ink-muted leading-relaxed">
+            SERV was unavailable for this scan — rule-based verdict stands
+          </span>
+        </motion.div>
+      )}
+
       {/* Summary — the one sentence explanation, skipped when there's
           nothing more specific to say than the risk level already shows */}
       {result.summary && !isSafe && (
@@ -215,6 +269,94 @@ export function ScanResult({ result, content }: ScanResultProps) {
           automated protection. Answers "so what?" instead of stopping at
           the alarm. */}
       <NextSteps result={result} content={content} />
+    </div>
+  );
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+interface ScoreDeltaProps {
+  ruleScore: number;
+  servScore: number;
+}
+
+/**
+ * Shows the SERV-vs-rules score delta as a concise value-prop line.
+ * "SERV saw 0.71 · rules saw 0.42 · final 0.57" — the upsell signal.
+ */
+function ScoreDelta({ ruleScore, servScore }: ScoreDeltaProps) {
+  const moved = servScore - ruleScore;
+  const direction = moved > 0 ? "↑" : moved < 0 ? "↓" : "→";
+  const moveColor =
+    moved > 0.05
+      ? "text-dangerous"
+      : moved < -0.05
+        ? "text-warning"
+        : "text-ink-muted";
+
+  return (
+    <span className="text-xs text-ink-muted leading-relaxed flex items-center gap-1.5 flex-wrap">
+      <span>SERV saw</span>
+      <span className={`font-mono font-semibold ${moveColor}`}>{servScore.toFixed(2)}</span>
+      <span>· rules saw</span>
+      <span className="font-mono text-ink-faint">{ruleScore.toFixed(2)}</span>
+      <span className={`${moveColor}`}>
+        {direction} {Math.abs(moved).toFixed(2)}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Collapsible panel showing SERV's reasoning when it contributed to the
+ * verdict. Hidden by default so the badge stays compact; expanded on click
+ * so the user can see *why* SERV changed the score — the second upsell.
+ */
+function ServReasoningPanel({ result }: { result: ScanResponse }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // The reasoning is carried by the top indicator's remediation when SERV
+  // refined it; otherwise we fall back to the scan summary.
+  const topIndicator =
+    result.indicators.length > 0
+      ? result.indicators.reduce((a, b) =>
+          a.severity.value > b.severity.value ||
+          (a.severity.value === b.severity.value && a.confidence > b.confidence)
+            ? a
+            : b
+        )
+      : null;
+  const reasoning = topIndicator?.explanation ?? result.summary ?? "";
+
+  if (!reasoning) return null;
+
+  return (
+    <div className="border-t border-violet/10">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-violet/70 hover:text-violet transition-colors"
+        aria-expanded={expanded}
+      >
+        <span>Why SERV changed the score</span>
+        <span className={`transform transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}>
+          ▼
+        </span>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <p className="px-3 pb-2 text-xs text-ink-muted leading-relaxed">
+              {reasoning}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
