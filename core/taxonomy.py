@@ -84,6 +84,19 @@ RISK_THRESHOLDS = {
 GRAY_ZONE_LOW = 0.3
 GRAY_ZONE_HIGH = 0.7
 
+# Breadth (multiple technique classes firing) is only meaningful once at
+# least one of those classes is a substantive signal on its own — breadth
+# among several incidental, weak classes isn't evidence of anything. Real
+# fetched web content commonly carries incidental invisible Unicode
+# (editor artifacts, typographic joiners) alongside an equally weak,
+# generic signal (e.g. LOW-confidence repeated-imperatives); that
+# combination alone should not read as "dangerous" via either the additive
+# class_bonus (_compute_score) or the obfuscation combo-multiplier
+# (_apply_multipliers) — both are gated on this floor. Chosen to sit above
+# LOW/MEDIUM-confidence indicators (~0.5-0.55) but below genuine
+# attack-grade signals (0.65+).
+BREADTH_BONUS_CONFIDENCE_FLOOR = 0.6
+
 # Sentinel distinguishing "no classifier argument given" (auto-configure from
 # env) from an explicit classifier=None (second pass forcibly disabled).
 _CLASSIFIER_UNSET = object()
@@ -398,7 +411,11 @@ class IpiDetectionEngine:
 
         Strategy:
         - Base score from the highest single indicator confidence
-        - Bonus for multiple technique classes (breadth = more suspicious)
+        - Bonus for multiple technique classes (breadth = more suspicious —
+          but only once max_confidence itself clears
+          BREADTH_BONUS_CONFIDENCE_FLOOR; breadth among several incidental,
+          weak-confidence classes is not evidence of anything, see that
+          constant's docstring)
         - Bonus for high-confidence matches (0.8+)
         """
         if not indicators:
@@ -409,7 +426,11 @@ class IpiDetectionEngine:
 
         # Number of distinct technique classes
         distinct_classes = {ind.technique_class for ind in indicators}
-        class_bonus = min(len(distinct_classes) * 0.08, 0.3)
+        class_bonus = (
+            min(len(distinct_classes) * 0.08, 0.3)
+            if max_confidence >= BREADTH_BONUS_CONFIDENCE_FLOOR
+            else 0.0
+        )
 
         # Count of high-confidence matches
         high_conf_count = sum(1 for ind in indicators if ind.confidence >= 0.8)
@@ -426,7 +447,10 @@ class IpiDetectionEngine:
     ) -> float:
         """Apply risk multipliers for dangerous combinations.
 
-        - Obfuscation (D) + any other class = 1.3x (hiding an attack)
+        - Obfuscation (D) + another substantive class (>= OBFUSCATION_COMBO_
+          CONFIDENCE_FLOOR) = 1.3x (hiding an attack — but only when there's
+          actually an attack-grade signal underneath; see the constant's
+          docstring for why this is gated rather than unconditional)
         - Conditional (F) + Task reframe (C) = 1.2x (hidden redirect)
         - Authority (A) + Delimiter (B) = 1.15x (system spoofing + frame break)
         """
@@ -434,7 +458,16 @@ class IpiDetectionEngine:
         class_set = set(flagged_classes)
 
         if TechniqueClass.OBFUSCATION in class_set and len(class_set) > 1:
-            multiplier *= 1.3
+            strongest_other = max(
+                (
+                    ind.confidence
+                    for ind in indicators
+                    if ind.technique_class != TechniqueClass.OBFUSCATION
+                ),
+                default=0.0,
+            )
+            if strongest_other >= BREADTH_BONUS_CONFIDENCE_FLOOR:
+                multiplier *= 1.3
 
         if TechniqueClass.CONDITIONAL in class_set and TechniqueClass.TASK_REFRAME in class_set:
             multiplier *= 1.2
