@@ -137,7 +137,18 @@ class PlacementDetector(BaseDetector):
                 indicators.append(
                     self._make_indicator(
                         technique_name="placement:repeated_imperatives",
-                        confidence=0.5,
+                        # Was 0.5 — sitting exactly on the 0.5 quarantine
+                        # threshold, so this LOW-severity signal alone
+                        # quarantined content despite LOW being documented
+                        # as "unlikely malicious alone" (core/schemas.py
+                        # Severity docstring). 4+ generic verbs (create,
+                        # add, update, ...) spread across a document is
+                        # extremely common in ordinary technical/business
+                        # writing — a weak, contributory signal only.
+                        # Lowered to 0.45, matching the same "kept below
+                        # quarantine threshold" tier used elsewhere
+                        # (core/normalize.py's rot13/hex/base64/zero_width).
+                        confidence=0.45,
                         matched_text=(
                             f"{len(imperative_positions)} imperatives"
                             f" across {spread:.0%} of content"

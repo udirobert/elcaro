@@ -208,6 +208,24 @@ def test_repeated_imperatives_without_metadata_or_tail_match(engine):
     assert TechniqueClass.PLACEMENT in result.flagged_techniques
 
 
+def test_lone_repeated_imperatives_does_not_quarantine(engine):
+    """Regression: 4+ generic verbs (create/add/update/remove) spread across
+    a document, with nothing else co-occurring, must not alone cross the
+    quarantine threshold — this pattern is extremely common in ordinary
+    technical/business writing. Was 0.5 (>= the 0.5 quarantine threshold,
+    contradicting Severity.LOW's "unlikely malicious alone" docstring);
+    now 0.45."""
+    content = (
+        "Please update your profile. Later you might want to create a new "
+        "project, then add a teammate, and eventually remove access when "
+        "they leave."
+    )
+    result = engine.scan(ScanRequest(content=content, content_type=ContentType.WEBPAGE))
+    assert TechniqueClass.PLACEMENT in result.flagged_techniques
+    assert not result.quarantined
+    assert result.risk_level != RiskLevel.DANGEROUS
+
+
 def test_generic_advice_verbs_do_not_trigger_conditional_imperative_combo(engine):
     """Regression: 'when X, change/create/update/...' in ordinary technical
     writing must not score as a highest-confidence conditional+imperative
@@ -323,10 +341,13 @@ def test_weak_multi_class_combo_does_not_reach_dangerous(engine):
 
     This is the exact shape of a real, benign docs page fetched live via
     the /scan "Fetch page content" feature: incidental invisible Unicode
-    (zero-width chars, MEDIUM/0.45) plus a handful of generic verbs
-    (create/add/remove/update, LOW/0.5) scored 0.92/DANGEROUS/quarantined
-    before this fix — pure breadth-among-weak-signals, no attack-grade
-    finding underneath either class.
+    (zero-width chars, LOW/0.45) plus a handful of generic verbs
+    (create/add/remove/update, LOW/0.45) scored 0.92/DANGEROUS/quarantined
+    before this fix and the two follow-up confidence recalibrations
+    (zero_width_strip and placement:repeated_imperatives, both were >= the
+    0.5 quarantine threshold despite being LOW/MEDIUM severity — "unlikely
+    malicious alone" per Severity's docstring) — pure breadth-among-weak-
+    signals, no attack-grade finding underneath either class.
     """
     content = (
         "Please update your profile​ here. Later you might want to "
@@ -337,14 +358,7 @@ def test_weak_multi_class_combo_does_not_reach_dangerous(engine):
     assert TechniqueClass.PLACEMENT in result.flagged_techniques
     assert TechniqueClass.OBFUSCATION in result.flagged_techniques
     assert result.risk_level != RiskLevel.DANGEROUS
-    # NOTE: this still quarantines (score lands at exactly 0.5, now
-    # placement:repeated_imperatives' own confidence — zero_width_strip's
-    # confidence was lowered to 0.45, below the quarantine threshold, fixing
-    # the obfuscation half of this). Severity.LOW is documented as
-    # "unlikely malicious alone", yet 0.5 is >= the quarantine threshold, so
-    # this LOW indicator alone still quarantines. Same shape of
-    # miscalibration as zero_width_strip had, different indicator — flagged,
-    # not fixed here; not asserting quarantined=False.
+    assert not result.quarantined
 
 
 def test_strong_multi_class_combo_still_reaches_dangerous(engine):
