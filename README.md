@@ -130,6 +130,12 @@ Everything is live — no waitlists, no gated features:
   `list_specimens`, `explain_verdict`, `contrast_intent`) so an agent in
   ChatGPT’s in-app browser loads a specimen the human can see, scans it,
   then declares the action it was about to take. Plan: [docs/webmcp.md](docs/webmcp.md).
+  Paste a bare URL and a "Fetch page content" button offers to pull the
+  page via [Tavily's](https://tavily.com/) extract API before scanning —
+  the app server never fetches the URL itself (Tavily does, avoiding SSRF
+  against this deployment), and the extracted text is shown before you
+  scan it. Hidden entirely without `TAVILY_API_KEY` set
+  (`app/web/.env.local`).
 - **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
   specimen corpus against the live miner and watch every verdict.
 - **[Red team](https://elcaro.trustfall.xyz/redteam)** — the product attacks

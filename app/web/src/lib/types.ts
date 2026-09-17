@@ -123,6 +123,18 @@ export interface ScanError {
   detail?: string;
 }
 
+// ── URL fetching (/scan "Fetch page content") ────────────────────────────────
+export interface FetchUrlResponse {
+  content: string;
+  provider: "tavily";
+  credits_used: number | null;
+  source_url: string;
+}
+
+export interface FetchUrlError {
+  error: string;
+}
+
 // ── Vulnerability analyzer ────────────────────────────────────────────────────
 export interface VulnerabilityClassScore {
   letter: string;

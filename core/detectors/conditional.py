@@ -82,13 +82,23 @@ SPECIFIC_TOOL_TRIGGER_PATTERNS = [
     ),
 ]
 
-# Combined conditional + imperative — highest risk
+# Combined conditional + imperative — highest risk.
+#
+# Deliberately excludes generic verbs like change/update/modify/set/create/
+# add/remove: they're ubiquitous in ordinary technical writing ("when
+# priorities shift, change a coefficient in your code") and caused false
+# positives at 0.8 confidence on real, benign documentation fetched via the
+# /scan "Fetch page content" feature. Those verbs are still covered, at
+# appropriately lower confidence, by placement.py's broader
+# IMPERATIVE_VERB_PATTERN (repeated-imperative / tail-edge signals) — this
+# pattern stays reserved for actions that are rare in benign prose about
+# how to write or use software.
 CONDITIONAL_IMPERATIVE_PATTERN = re.compile(
-    r"(?:when|if|after|once|before)\s+.{0,80}?"
-    r"(?:send|forward|exec(?:ute)?|run|call|install|delete|reset|approve|"
-    r"grant|change|update|modify|set|create|add|remove|wipe|share|export|"
-    r"download|upload|post|publish|submit|transfer|copy|ignore|disregard|"
-    r"override|replace|inject|configure|enable|disable|grant|revoke)",
+    r"\b(?:when|if|after|once|before)\b\s+.{0,80}?"
+    r"\b(?:send|forward|exec(?:ute)?|run|call|install|delete|reset|approve|"
+    r"grant|wipe|share|export|download|upload|post|publish|submit|transfer|"
+    r"copy|ignore|disregard|override|replace|inject|configure|enable|"
+    r"disable|revoke)\b",
     re.IGNORECASE,
 )
 

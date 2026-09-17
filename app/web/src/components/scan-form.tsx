@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useSyncExternalStore } from "
 import Link from "next/link";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
-import { scanContent, isError } from "@/lib/api";
+import { scanContent, isError, fetchUrlAvailable, fetchUrlContent, isFetchUrlError } from "@/lib/api";
 import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
@@ -49,6 +49,20 @@ function detectContentType(
     return { type: "code", label: "Code" };
   }
   return null;
+}
+
+// Bare-URL detection — the whole pasted content is one http(s) URL, nothing
+// else. Deliberately narrow: a URL that merely appears inside pasted prose
+// should not trigger a fetch offer.
+function isBareUrl(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 // A one-shot read of localStorage's initial state, exposed via
@@ -107,6 +121,12 @@ export function ScanForm() {
   // the same way (no-op on the free path unless the miner has JEV_API_KEY +
   // JEV_ENABLED=1 configured).
   const [jevEnabled, setJevEnabled] = useState(false);
+  // URL fetching — hidden entirely when the deployment has no TAVILY_API_KEY,
+  // so self-hosters without a key see exactly the paste-only experience.
+  const [fetchUrlEnabled, setFetchUrlEnabled] = useState(false);
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
+  const [fetchedFrom, setFetchedFrom] = useState<{ url: string; credits: number | null } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
@@ -161,6 +181,27 @@ export function ScanForm() {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, [adoptedVerdict]);
+
+  // Feature-detect once on mount — cheap, and keeps the button hidden until
+  // we know the deployment actually has a Tavily key configured.
+  useEffect(() => {
+    fetchUrlAvailable().then(setFetchUrlEnabled);
+  }, []);
+
+  async function handleFetchUrl() {
+    const url = content.trim();
+    setFetchingUrl(true);
+    setFetchUrlError(null);
+    const result = await fetchUrlContent(url);
+    setFetchingUrl(false);
+    if (isFetchUrlError(result)) {
+      setFetchUrlError(result.error);
+      return;
+    }
+    setContent(result.content);
+    setContentType("webpage");
+    setFetchedFrom({ url: result.source_url, credits: result.credits_used });
+  }
 
   const triggerShake = useCallback(async () => {
     await shakeControls.start({
@@ -230,6 +271,8 @@ export function ScanForm() {
     resultRef.current = null;
     setIntentContrast(null);
     setError(null);
+    setFetchedFrom(null);
+    setFetchUrlError(null);
     setContent(example.content);
     setContentType(example.content_type);
     return {
@@ -266,6 +309,8 @@ export function ScanForm() {
     resultRef.current = null;
     setIntentContrast(null);
     setError(null);
+    setFetchedFrom(null);
+    setFetchUrlError(null);
     setContent("");
     setContentType(example.content_type);
 
@@ -295,6 +340,8 @@ export function ScanForm() {
     resultRef.current = entry.response;
     setIntentContrast(null);
     setError(null);
+    setFetchedFrom(null);
+    setFetchUrlError(null);
   }
 
   const hasContent = content.trim().length > 0;
@@ -309,6 +356,7 @@ export function ScanForm() {
   }, [scanning]);
 
   const suggestion = hasContent ? detectContentType(content) : null;
+  const urlDetected = fetchUrlEnabled && hasContent && isBareUrl(content);
   const beat = agentBeat({
     hasContent,
     scanning,
@@ -370,6 +418,9 @@ export function ScanForm() {
           onChange={(e) => {
             setContent(e.target.value);
             if (e.target.value.trim()) setDismissedOnboarding(true);
+            // Stale once the user edits away from what was fetched.
+            if (fetchedFrom) setFetchedFrom(null);
+            if (fetchUrlError) setFetchUrlError(null);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && e.metaKey && hasContent && !scanning) {
@@ -414,6 +465,46 @@ export function ScanForm() {
           {suggestion.label} detected — scan as{" "}
           {suggestion.label.toLowerCase()}?
         </motion.button>
+      )}
+
+      {/* Fetch page content — offered when the whole box is one bare URL.
+          The server never fetches the URL itself; Tavily does (avoids SSRF
+          against this deployment), so this is hidden entirely on
+          deployments without TAVILY_API_KEY configured. */}
+      {urlDetected && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 text-xs"
+        >
+          <button
+            onClick={handleFetchUrl}
+            disabled={fetchingUrl}
+            className="text-teal font-medium hover:text-teal/80 transition-colors disabled:opacity-50"
+          >
+            {fetchingUrl ? "Fetching…" : "Fetch page content, then scan it"}
+          </button>
+          <span className="text-ink-faint">— fetched via Tavily, not this browser</span>
+        </motion.div>
+      )}
+      {fetchUrlError && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-xs text-dangerous"
+        >
+          {fetchUrlError}
+        </motion.p>
+      )}
+      {fetchedFrom && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-[11px] text-ink-faint font-mono truncate"
+        >
+          Fetched from {fetchedFrom.url}
+          {fetchedFrom.credits != null && ` · ${fetchedFrom.credits} credit${fetchedFrom.credits === 1 ? "" : "s"}`}
+        </motion.p>
       )}
 
       {/* Actions row — examples (left), content-type + scan (right) */}

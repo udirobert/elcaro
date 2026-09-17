@@ -150,7 +150,12 @@ class PlacementDetector(BaseDetector):
                         ),
                         location="distributed",
                         content=content,
-                        char_offset=match.start(),
+                        # Distributed across many matches — no single "the"
+                        # offset applies; anchor on the first occurrence.
+                        # (Previously reused a `match` left bound by an
+                        # earlier, unrelated loop — undefined whenever
+                        # neither of those loops ran a single iteration.)
+                        char_offset=imperative_positions[0],
                     )
                 )
 

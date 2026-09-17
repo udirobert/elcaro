@@ -189,6 +189,50 @@ def test_tail_edge_imperative(engine):
     )
 
 
+def test_repeated_imperatives_without_metadata_or_tail_match(engine):
+    """Regression: repeated-imperative detection must not crash when neither
+    the metadata-pattern loop nor the tail-edge loop runs a single iteration.
+
+    core/detectors/placement.py used to reuse a `match` variable left bound
+    by an earlier, unrelated for-loop for this indicator's char_offset —
+    UnboundLocalError whenever that earlier loop matched nothing. Real
+    fetched web content (short, no metadata patterns, no tail-edge cluster)
+    hit exactly this path via the /scan "Fetch page content" feature.
+    """
+    short_content = (
+        "Please update your profile. Later you might want to create a new "
+        "project, then add a teammate, and eventually remove access when "
+        "they leave."
+    )
+    result = engine.scan(ScanRequest(content=short_content, content_type=ContentType.WEBPAGE))
+    assert TechniqueClass.PLACEMENT in result.flagged_techniques
+
+
+def test_generic_advice_verbs_do_not_trigger_conditional_imperative_combo(engine):
+    """Regression: 'when X, change/create/update/...' in ordinary technical
+    writing must not score as a highest-confidence conditional+imperative
+    trigger (0.8 confidence, TechniqueClass.CONDITIONAL).
+
+    Both sentences below are real, benign text from a third-party docs page
+    (fetched live via the /scan "Fetch page content" feature) that scored
+    1.00 / DANGEROUS / quarantined before this fix — a false positive at the
+    highest severity, caused by CONDITIONAL_IMPERATIVE_PATTERN matching
+    generic verbs (change, create/creates) that are ubiquitous in advice
+    about writing code, not agent-directed commands.
+    """
+    sentences = [
+        "When priorities shift, change a coefficient in your code rather than rewriting a prompt.",
+        "When you need a model to make a judgment that your code will consume, "
+        "that creates a mismatch: you are coercing a text-generation system "
+        "into outputting structured decisions.",
+    ]
+    for sentence in sentences:
+        result = engine.scan(ScanRequest(content=sentence, content_type=ContentType.WEBPAGE))
+        matched_names = {ind.technique_name for ind in result.indicators}
+        assert "conditional:conditional_imperative_combo" not in matched_names, sentence
+        assert result.risk_level != RiskLevel.DANGEROUS, sentence
+
+
 # ── Clean content (false positive checks) ─────────────────────────────────────
 
 
