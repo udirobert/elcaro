@@ -1,7 +1,12 @@
 """Detector D — Obfuscation / filter evasion.
 
-Detects encoding tricks, zero-width characters, homoglyphs, leetspeak, and other
-techniques used to hide injection instructions from naive content filters.
+Detects encoding tricks, homoglyphs, leetspeak, and other techniques used to
+hide injection instructions from naive content filters. Zero-width-character
+evidence is handled entirely by core/normalize.py: the engine strips zero-
+width chars for ALL detectors before they ever run (core/taxonomy.py's
+scan()), so a zero-width check here would only ever see already-stripped
+text — normalize.py synthesizes the equivalent "obfuscation:zero_width_chars"
+indicator instead, from what it actually stripped.
 """
 
 from __future__ import annotations
@@ -24,11 +29,6 @@ DECODED_IMPERATIVE_PATTERN = re.compile(
     r"disregard|system|admin|instruction|override|sudo|chmod|rm\s+-rf|"
     r"curl|wget|eval|import|require|exec|spawn|subprocess)",
     re.IGNORECASE,
-)
-
-# Zero-width characters
-ZERO_WIDTH_PATTERN = re.compile(
-    "[\u200b\u200c\u200d\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2060\ufeff]"
 )
 
 # Leetspeak substitution in imperatives.
@@ -128,36 +128,6 @@ class ObfuscationDetector(BaseDetector):
                         char_offset=match.start(),
                     )
                 )
-
-        # Zero-width characters
-        zw_count = len(ZERO_WIDTH_PATTERN.findall(content))
-        if zw_count > 0:
-            confidence = min(0.5 + (zw_count * 0.1), 0.9)
-            # Extract surrounding context for first occurrence
-            first_zw = ZERO_WIDTH_PATTERN.search(content)
-            context_start = max(0, (first_zw.start() if first_zw else 0) - 30)
-            context_end = min(len(content), (first_zw.end() if first_zw else 30) + 30)
-            context_snippet = (
-                content[context_start:context_end]
-                .replace("\u200b", "[ZWSP]")
-                .replace("\u200c", "[ZWNJ]")
-                .replace("\u200d", "[ZWJ]")
-                .replace("\ufeff", "[BOM]")
-            )
-            indicators.append(
-                self._make_indicator(
-                    technique_name="obfuscation:zero_width_chars",
-                    confidence=confidence,
-                    matched_text=f"{zw_count} zero-width chars; context: {context_snippet}",
-                    explanation=(
-                        f"{zw_count} zero-width character(s) detected in "
-                        f"{content_type.value}. These are invisible characters "
-                        f"used to hide instructions from text-based filters."
-                    ),
-                    content=content,
-                    char_offset=first_zw.start() if first_zw else 0,
-                )
-            )
 
         # Leetspeak imperatives — only flag if the match contains at least
         # one digit (otherwise it's just plain English, not leetspeak)

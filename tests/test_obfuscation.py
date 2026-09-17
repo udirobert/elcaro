@@ -53,7 +53,13 @@ def test_base64_benign_blob_not_flagged(engine):
 
 
 def test_zero_width_characters(engine):
-    """Zero-width characters hiding inside text must be flagged."""
+    """Zero-width characters hiding inside text must be flagged.
+
+    This is satisfied by core/normalize.py's synthesized indicator, not by
+    ObfuscationDetector itself \u2014 see test_obfuscation_detector_has_no_zero_
+    width_branch below for why that detector deliberately has no zero-width
+    check of its own.
+    """
     result = engine.scan(
         ScanRequest(
             content="Please revie\u200bw this documen\u200ct\u200d at your convenience.",
@@ -62,6 +68,23 @@ def test_zero_width_characters(engine):
     )
     assert TechniqueClass.OBFUSCATION in result.flagged_techniques
     assert any(ind.technique_name == "obfuscation:zero_width_chars" for ind in result.indicators)
+
+
+def test_obfuscation_detector_has_no_zero_width_branch():
+    """Guard against reintroducing the removed dead code: ObfuscationDetector
+    itself must not produce a zero-width indicator, even when called
+    directly on raw, unstripped content. core/taxonomy.py's scan() always
+    strips zero-width chars via core/normalize.py before any detector runs,
+    so a zero-width check inside ObfuscationDetector could never fire
+    through the real pipeline anyway \u2014 it used to exist regardless, with a
+    confidence formula (min(0.5 + zw_count*0.1, 0.9)) worse than the one
+    normalize.py had before its own fix. One source of truth now."""
+    from core.detectors.obfuscation import ObfuscationDetector
+
+    detector = ObfuscationDetector()
+    raw = "Please revie\u200bw this documen\u200ct\u200d at your convenience."
+    indicators = detector.detect(raw, ContentType.EMAIL)
+    assert not any(ind.technique_name == "obfuscation:zero_width_chars" for ind in indicators)
 
 
 def test_lone_zero_width_does_not_quarantine(engine):
