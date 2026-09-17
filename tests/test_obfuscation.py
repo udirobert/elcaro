@@ -11,7 +11,7 @@ import base64
 
 import pytest
 
-from core import ContentType, IpiDetectionEngine, ScanRequest, TechniqueClass
+from core import ContentType, IpiDetectionEngine, RiskLevel, ScanRequest, TechniqueClass
 
 
 @pytest.fixture
@@ -62,6 +62,23 @@ def test_zero_width_characters(engine):
     )
     assert TechniqueClass.OBFUSCATION in result.flagged_techniques
     assert any(ind.technique_name == "obfuscation:zero_width_chars" for ind in result.indicators)
+
+
+def test_lone_zero_width_does_not_quarantine(engine):
+    """Regression: invisible characters with nothing else co-occurring must
+    not alone cross the quarantine threshold \u2014 real pages commonly carry
+    incidental invisible Unicode (editor artifacts, typographic joiners)
+    for entirely benign reasons. Was 0.55 (>= the 0.5 quarantine threshold,
+    contradicting this indicator's own "kept below quarantine threshold"
+    docstring); now 0.45."""
+    result = engine.scan(
+        ScanRequest(
+            content="Please revie\u200bw this documen\u200ct\u200d at your convenience.",
+            content_type=ContentType.EMAIL,
+        )
+    )
+    assert not result.quarantined
+    assert result.risk_level != RiskLevel.DANGEROUS
 
 
 def test_leetspeak_imperative(engine):

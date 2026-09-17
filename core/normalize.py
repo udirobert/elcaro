@@ -179,7 +179,11 @@ def normalize(content: str) -> NormalizationResult:
 _NORMALIZATION_EVIDENCE: dict[str, tuple[str, float, str]] = {
     "zero_width_strip": (
         "obfuscation:zero_width_chars",
-        0.55,
+        # Was 0.55 — above the 0.5 quarantine threshold, contradicting the
+        # "kept below quarantine threshold" intent above. Lone invisible
+        # characters are common copy/paste or CMS artifacts, not on their
+        # own evidence of an attack; matches rot13/hex/base64 below.
+        0.45,
         "Invisible zero-width/format characters removed before detection — "
         "used to hide instructions from text-based filters.",
     ),

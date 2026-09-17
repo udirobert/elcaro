@@ -323,7 +323,7 @@ def test_weak_multi_class_combo_does_not_reach_dangerous(engine):
 
     This is the exact shape of a real, benign docs page fetched live via
     the /scan "Fetch page content" feature: incidental invisible Unicode
-    (zero-width chars, MEDIUM/0.55) plus a handful of generic verbs
+    (zero-width chars, MEDIUM/0.45) plus a handful of generic verbs
     (create/add/remove/update, LOW/0.5) scored 0.92/DANGEROUS/quarantined
     before this fix — pure breadth-among-weak-signals, no attack-grade
     finding underneath either class.
@@ -337,13 +337,14 @@ def test_weak_multi_class_combo_does_not_reach_dangerous(engine):
     assert TechniqueClass.PLACEMENT in result.flagged_techniques
     assert TechniqueClass.OBFUSCATION in result.flagged_techniques
     assert result.risk_level != RiskLevel.DANGEROUS
-    # NOTE: this still quarantines (score lands at exactly 0.55, the
-    # zero_width_strip indicator's own un-boosted confidence, which is
-    # >= the 0.5 quarantine threshold). That indicator's docstring claims
-    # its confidence is "kept below quarantine threshold for benign-looking
-    # cases" — it isn't, at 0.55. That's a separate, narrower miscalibration
-    # than what this fix addresses (breadth-among-weak-signals) and is
-    # intentionally left alone here; not asserting quarantined=False.
+    # NOTE: this still quarantines (score lands at exactly 0.5, now
+    # placement:repeated_imperatives' own confidence — zero_width_strip's
+    # confidence was lowered to 0.45, below the quarantine threshold, fixing
+    # the obfuscation half of this). Severity.LOW is documented as
+    # "unlikely malicious alone", yet 0.5 is >= the quarantine threshold, so
+    # this LOW indicator alone still quarantines. Same shape of
+    # miscalibration as zero_width_strip had, different indicator — flagged,
+    # not fixed here; not asserting quarantined=False.
 
 
 def test_strong_multi_class_combo_still_reaches_dangerous(engine):
