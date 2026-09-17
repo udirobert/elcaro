@@ -95,6 +95,34 @@ def test_html_comment_imperative(engine):
     assert TechniqueClass.DELIMITER in result.flagged_techniques
 
 
+def test_ordinary_forwarded_email_does_not_quarantine(engine):
+    """Regression: the "----- Forwarded message -----" boilerplate that
+    every email client auto-inserts on every forward, benign or not, must
+    not alone quarantine content. Was 0.5 (>= the 0.5 quarantine threshold,
+    contradicting LOW severity's "unlikely malicious alone" doctrine); now
+    0.45, matching forwarded_header."""
+    content = (
+        "----- Forwarded message -----\n"
+        "From: Jane Doe <jane@acme.com>\n"
+        "Hi team, please see the attached quarterly report below.\n"
+    )
+    result = engine.scan(ScanRequest(content=content, content_type=ContentType.EMAIL))
+    assert TechniqueClass.DELIMITER in result.flagged_techniques
+    assert not result.quarantined
+    assert result.risk_level != RiskLevel.DANGEROUS
+
+
+def test_quoted_transcript_user_prefix_does_not_quarantine(engine):
+    """Regression: a bare 'User: ' prefix (e.g. any quoted support
+    transcript or FAQ) must not alone quarantine content. Same shape as
+    the forwarded-message fix above — was 0.5, now 0.45."""
+    content = "User: How do I reset my password?\nAgent: Go to settings and click reset."
+    result = engine.scan(ScanRequest(content=content, content_type=ContentType.EMAIL))
+    assert TechniqueClass.DELIMITER in result.flagged_techniques
+    assert not result.quarantined
+    assert result.risk_level != RiskLevel.DANGEROUS
+
+
 # ── Task reframing (Class C) ──────────────────────────────────────────────────
 
 

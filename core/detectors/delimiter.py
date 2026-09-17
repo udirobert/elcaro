@@ -46,7 +46,11 @@ TURN_SPOOFING_PATTERNS = [
         0.8,
         "assistant_turn_spoof",
     ),
-    (r"\bUser\s*:\s*", 0.5, "user_turn_spoof"),  # lower — very common in quoting
+    # Was 0.5 — sat exactly on the 0.5 quarantine threshold despite the
+    # author's own "very common in quoting" comment: a bare "User: " match
+    # alone (e.g. any quoted support transcript or FAQ) then quarantined,
+    # contradicting LOW severity's "unlikely malicious alone" doctrine.
+    (r"\bUser\s*:\s*", 0.45, "user_turn_spoof"),
     (
         r"\b(?:System|Developer|Admin)\s*:\s*.{0,100}?" + _IMPERATIVE_VERBS_TURN_SPOOF,
         0.85,
@@ -56,7 +60,11 @@ TURN_SPOOFING_PATTERNS = [
 
 # Forwarded message spoofing (common in email-based injection)
 FORWARDED_PATTERNS = [
-    (r"-{5,}\s*Forwarded message\s*-{5,}", 0.5, "forwarded_block"),
+    # Was 0.5 — this exact boilerplate is auto-inserted by essentially
+    # every email client on every forward, benign or not, so it alone
+    # quarantined ordinary forwarded email. Now below threshold, matching
+    # forwarded_header just below.
+    (r"-{5,}\s*Forwarded message\s*-{5,}", 0.45, "forwarded_block"),
     (r"Begin forwarded message", 0.45, "forwarded_header"),
 ]
 
