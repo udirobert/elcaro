@@ -101,6 +101,12 @@ export function ScanForm() {
   // on the free path). Default off — opt-in keeps the free fast path
   // visible.
   const [servEnabled, setServEnabled] = useState(false);
+  // Comparison toggle: when on, the miner also asks Jev (TypeSafe) to score
+  // the same borderline content for side-by-side comparison. Unlike SERV
+  // above, Jev never changes the verdict — it's purely informational, gated
+  // the same way (no-op on the free path unless the miner has JEV_API_KEY +
+  // JEV_ENABLED=1 configured).
+  const [jevEnabled, setJevEnabled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
@@ -187,6 +193,7 @@ export function ScanForm() {
         content: nextContent,
         content_type: nextType,
         serv_enabled: servEnabled,
+        jev_enabled: jevEnabled,
       });
 
       if (isError(response)) {
@@ -519,6 +526,51 @@ export function ScanForm() {
                   className="text-[11px] text-ink-faint leading-relaxed"
                 >
                   SERV was attempted but did not contribute this scan — rule verdict stands.
+                </motion.p>
+              )}
+          </div>
+
+          {/* Jev comparison toggle — informational only, never changes the
+              verdict. No-op when the miner isn't configured with JEV_API_KEY. */}
+          <div className="flex flex-col gap-1">
+            <label
+              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+              title="Comparison only: ask the miner for Jev's (TypeSafe) calibrated confidence on borderline cases, shown side-by-side. Never changes the quarantine decision."
+            >
+              <input
+                type="checkbox"
+                checked={jevEnabled}
+                onChange={(e) => setJevEnabled(e.target.checked)}
+                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                aria-label="Compare against Jev"
+              />
+              <span className="font-medium">Compare with Jev</span>
+            </label>
+            {jevEnabled &&
+              result !== null &&
+              result.jev_available === false &&
+              result.jev_attempted === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-teal font-medium leading-relaxed"
+                >
+                  Miner not configured for Jev — set
+                  {' '}JEV_ENABLED=1 + JEV_API_KEY{' '}on your deployment, then re-scan.
+                </motion.p>
+              )}
+            {jevEnabled &&
+              result?.jev_attempted &&
+              !result.jev_used &&
+              result.jev_available && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-ink-faint leading-relaxed"
+                >
+                  Jev was unavailable for this scan — no comparison to show.
                 </motion.p>
               )}
           </div>

@@ -6,7 +6,7 @@ Every scan returns a structured verdict: risk score, risk level, the techniques 
 
 ## Scan API
 
-- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean, "serv_enabled"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, scanned_at, signature?, key_id?, serv_available?, serv_attempted?, serv_used?, serv_rule_score_before?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
+- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean, "serv_enabled"?: boolean, "jev_enabled"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, scanned_at, signature?, key_id?, serv_available?, serv_attempted?, serv_used?, serv_rule_score_before?, jev_available?, jev_attempted?, jev_used?, jev_comparison?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
 
 ## SERV Reasoning (optional LLM second pass)
 
@@ -20,6 +20,16 @@ When `serv_enabled=true` **and** the miner is configured with `SERV_ENABLED=1` +
 The blend is `0.5 * rule_score + 0.5 * serv_score`, floored at `0.5 * rule_score` (rules always keep veto power). SERV also layers refined TTPs, remediation, and `safe_content` onto the verdict when present.
 
 Cost transparency: every SERV-enhanced scan returns `serv_cost.total_usdc` so callers always know what SERV costs before they act. A typical scan (~600 input chars, ~200 output chars) costs ~$0.002 USDC. At scale (~10 k scans/day with 20% gray-zone hit rate) that's ~$4/day in SERV costs, plus the base 0.01 USDC per scan routed through Telegraph. Operators pay SERV directly; Elcaro takes no markup.
+
+## Jev comparison (optional, informational only)
+
+When `jev_enabled=true` **and** the miner is configured with `JEV_ENABLED=1` + `JEV_API_KEY`, borderline cases (rule score 0.3–0.7) also get scored by [TypeSafe's](https://docs.typesafe.ai) Jev model for side-by-side comparison. Unlike SERV, **Jev never adjusts risk_score, risk_level, or safe_content** — the rule engine stays sole authority. The response gains:
+- `jev_available`: whether the miner has Jev configured at all
+- `jev_attempted`: whether Jev was called for this scan
+- `jev_used`: whether the call succeeded and `jev_comparison` is populated
+- `jev_comparison`: `{rule_score, rule_level, jev_score, jev_level, jev_confidence, probabilities, agrees_with_rules, input_tokens, output_tokens, cost_usd}` — `agrees_with_rules` is a coarse bucket comparison (both sides ≥0.5 or both <0.5), not an exact level match. `cost_usd` is computed from real response token counts at a console-observed rate (TypeSafe publishes no pricing docs) — treat it as approximate.
+
+See [docs/jev-comparison.md](https://github.com/udirobert/elcaro/blob/main/docs/jev-comparison.md) for the full contract and architecture.
 - [GET /redteam/run](https://api.elcaro.trustfall.xyz/redteam/run): Self red-team — streams an SSE journal (`data:` per record: scan / trophy / execution / run_end) of an evolutionary searcher attacking this engine. Params: `budget` (scans, ≤300), `seed` (deterministic run), `baseline=vulnerable` (target the pre-hardening engine semantics — the before/after contrast), `execute=true` (Tier-2: feed each bypass to an LLM and score whether the agent complies). Fixed corpus only.
 - [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
 - [GET /pubkey](https://api.elcaro.trustfall.xyz/pubkey): The miner's Ed25519 verdict-signing public key (404 when running unsigned).
@@ -40,6 +50,8 @@ When the miner runs with `ELCARO_SIGNING_KEY` set, every verdict carries an Ed25
 ## Docs
 
 - [README](https://github.com/udirobert/elcaro/blob/main/README.md): What Elcaro is, quickstart, an example verdict.
+- [SERV Reasoning guide](https://github.com/udirobert/elcaro/blob/main/docs/serv-reasoning.md): Architecture, config, pricing, and API contract for the optional LLM second-pass judge.
+- [Jev comparison guide](https://github.com/udirobert/elcaro/blob/main/docs/jev-comparison.md): Architecture, config, pricing, and API contract for the optional TypeSafe/Jev side-by-side comparison.
 - [Technique reference](https://github.com/udirobert/elcaro/blob/main/docs/technique-reference.md): The six injection classes detected — authority framing, delimiter confusion, task reframing, obfuscation, placement salience, conditional triggers.
 - [UX audit — adaptive & agentic lenses](https://github.com/udirobert/elcaro/blob/main/docs/ux-audit.md): How this product designs for agents as first-class users.
 - [Warn-mode salience experiment](https://github.com/udirobert/elcaro/blob/main/docs/warn-salience-experiment.md): Does the position of the quarantine warning — prefix, suffix, or sandwich — change whether an agent follows the injected instruction anyway? Executed 2026-08-30 (81 completions, 3 model families, judge-rescored): prefix 0/27 complied, sandwich 0/27, suffix 3/27 — prefix stays the default, placement is load-bearing.

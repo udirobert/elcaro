@@ -16,6 +16,13 @@ export async function POST(request: Request) {
         : servQuery === "0" || servQuery === "false" ? false
           : undefined;
 
+    // Same override pattern for Jev's comparison toggle.
+    const jevQuery = url.searchParams.get("jev");
+    const jevFromQuery =
+      jevQuery === "1" || jevQuery === "true" ? true
+        : jevQuery === "0" || jevQuery === "false" ? false
+          : undefined;
+
     const minerResponse = await fetch(`${MINER_URL}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -25,6 +32,8 @@ export async function POST(request: Request) {
         deep_analysis: body.deep_analysis || false,
         serv_enabled:
           servFromQuery !== undefined ? servFromQuery : (body.serv_enabled || false),
+        jev_enabled:
+          jevFromQuery !== undefined ? jevFromQuery : (body.jev_enabled || false),
       }),
     });
 

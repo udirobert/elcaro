@@ -167,6 +167,12 @@ Everything is live — no waitlists, no gated features:
   `SERV_API_KEY` on your miner; the `/scan` checkbox activates it. The UI
   shows the score delta (rules vs SERV) so you see exactly what the LLM
   added. See [docs/serv-reasoning.md](docs/serv-reasoning.md).
+- **[Jev comparison](https://docs.typesafe.ai)** — optional side-by-side
+  verdict from TypeSafe's Jev model, shown next to the rule engine's on
+  gray-zone scans. Unlike SERV, it never adjusts the verdict — pure
+  comparison, cost and confidence included. Set `JEV_ENABLED=1` +
+  `JEV_API_KEY`; the `/scan` "Compare with Jev" checkbox activates it. See
+  [docs/jev-comparison.md](docs/jev-comparison.md).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
   affects agent compliance with injected instructions. Executed 2026-08-30

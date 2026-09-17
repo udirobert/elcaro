@@ -88,3 +88,12 @@ export function countServRefined(lastN: number = 10): number {
   const history = getHistory();
   return history.slice(0, lastN).filter((e) => e.response.serv_used).length;
 }
+
+// Count how many of the last N scans got a Jev comparison. Jev never
+// "refines" a verdict (it's a shadow pass), so this tracks comparisons
+// shown, not verdicts changed — used by the session-level Jev badge.
+export function countJevCompared(lastN: number = 10): number {
+  if (typeof window === "undefined") return 0;
+  const history = getHistory();
+  return history.slice(0, lastN).filter((e) => e.response.jev_used).length;
+}

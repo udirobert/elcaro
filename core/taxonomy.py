@@ -27,6 +27,7 @@ from core.detectors.delimiter import DelimiterDetector
 from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
 from core.detectors.task_reframe import TaskReframeDetector
+from core.jev_reasoner import JevReasoner
 from core.llm_classifier import LlmClassifier
 from core.normalize import normalization_indicators, normalize
 from core.quarantine import DEFAULT_RISK_THRESHOLD, quarantine_decision
@@ -87,6 +88,7 @@ GRAY_ZONE_HIGH = 0.7
 # env) from an explicit classifier=None (second pass forcibly disabled).
 _CLASSIFIER_UNSET = object()
 _SERV_UNSET = object()
+_JEV_UNSET = object()
 
 
 def _load_classifier_from_env() -> LlmClassifier | None:
@@ -101,6 +103,14 @@ def _load_serv_reasoner_from_env() -> ServReasoner | None:
     the engine treats that as "stay on the rule-only fast path".
     """
     return ServReasoner.from_env()
+
+
+def _load_jev_reasoner_from_env() -> JevReasoner | None:
+    """Build the Jev comparison reasoner from JEV_* env vars, if configured.
+
+    Returns None when Jev is disabled — the engine attaches no comparison.
+    """
+    return JevReasoner.from_env()
 
 
 # ── Scoring engine ─────────────────────────────────────────────────────────────
@@ -125,6 +135,7 @@ class IpiDetectionEngine:
         self,
         classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET,
         serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
+        jev_reasoner: JevReasoner | None | object = _JEV_UNSET,
     ) -> None:
         self.detectors = [
             AuthorityDetector(),
@@ -140,6 +151,9 @@ class IpiDetectionEngine:
         if serv_reasoner is _SERV_UNSET:
             serv_reasoner = _load_serv_reasoner_from_env()
         self.serv_reasoner: ServReasoner | None = serv_reasoner  # type: ignore[assignment]
+        if jev_reasoner is _JEV_UNSET:
+            jev_reasoner = _load_jev_reasoner_from_env()
+        self.jev_reasoner: JevReasoner | None = jev_reasoner  # type: ignore[assignment]
 
     def scan(self, request: ScanRequest) -> ScanResponse:
         """Scan content for indirect prompt injection indicators.
@@ -237,6 +251,12 @@ class IpiDetectionEngine:
         in_gray_zone = GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH
         should_run_second_pass = serv_requested and in_gray_zone
 
+        # Snapshot the pure rule verdict before SERV/LLM may adjust
+        # weighted_score below — the Jev comparison is "rule engine vs Jev",
+        # not "rule+SERV blend vs Jev".
+        pure_rule_score = weighted_score
+        pure_rule_level = risk_level
+
         if should_run_second_pass and self.serv_reasoner is not None:
             serv_attempted = True
             serv_result = self.serv_reasoner.classify(
@@ -258,6 +278,41 @@ class IpiDetectionEngine:
                 weighted_score = llm_result.adjusted_score
                 risk_level = self._risk_level(weighted_score)
                 deep_analysis_used = True
+
+        # Jev shadow pass: a pure comparison, gated the same way as the SERV
+        # second pass (gray-zone AND opted in), but its verdict never touches
+        # weighted_score / risk_level. See core/jev_reasoner.py.
+        jev_available = self.jev_reasoner is not None
+        jev_attempted = False
+        jev_used = False
+        jev_comparison: dict | None = None
+        jev_requested = bool(request.jev_enabled)
+        should_run_jev = jev_requested and in_gray_zone
+
+        if should_run_jev and self.jev_reasoner is not None:
+            jev_attempted = True
+            jev_result = self.jev_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if jev_result.confidence > 0.0:
+                jev_used = True
+                jev_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "jev_score": round(jev_result.jev_score, 4),
+                    "jev_level": jev_result.jev_level,
+                    "jev_confidence": round(jev_result.confidence, 4),
+                    "probabilities": jev_result.probabilities,
+                    "agrees_with_rules": jev_result.agrees_with_rules,
+                    "input_tokens": jev_result.input_tokens,
+                    "output_tokens": jev_result.output_tokens,
+                    # Priced from console-observed pricing (see
+                    # JEV_INPUT_PRICE_PER_M / JEV_OUTPUT_PRICE_PER_M in
+                    # core/jev_reasoner.py) — TypeSafe publishes no pricing
+                    # docs, so this may drift; re-check the console if it
+                    # looks stale.
+                    "cost_usd": jev_result.cost_usd,
+                }
 
         latency_ms = int((time.monotonic() - start_time) * 1000)
 
@@ -332,6 +387,10 @@ class IpiDetectionEngine:
             }
             if serv_result and serv_result.cost_estimate
             else None,
+            jev_available=jev_available,
+            jev_attempted=jev_attempted,
+            jev_used=jev_used,
+            jev_comparison=jev_comparison,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

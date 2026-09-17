@@ -86,15 +86,16 @@ export async function runSandbox(
 
 export interface MinerConfig {
   serv_available: boolean;
+  jev_available: boolean;
   version: string;
 }
 
 export async function fetchMinerConfig(): Promise<MinerConfig> {
   try {
     const res = await fetch("/api/config");
-    if (!res.ok) return { serv_available: false, version: "unknown" };
+    if (!res.ok) return { serv_available: false, jev_available: false, version: "unknown" };
     return res.json() as Promise<MinerConfig>;
   } catch {
-    return { serv_available: false, version: "unknown" };
+    return { serv_available: false, jev_available: false, version: "unknown" };
   }
 }

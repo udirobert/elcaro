@@ -198,6 +198,17 @@ class ScanRequest(BaseModel):
         "`context` object into the request body, so a dict must not be rejected. "
         "Informational only — it does not affect detection.",
     )
+    jev_enabled: bool = Field(
+        default=False,
+        description=(
+            "Optional comparison toggle: when true AND the server is configured "
+            "with JEV_API_KEY + JEV_ENABLED=1, borderline (gray-zone) scans also "
+            "get a shadow verdict from TypeSafe's Jev model for side-by-side "
+            "comparison. Jev never adjusts risk_score or risk_level — the rule "
+            "engine's decision is unaffected either way. Default off; no network "
+            "call, no key required."
+        ),
+    )
 
 
 class ScanResponse(BaseModel):
@@ -312,6 +323,47 @@ class ScanResponse(BaseModel):
             "input_cost_usdc, output_cost_usdc, total_usdc. Values are "
             "approximations based on character counts — real token counts "
             "are available from the provider if the response includes them."
+        ),
+    )
+    # ── Jev (TypeSafe) comparison observability ──────────────────────────────
+    # A pure shadow pass: these fields report what Jev saw on the same
+    # borderline content, purely for side-by-side comparison. Unlike the
+    # serv_* fields above, Jev's verdict never contributes to risk_score /
+    # risk_level / safe_content — the rule engine stays sole authority.
+    jev_available: bool = Field(
+        default=False,
+        description=(
+            "True when the miner is configured with JEV_API_KEY and "
+            "JEV_ENABLED=1 — the Jev comparison pass is ready to run."
+        ),
+    )
+    jev_attempted: bool = Field(
+        default=False,
+        description=(
+            "True when the engine attempted to call Jev for this scan "
+            "(gray-zone AND jev_enabled). False when the request stayed on "
+            "the rule-only fast path or fell outside the gray zone."
+        ),
+    )
+    jev_used: bool = Field(
+        default=False,
+        description=(
+            "True when the Jev call succeeded and jev_comparison is "
+            "populated. False when Jev was unavailable, in cooldown, timed "
+            "out, or returned an error — jev_comparison is None in that case."
+        ),
+    )
+    jev_comparison: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Side-by-side comparison of the rule engine's verdict and Jev's "
+            "calibrated confidence on the same content, present only when "
+            "jev_used=True. Keys: rule_score, rule_level, jev_score, "
+            "jev_level, jev_confidence, probabilities (map<level, prob>), "
+            "agrees_with_rules, input_tokens, output_tokens, cost_usd "
+            "(console-observed pricing, not a published rate — see "
+            "core/jev_reasoner.py). Informational only — never fed back into "
+            "the quarantine decision."
         ),
     )
     scanned_at: int | None = Field(

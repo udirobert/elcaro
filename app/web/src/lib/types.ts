@@ -82,6 +82,26 @@ export interface ScanResponse {
   // estimated. Keys: input_tokens, output_tokens, input_cost_usdc,
   // output_cost_usdc, total_usdc.
   serv_cost?: { input_tokens?: number; output_tokens?: number; input_cost_usdc?: number; output_cost_usdc?: number; total_usdc?: number } | null;
+  // Jev (TypeSafe) comparison — a pure shadow pass. Unlike serv_* above,
+  // Jev's verdict never adjusts risk_score / risk_level / safe_content; it's
+  // reported purely for side-by-side comparison against the rule engine on
+  // borderline (gray-zone) scans. Populated when the miner has JEV_API_KEY +
+  // JEV_ENABLED=1 configured and the request opted in via jev_enabled.
+  jev_available?: boolean;
+  jev_attempted?: boolean;
+  jev_used?: boolean;
+  jev_comparison?: {
+    rule_score: number;
+    rule_level: RiskLevel;
+    jev_score: number;
+    jev_level: string;
+    jev_confidence: number;
+    probabilities: Record<string, number>;
+    agrees_with_rules: boolean;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    cost_usd?: number | null;
+  } | null;
 }
 
 export interface ScanRequest {
@@ -92,6 +112,10 @@ export interface ScanRequest {
   // Reasoning for borderline / deep-analysis cases. Default off — the free
   // fast path is unaffected when SERV is not configured.
   serv_enabled?: boolean;
+  // Comparison toggle: when true, ask the miner for a Jev (TypeSafe) shadow
+  // verdict alongside the rule engine's on borderline scans. Default off;
+  // never changes the quarantine decision either way.
+  jev_enabled?: boolean;
 }
 
 export interface ScanError {

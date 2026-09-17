@@ -8,7 +8,7 @@ import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
 import { NextSteps } from "./next-steps";
 import { getReviewerMode, recordExpandAll, setReviewerMode } from "@/lib/reviewer";
-import { countServRefined, getHistory } from "@/lib/history";
+import { countServRefined, countJevCompared, getHistory } from "@/lib/history";
 
 interface ScanResultProps {
   result: ScanResponse;
@@ -175,6 +175,34 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </span>
           <span className="text-ink-muted leading-relaxed">
             SERV was unavailable for this scan — rule-based verdict stands
+          </span>
+        </motion.div>
+      )}
+
+      {/* Session Jev counter — mirrors SessionServCount but tracks
+          comparisons shown, not verdicts changed (Jev never changes the
+          verdict). */}
+      {result.jev_used && <SessionJevCount />}
+
+      {/* Jev comparison — a pure side-by-side, never a verdict input. Shown
+          whenever Jev contributed a comparison; framed as "rules saw X, Jev
+          saw Y", never "Jev changed the score" (it structurally can't). */}
+      {result.jev_used && result.jev_comparison && (
+        <JevComparisonCard comparison={result.jev_comparison} />
+      )}
+      {/* Jev configured + requested but didn't contribute this scan */}
+      {result.jev_attempted && !result.jev_used && result.jev_available && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
+          className="flex items-start gap-2 text-xs text-ink-faint bg-canvas border border-border rounded-lg px-3 py-2"
+        >
+          <span className="font-mono font-semibold shrink-0 mt-px">
+            Jev fallback
+          </span>
+          <span className="text-ink-muted leading-relaxed">
+            Jev was unavailable for this scan — no comparison to show
           </span>
         </motion.div>
       )}
@@ -399,6 +427,135 @@ function SessionServCount() {
     >
       <span className="w-1.5 h-1.5 rounded-full bg-violet shrink-0" />
       SERV refined {refined} of {total} recent scans
+    </motion.div>
+  );
+}
+
+// ── Session Jev counter ────────────────────────────────────────────────────────
+// Mirrors SessionServCount, worded around "compared" since Jev never
+// changes a verdict — there's nothing to "refine".
+function SessionJevCount() {
+  const compared = countJevCompared(10);
+  const total = getHistory().slice(0, 10).length;
+
+  if (total < 2 || compared === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
+      Jev compared {compared} of {total} recent scans
+    </motion.div>
+  );
+}
+
+// ── Jev comparison card ──────────────────────────────────────────────────────
+
+type JevComparison = NonNullable<ScanResponse["jev_comparison"]>;
+
+const RISK_LEVEL_ORDER = ["safe", "low", "suspicious", "dangerous"] as const;
+
+const LEVEL_TEXT_COLOR: Record<string, string> = {
+  safe: "text-safe",
+  low: "text-low",
+  suspicious: "text-suspicious",
+  dangerous: "text-dangerous",
+};
+
+const LEVEL_BG_COLOR: Record<string, string> = {
+  safe: "bg-safe",
+  low: "bg-low",
+  suspicious: "bg-suspicious",
+  dangerous: "bg-dangerous",
+};
+
+function formatCostUsd(usd: number): string {
+  if (usd <= 0) return "$0";
+  if (usd >= 0.01) return `$${usd.toFixed(4)}`;
+  // Sub-cent costs: show enough decimals to see the leading significant
+  // digit rather than exponential notation ("$1.89e-5" reads as a typo
+  // at a glance; "$0.000019" doesn't).
+  return `$${usd.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
+}
+
+/**
+ * Side-by-side rule-engine-vs-Jev comparison. Deliberately never says Jev
+ * "changed" or "refined" anything — it structurally can't (core/jev_reasoner.py
+ * is a shadow pass). The only thing worth calling out visually is a genuine
+ * bucket-level disagreement (agrees_with_rules=false): one side would
+ * quarantine, the other wouldn't. Matching level labels with a close score
+ * are left to speak for themselves.
+ */
+function JevComparisonCard({ comparison }: { comparison: JevComparison }) {
+  const ruleColor = LEVEL_TEXT_COLOR[comparison.rule_level] ?? "text-ink-muted";
+  const jevColor = LEVEL_TEXT_COLOR[comparison.jev_level] ?? "text-ink-muted";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
+      className="rounded-lg border border-teal/20 bg-teal/5 overflow-hidden"
+    >
+      <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap">
+        <span className="font-mono text-xs font-bold text-teal shrink-0">
+          Jev comparison
+        </span>
+        <span className="text-xs text-ink-muted leading-relaxed flex items-center gap-1.5 flex-wrap">
+          <span>rules saw</span>
+          <span className={`font-mono font-semibold ${ruleColor}`}>
+            {comparison.rule_level}
+          </span>
+          <span className="text-ink-faint">({comparison.rule_score.toFixed(2)})</span>
+          <span>· Jev saw</span>
+          <span className={`font-mono font-semibold ${jevColor}`}>
+            {comparison.jev_level}
+          </span>
+          <span className="text-ink-faint">({comparison.jev_score.toFixed(2)})</span>
+          <span className="text-ink-faint">
+            · {Math.round(comparison.jev_confidence * 100)}% confident
+          </span>
+        </span>
+        {!comparison.agrees_with_rules && (
+          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+            disagreement
+          </span>
+        )}
+      </div>
+
+      {/* Probability distribution — a compact stacked bar so the shape of
+          Jev's uncertainty is visible, not just the single winning label. */}
+      <div className="px-3 pb-2">
+        <div className="flex h-1.5 rounded-full overflow-hidden bg-border" role="img" aria-label="Jev's probability distribution across risk levels">
+          {RISK_LEVEL_ORDER.map((level) => {
+            const p = comparison.probabilities[level] ?? 0;
+            if (p <= 0) return null;
+            return (
+              <div
+                key={level}
+                className={LEVEL_BG_COLOR[level] ?? "bg-ink-faint"}
+                style={{ width: `${p * 100}%` }}
+                title={`${level}: ${Math.round(p * 100)}%`}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {(comparison.input_tokens != null || comparison.cost_usd != null) && (
+        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+          {comparison.input_tokens != null && (
+            <span>
+              {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens
+            </span>
+          )}
+          {comparison.cost_usd != null && <span>· {formatCostUsd(comparison.cost_usd)}</span>}
+        </div>
+      )}
     </motion.div>
   );
 }
