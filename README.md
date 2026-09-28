@@ -195,7 +195,8 @@ Everything is live — no waitlists, no gated features:
   against the corpus before trusting it: `scripts/laya_calibration.py`
   (current 26-case result: Brier 0.32 — Laya leans heavily "clean", so its
   comparison is strictly informational and the UI says so on downward
-  disagreements).
+  disagreements). Full guide:
+  [docs/laya-comparison.md](docs/laya-comparison.md).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
   affects agent compliance with injected instructions. Executed 2026-08-30

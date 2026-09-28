@@ -87,7 +87,8 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 - [x] Prose `summary` leading with a committed verdict: "Verdict: prompt
       injection (dangerous, risk 0.93 of 1). … using <techniques>. Signals: …".
       Deliberately never quotes matched content (summary is relayed to agents).
-      No YAML change, so no `updateMiner`; needs a miner redeploy to go live
+      No YAML change, so no `updateMiner`. **Live since the 28 Sep redeploy**
+      — verdict-first summaries confirmed in production via the web UI.
 - [ ] Score our own miner with the seated champion via the W1 harness; iterate
       on `summary` until it ranks well. Against our own scorer: the 26 corpus
       summaries average 0.813 (text baseline 0.434)
@@ -128,8 +129,15 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       the obfuscation cases our rule engine misses. **Decision: keep Laya a
       comparison rail only; do not let it near the verdict.** Re-run before
       any promotion.
-- [ ] Wire Laya into the web `/scan` UI (types, form toggle, result panel) —
-      Python side is done; frontend deferred
+- [x] Wire Laya into the web `/scan` UI (types, form toggle, result panel,
+      session pill, `MinerConfig.laya_available`, `/api/scan` laya query
+      override) and deploy the miner config (`LAYA_ENABLED=1` + Runware key in
+      the pm2 process env). **Verified end-to-end 28 Sep:**
+      `/config` → `laya_available: true` on api.elcaro.trustfall.xyz; a
+      gray-zone scan with `laya_enabled: true` returned `laya_used: true`
+      with a live comparison (rules 0.664 vs Laya 0.36, $0.0000035); card
+      renders with the disagreement badge. Calibration re-run same day:
+      Brier 0.3206 — consistent with the first run.
 - **Done when:** published extension, real users, counted engine traffic
 
 ### W4 — Distribution and credibility
