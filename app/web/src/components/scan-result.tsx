@@ -8,7 +8,7 @@ import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
 import { NextSteps } from "./next-steps";
 import { getReviewerMode, recordExpandAll, setReviewerMode } from "@/lib/reviewer";
-import { countServRefined, countJevCompared, getHistory } from "@/lib/history";
+import { countServRefined, countJevCompared, countLayaCompared, getHistory } from "@/lib/history";
 
 interface ScanResultProps {
   result: ScanResponse;
@@ -183,6 +183,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
           comparisons shown, not verdicts changed (Jev never changes the
           verdict). */}
       {result.jev_used && <SessionJevCount />}
+      {result.laya_used && <SessionLayaCount />}
 
       {/* Jev comparison — a pure side-by-side, never a verdict input. Shown
           whenever Jev contributed a comparison; framed as "rules saw X, Jev
@@ -203,6 +204,26 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </span>
           <span className="text-ink-muted leading-relaxed">
             Jev was unavailable for this scan — no comparison to show
+          </span>
+        </motion.div>
+      )}
+
+      {/* Laya comparison — a second shadow rail, same contract as Jev. */}
+      {result.laya_used && result.laya_comparison && (
+        <LayaComparisonCard comparison={result.laya_comparison} />
+      )}
+      {result.laya_attempted && !result.laya_used && result.laya_available && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
+          className="flex items-start gap-2 text-xs text-ink-faint bg-canvas border border-border rounded-lg px-3 py-2"
+        >
+          <span className="font-mono font-semibold shrink-0 mt-px">
+            Laya fallback
+          </span>
+          <span className="text-ink-muted leading-relaxed">
+            Laya was unavailable for this scan — no comparison to show
           </span>
         </motion.div>
       )}
@@ -367,8 +388,9 @@ function ServReasoningPanel({ result }: { result: ScanResponse }) {
   const topIndicator =
     result.indicators.length > 0
       ? result.indicators.reduce((a, b) =>
-          a.severity.value > b.severity.value ||
-          (a.severity.value === b.severity.value && a.confidence > b.confidence)
+          SEVERITY_RANK[a.severity] > SEVERITY_RANK[b.severity] ||
+          (SEVERITY_RANK[a.severity] === SEVERITY_RANK[b.severity] &&
+            a.confidence > b.confidence)
             ? a
             : b
         )
@@ -457,6 +479,16 @@ function SessionJevCount() {
 
 type JevComparison = NonNullable<ScanResponse["jev_comparison"]>;
 
+// Ordered severity so the "top" indicator can be picked without a `.value`
+// (severity is a plain string union, not an enum object).
+const SEVERITY_RANK: Record<string, number> = {
+  info: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
 const RISK_LEVEL_ORDER = ["safe", "low", "suspicious", "dangerous"] as const;
 
 const LEVEL_TEXT_COLOR: Record<string, string> = {
@@ -543,6 +575,102 @@ function JevComparisonCard({ comparison }: { comparison: JevComparison }) {
               />
             );
           })}
+        </div>
+      </div>
+
+      {(comparison.input_tokens != null || comparison.cost_usd != null) && (
+        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+          {comparison.input_tokens != null && (
+            <span>
+              {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens
+            </span>
+          )}
+          {comparison.cost_usd != null && <span>· {formatCostUsd(comparison.cost_usd)}</span>}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+
+// ── Session Laya counter ──────────────────────────────────────────────────────
+// Same as SessionJevCount, for the Laya comparison rail.
+function SessionLayaCount() {
+  const compared = countLayaCompared(10);
+  const total = getHistory().slice(0, 10).length;
+
+  if (total < 2 || compared === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
+      Laya compared {compared} of {total} recent scans
+    </motion.div>
+  );
+}
+
+// ── Laya comparison card ──────────────────────────────────────────────────────
+
+type LayaComparison = NonNullable<ScanResponse["laya_comparison"]>;
+
+/**
+ * Side-by-side rule-engine-vs-Laya comparison. Like the Jev card it never
+ * claims Laya "changed" anything — Laya is a shadow pass (core/laya_reasoner.py).
+ * Laya answers a single yes/no Noul question, so instead of a 4-level
+ * distribution it reports one probability of injection; the bar shows that
+ * probability, coloured by the band it falls in.
+ */
+function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
+  const ruleColor = LEVEL_TEXT_COLOR[comparison.rule_level] ?? "text-ink-muted";
+  const layaColor = LEVEL_TEXT_COLOR[comparison.laya_level] ?? "text-ink-muted";
+  const pInjection = comparison.probabilities.true ?? comparison.laya_score;
+  const barColor = LEVEL_BG_COLOR[comparison.laya_level] ?? "bg-ink-faint";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
+      className="rounded-lg border border-teal/20 bg-teal/5 overflow-hidden"
+    >
+      <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap">
+        <span className="font-mono text-xs font-bold text-teal shrink-0">
+          Laya comparison
+        </span>
+        <span className="text-xs text-ink-muted leading-relaxed flex items-center gap-1.5 flex-wrap">
+          <span>rules saw</span>
+          <span className={`font-mono font-semibold ${ruleColor}`}>
+            {comparison.rule_level}
+          </span>
+          <span className="text-ink-faint">({comparison.rule_score.toFixed(2)})</span>
+          <span>· Laya saw</span>
+          <span className={`font-mono font-semibold ${layaColor}`}>
+            {comparison.laya_level}
+          </span>
+          <span className="text-ink-faint">
+            (P(injection) {comparison.laya_score.toFixed(2)})
+          </span>
+        </span>
+        {!comparison.agrees_with_rules && (
+          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+            disagreement
+          </span>
+        )}
+      </div>
+
+      {/* Single probability-of-injection bar, coloured by the band. */}
+      <div className="px-3 pb-2">
+        <div
+          className="flex h-1.5 rounded-full overflow-hidden bg-border"
+          role="img"
+          aria-label={`Laya's probability of injection: ${Math.round(pInjection * 100)} percent`}
+        >
+          <div className={barColor} style={{ width: `${pInjection * 100}%` }} />
         </div>
       </div>
 

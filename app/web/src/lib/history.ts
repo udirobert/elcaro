@@ -97,3 +97,10 @@ export function countJevCompared(lastN: number = 10): number {
   const history = getHistory();
   return history.slice(0, lastN).filter((e) => e.response.jev_used).length;
 }
+
+// Same as countJevCompared but for the Laya comparison rail.
+export function countLayaCompared(lastN: number = 10): number {
+  if (typeof window === "undefined") return 0;
+  const history = getHistory();
+  return history.slice(0, lastN).filter((e) => e.response.laya_used).length;
+}

@@ -121,6 +121,10 @@ export function ScanForm() {
   // the same way (no-op on the free path unless the miner has JEV_API_KEY +
   // JEV_ENABLED=1 configured).
   const [jevEnabled, setJevEnabled] = useState(false);
+  // Second comparison rail: Convai's Laya (via Runware), independent of Jev.
+  // Same contract — never changes the verdict, no-op unless the miner has a
+  // Runware key + LAYA_ENABLED=1.
+  const [layaEnabled, setLayaEnabled] = useState(false);
   // URL fetching — hidden entirely when the deployment has no TAVILY_API_KEY,
   // so self-hosters without a key see exactly the paste-only experience.
   const [fetchUrlEnabled, setFetchUrlEnabled] = useState(false);
@@ -235,6 +239,7 @@ export function ScanForm() {
         content_type: nextType,
         serv_enabled: servEnabled,
         jev_enabled: jevEnabled,
+        laya_enabled: layaEnabled,
       });
 
       if (isError(response)) {
@@ -662,6 +667,51 @@ export function ScanForm() {
                   className="text-[11px] text-ink-faint leading-relaxed"
                 >
                   Jev was unavailable for this scan — no comparison to show.
+                </motion.p>
+              )}
+          </div>
+
+          {/* Laya comparison toggle — a second rail, same contract as Jev.
+              No-op when the miner isn't configured with a Runware key. */}
+          <div className="flex flex-col gap-1">
+            <label
+              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+              title="Comparison only: ask the miner for Convai's Laya probability that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
+            >
+              <input
+                type="checkbox"
+                checked={layaEnabled}
+                onChange={(e) => setLayaEnabled(e.target.checked)}
+                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                aria-label="Compare against Laya"
+              />
+              <span className="font-medium">Compare with Laya</span>
+            </label>
+            {layaEnabled &&
+              result !== null &&
+              result.laya_available === false &&
+              result.laya_attempted === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-teal font-medium leading-relaxed"
+                >
+                  Miner not configured for Laya — set
+                  {' '}LAYA_ENABLED=1 + a Runware key{' '}on your deployment, then re-scan.
+                </motion.p>
+              )}
+            {layaEnabled &&
+              result?.laya_attempted &&
+              !result.laya_used &&
+              result.laya_available && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-ink-faint leading-relaxed"
+                >
+                  Laya was unavailable for this scan — no comparison to show.
                 </motion.p>
               )}
           </div>

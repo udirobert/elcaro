@@ -23,6 +23,13 @@ export async function POST(request: Request) {
         : jevQuery === "0" || jevQuery === "false" ? false
           : undefined;
 
+    // Same override pattern for Laya's comparison toggle.
+    const layaQuery = url.searchParams.get("laya");
+    const layaFromQuery =
+      layaQuery === "1" || layaQuery === "true" ? true
+        : layaQuery === "0" || layaQuery === "false" ? false
+          : undefined;
+
     const minerResponse = await fetch(`${MINER_URL}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -34,6 +41,8 @@ export async function POST(request: Request) {
           servFromQuery !== undefined ? servFromQuery : (body.serv_enabled || false),
         jev_enabled:
           jevFromQuery !== undefined ? jevFromQuery : (body.jev_enabled || false),
+        laya_enabled:
+          layaFromQuery !== undefined ? layaFromQuery : (body.laya_enabled || false),
       }),
     });
 

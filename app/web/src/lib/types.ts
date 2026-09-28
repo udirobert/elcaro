@@ -102,6 +102,26 @@ export interface ScanResponse {
     output_tokens?: number | null;
     cost_usd?: number | null;
   } | null;
+  // Laya (Convai via Runware) comparison — a second shadow pass, same contract
+  // as Jev: never adjusts risk_score / risk_level / safe_content. Populated
+  // when the miner has a Runware key + LAYA_ENABLED=1 and the request opted in
+  // via laya_enabled. laya_score is P(injection) 0-1 (a Noul answer), so its
+  // probabilities are keyed true/false and laya_confidence is |2p-1|.
+  laya_available?: boolean;
+  laya_attempted?: boolean;
+  laya_used?: boolean;
+  laya_comparison?: {
+    rule_score: number;
+    rule_level: RiskLevel;
+    laya_score: number;
+    laya_level: string;
+    laya_confidence: number;
+    probabilities: Record<string, number>;
+    agrees_with_rules: boolean;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    cost_usd?: number | null;
+  } | null;
 }
 
 export interface ScanRequest {
@@ -116,6 +136,9 @@ export interface ScanRequest {
   // verdict alongside the rule engine's on borderline scans. Default off;
   // never changes the quarantine decision either way.
   jev_enabled?: boolean;
+  // Second comparison toggle: same as jev_enabled but for Convai's Laya model
+  // (via Runware). Independent of Jev — either, both, or neither may run.
+  laya_enabled?: boolean;
 }
 
 export interface ScanError {
