@@ -1,5 +1,8 @@
 # Submission Log — Telegraph Hackathon Season I
 
+> **Result (announced after 7 Sep 2026):** Elcaro did not place in any track.
+> Retro and Season II plan: [docs/telegraph-season-2.md](docs/telegraph-season-2.md).
+
 > H1 overall close: **Sun 07 Sep 2026 23:59 UTC**.
 > Track 1 miner-ID + YAML form: **Wed 02 Sep 2026 11:59:59 UTC**.
 > Track 3 (Apps & Agents) is open now — must consume live Telegraph miners.

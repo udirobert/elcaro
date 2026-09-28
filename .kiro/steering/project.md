@@ -8,25 +8,30 @@ Autonomous agents can't safely act on raw, unverified external content. Elcaro g
 
 ## Hackathon context
 
-**Telegraph Protocol — Season I Hackathon (H1)**
+**Telegraph Protocol — Season II** (next; ~30 days, $10,000, rules TBA)
 
-| | |
-|---|---|
-| Prize pool | $15,000 USD across 3 tracks |
-| Track 1 & 2 open | Aug 17 – Sep 7, 2026 |
-| Track 3 open | ~Aug 31, 2026 |
-| Evaluation | Sep 7, 2026 |
-| **Hard deadline** | **Sep 7, 2026** |
+Season I (closed Sep 7, 2026): Elcaro did not place. The retro and the
+Season II plan — workstreams, checklists, open questions — live in
+`docs/telegraph-season-2.md`. Treat that file as the source of truth for
+hackathon priorities; update it as rules are published.
 
-Today is August 8, 2026. There are approximately **30 days** to submission.
+Key Season I lessons that constrain all work:
+- Track 2 modules must implement Telegraph's scoring ABI
+  (`rank_answer(q, gt, answer) -> f32`) and beat the seated champion on margin
+  and rank agreement. The current `eval/` exports (`evaluate_ptr`, …) are a
+  benchmark harness, not a scoring module.
+- Miner answers are graded by seated scoring modules, mostly text-comparing —
+  the prose `summary` must carry the verdict.
+- Only auto-routed `POST /engine/v1/ask` from organic use counts. No scripted traffic.
+- Apps must consume Telegraph miners (ideally several, composed into one decision).
 
 ## Three tracks
 
-| Track | What we're building | Status |
+| Track | Season I state | Season II plan |
 |---|---|---|
-| **Track 1 — Miner** | FastAPI IPI detection API registered as a Telegraph miner | Code complete, needs deployment + registration |
-| **Track 2 — Eval Script** | WASM evaluation script (Rust) that scores miners against an adversarial IPI corpus | Implemented, needs WASM ABI verification + submission |
-| **Track 3 — App** | Agent middleware that pre-filters retrieved content via the Elcaro miner | Implemented, opens ~Aug 31 |
+| **Track 1 — Miner** | Live: miner 8848, registration 406, `CONTENT_MODERATION` / `TEXT_CLASSIFICATION` | Scorer-legible `summary`; verify ERC-8183 job params; register early |
+| **Track 2 — Evaluator** | IPI corpus + WASM benchmark harness (not a registered scoring module) | Rewrite as `rank_answer` scoring module; benchmark vs champions first |
+| **Track 3 — App** | Web playground + middleware calling `/scan` directly | Gmail extension composing multiple Telegraph miners via engine routing |
 
 ## Judging criteria (what matters for scoring)
 
@@ -52,6 +57,11 @@ Today is August 8, 2026. There are approximately **30 days** to submission.
 ## Strategic differentiation
 
 Elcaro is the **only content safety / IPI detection miner on the Telegraph network**. The 37 active miners as of Aug 2026 are: LLM chatbots, Tavily web search, OpenWeatherMap, Bedrock models, Bittensor subnets. We are creating a new supply category, not competing in an existing one.
+
+Season I caveat: being alone in a category meant no ranking competition, no
+scorer shaped for our answers, and little routed demand. Winners served
+demanded intents with checkable answers. Monopoly positioning is a product
+thesis, not a hackathon-scoring advantage.
 
 The rule-based primary layer is a structural advantage: while LLM miners average ~12s latency, Elcaro's regex engine responds in under 10ms. Telegraph ranking factors in latency and reliability.
 

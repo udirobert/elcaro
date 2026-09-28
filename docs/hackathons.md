@@ -30,7 +30,15 @@ records the submission details for each.
 - [ ] Google Form submitted before Aug 23 23:59 UTC
 - [x] E2E guard-hook check in the Kiro IDE — fetch https://elcaro.trustfall.xyz/specimen/raw → [ELCARO GUARD] 🚨 risk 1.00 / dangerous, all 6 technique classes (spec `.kiro/specs/kiro-guard/` task 3.2 ✓)
 
+## Telegraph Protocol Hackathon — Season II (next)
+
+~30 days, $10,000 across Miner / Evaluator / Application tracks; rules TBA.
+Retro of Season I and the plan: [telegraph-season-2.md](telegraph-season-2.md).
+
 ## Telegraph Protocol Hackathon — Season I
+
+**Result:** did not place in any track. Why, and what changes:
+[telegraph-season-2.md](telegraph-season-2.md).
 
 H1 of a 3-round series ($5K this round; $10K in October; mainnet later).
 Event: [hackathon.telegraphprotocol.com](https://hackathon.telegraphprotocol.com).
