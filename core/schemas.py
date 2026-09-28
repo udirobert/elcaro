@@ -232,7 +232,10 @@ class ScanResponse(BaseModel):
     )
     summary: str = Field(
         default="",
-        description="One-sentence human-readable summary of the scan result",
+        description=(
+            "Prose verdict: leads with 'Verdict: ...', then band, score and "
+            "techniques. Never quotes matched content."
+        ),
     )
     content_type: ContentType = Field(..., description="The content type that was scanned")
     deep_analysis_used: bool = Field(

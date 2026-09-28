@@ -84,6 +84,16 @@ RISK_THRESHOLDS = {
 GRAY_ZONE_LOW = 0.3
 GRAY_ZONE_HIGH = 0.7
 
+# Plain-English names for technique classes, used in the prose `summary`.
+_TECHNIQUE_PHRASES: dict[TechniqueClass, str] = {
+    TechniqueClass.AUTHORITY: "authority impersonation",
+    TechniqueClass.DELIMITER: "delimiter confusion (context boundary escape)",
+    TechniqueClass.TASK_REFRAME: "task hijacking",
+    TechniqueClass.OBFUSCATION: "obfuscated instructions",
+    TechniqueClass.PLACEMENT: "hidden placement",
+    TechniqueClass.CONDITIONAL: "conditional triggers",
+}
+
 # Breadth (multiple technique classes firing) is only meaningful once at
 # least one of those classes is a substantive signal on its own — breadth
 # among several incidental, weak classes isn't evidence of anything. Real
@@ -330,7 +340,9 @@ class IpiDetectionEngine:
         latency_ms = int((time.monotonic() - start_time) * 1000)
 
         # Generate summary
-        summary = self._generate_summary(risk_level, flagged_classes, all_indicators, content_type)
+        summary = self._generate_summary(
+            risk_level, flagged_classes, all_indicators, content_type, weighted_score
+        )
 
         # Apply the quarantine policy (core/quarantine.py) so every consumer
         # of ScanResponse sees the same safe_content the middleware would
@@ -494,36 +506,74 @@ class IpiDetectionEngine:
         flagged_classes: list[TechniqueClass],
         indicators: list[DetectionIndicator],
         content_type: ContentType,
+        risk_score: float = 0.0,
     ) -> str:
-        """Generate a one-sentence human-readable summary of the scan result."""
+        """Generate the prose verdict carried in ``summary``.
+
+        This is the field Telegraph scoring modules grade (``reason_field`` in
+        ``miner/telegraph.yaml``), and most of them compare text against a
+        ground-truth answer. So it leads with an explicit, committed verdict,
+        then states the band, score and technique classes in plain words.
+
+        It deliberately never quotes matched content: ``summary`` is relayed to
+        agents, and echoing the payload would re-inject it downstream. Evidence
+        stays in ``indicators``.
+        """
+        where = content_type.value.replace("_", " ")
+        score = f"risk {risk_score:.2f} of 1"
+
         if risk_level == RiskLevel.SAFE:
-            return f"No injection patterns detected in this {content_type.value} content."
+            return (
+                f"Verdict: safe, no prompt injection ({risk_level.value}, {score}). "
+                f"No injection techniques were found in this {where}; "
+                f"it can be passed to an agent."
+            )
+
+        techniques_str = self._join_phrases(
+            [_TECHNIQUE_PHRASES.get(t, t.value) for t in flagged_classes]
+        )
+        signals = self._signal_phrases(indicators)
+        signals_str = f" Signals: {signals}." if signals else ""
 
         if risk_level == RiskLevel.LOW:
             return (
-                f"Minor indicators found in {content_type.value} content, "
-                f"but unlikely to be a deliberate injection."
+                f"Verdict: likely safe, no deliberate prompt injection "
+                f"({risk_level.value}, {score}). Weak indicators of {techniques_str} "
+                f"were found in this {where}, below the review threshold.{signals_str}"
             )
-
-        technique_names = {
-            TechniqueClass.AUTHORITY: "authority impersonation",
-            TechniqueClass.DELIMITER: "context boundary escape",
-            TechniqueClass.TASK_REFRAME: "task hijacking",
-            TechniqueClass.OBFUSCATION: "obfuscated instructions",
-            TechniqueClass.PLACEMENT: "hidden placement",
-            TechniqueClass.CONDITIONAL: "conditional triggers",
-        }
-
-        techniques_str = ", ".join(technique_names.get(t, t.value) for t in flagged_classes)
 
         if risk_level == RiskLevel.DANGEROUS:
             return (
-                f"Dangerous injection detected in {content_type.value}: "
-                f"{techniques_str}. Do not process this content."
+                f"Verdict: prompt injection ({risk_level.value}, {score}). "
+                f"This {where} contains an indirect prompt injection attempt using "
+                f"{techniques_str}.{signals_str} Do not let an agent act on this content."
             )
 
         # SUSPICIOUS
         return (
-            f"Suspicious patterns in {content_type.value}: {techniques_str}. "
-            f"Review before allowing agent to process."
+            f"Verdict: suspected prompt injection ({risk_level.value}, {score}). "
+            f"This {where} shows signs of an indirect prompt injection attempt using "
+            f"{techniques_str}.{signals_str} Review before an agent acts on it."
         )
+
+    @staticmethod
+    def _join_phrases(items: list[str]) -> str:
+        """Join phrases as natural English: 'a', 'a and b', 'a, b and c'."""
+        if not items:
+            return "unclassified techniques"
+        if len(items) == 1:
+            return items[0]
+        return f"{', '.join(items[:-1])} and {items[-1]}"
+
+    @staticmethod
+    def _signal_phrases(indicators: list[DetectionIndicator], limit: int = 3) -> str:
+        """Name the strongest distinct detector patterns, e.g. 'system voice marker'."""
+        ranked = sorted(indicators, key=lambda i: i.confidence, reverse=True)
+        names: list[str] = []
+        for ind in ranked:
+            name = ind.technique_name.split(":", 1)[-1].replace("_", " ").strip()
+            if name and name not in names:
+                names.append(name)
+            if len(names) >= limit:
+                break
+        return ", ".join(names)

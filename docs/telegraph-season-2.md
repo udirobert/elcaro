@@ -60,28 +60,37 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 
 - [ ] Fetch seated modules for `CONTENT_MODERATION` / `TEXT_CLASSIFICATION`
       (and any mission-relevant intent) from `devnode…/api/wasm`; store under
-      `eval/champions/` (gitignored — third-party binaries)
-- [ ] New `eval/src/scorer.rs`: `no_std`, zero imports, exports `alloc`,
-      `dealloc`, `rank_answer`, `breakdown_answer`; deterministic float ops only
-- [ ] Grade verdicts, not vocabulary: parse the answer's committed verdict
-      (injection / clean), risk band, and techniques; compare to ground truth
-- [ ] Anti-gaming rules (each with a test): restating the question earns
-      nothing; hedging both poles is penalised; wrong-direction verdict caps at
-      ~15%; dumping every technique name costs precision
-- [ ] Node harness (`eval/harness.mjs`) that loads any module the way a
-      validator does, reports margin, wins, rank agreement vs champion, and
-      `--diff` where we lose
-- [ ] Keep the existing IPI corpus as the benchmark fixture set; widen it
-      (paraphrased correct answers, keyword dumps, negated verdicts)
+      `eval/scorer/champions/` (gitignored — third-party binaries). Blocked
+      28 Sep: devnode API timed out.
+- [x] Scoring module at `eval/scorer/` (own crate): `no_std`, zero imports,
+      exports `alloc`, `dealloc`, `rank_answer`, `breakdown_answer`; ~11 KB;
+      deterministic float ops only
+- [x] Grade verdicts, not vocabulary: committed verdict (with negation and
+      yes/no-by-question-polarity), category labels, risk figure, then text
+- [x] Anti-gaming rules, each with a test: question clauses cast no verdict
+      and copied answers ×0.1; hedges/keyword dumps cap at 0.30; wrong verdict
+      caps at 0.15; labels graded on precision; restated figures earn 0
+- [x] Node harness (`eval/scorer/harness.mjs`): bench, `--attacks`,
+      `--agreement` (ladder proxy for the ~0.60 gate), `--diff`, `--case`;
+      runs in CI
+- [x] Bench from the IPI corpus (`make_bench.py` → 29 cases, rotating
+      prose / terse / JSON / paraphrase styles) + 10 attack fixtures.
+      28 Sep: margin 0.6287, 29/29 wins, 10/10 attacks held; token-F1 text
+      baseline 0.1301, 22/29, 4/10
+- [ ] Widen fixtures with answers written by other people / real miner
+      outputs, so the bench isn't only our own phrasing
 - **Done when:** our module beats the seated champion on margin and wins, with
   rank agreement ≥ 0.60, on our harness — then register
 
 ### W2 — Miner (Track 1): make answers legible to scorers and contracts
 
-- [ ] Rich prose `summary`: verdict, score, band, techniques, and one evidence
-      snippet in a sentence shaped like a ground-truth answer
+- [x] Prose `summary` leading with a committed verdict: "Verdict: prompt
+      injection (dangerous, risk 0.93 of 1). … using <techniques>. Signals: …".
+      Deliberately never quotes matched content (summary is relayed to agents).
+      No YAML change, so no `updateMiner`; needs a miner redeploy to go live
 - [ ] Score our own miner with the seated champion via the W1 harness; iterate
-      on `summary` until it ranks well
+      on `summary` until it ranks well. Against our own scorer: the 26 corpus
+      summaries average 0.813 (text baseline 0.434)
 - [ ] Evaluate a second intent with real demand where the engine is a
       legitimate fit (e.g. URL/phishing/text-auth intents) — check the live
       intent catalog; do not declare intents we can't answer well

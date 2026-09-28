@@ -1,0 +1,24 @@
+[package]
+name = "elcaro-scorer"
+version = "0.1.0"
+edition = "2021"
+description = "Telegraph scoring module (rank_answer ABI) for CONTENT_MODERATION / TEXT_CLASSIFICATION — grades the committed verdict, not the vocabulary"
+license = "MIT"
+
+# ~/.cargo/bin/cargo +stable build --release --target wasm32-unknown-unknown
+#   -> target/wasm32-unknown-unknown/release/elcaro_scorer.wasm
+[lib]
+name = "elcaro_scorer"
+crate-type = ["cdylib", "rlib"]
+
+# Deliberately no dependencies: the module must have zero imports, and every
+# float operation is + - * / or comparison, which IEEE-754 defines exactly, so
+# two validators on different hosts return identical bits.
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

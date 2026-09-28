@@ -29,6 +29,33 @@ jobs:
       - name: Test
         run: python -m pytest -v
 
+  scorer:
+    name: Scoring module (Rust/WASM)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: eval/scorer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain
+        run: rustup target add wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Test (native)
+        run: cargo test
+
+      - name: Build (wasm)
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: Bench + attacks (fails if our module loses a pair or an attack)
+        run: |
+          node harness.mjs
+          node harness.mjs --attacks
+
   build-frontend:
     name: Build (Next.js)
     runs-on: ubuntu-latest
