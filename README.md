@@ -179,6 +179,14 @@ Everything is live — no waitlists, no gated features:
   comparison, cost and confidence included. Set `JEV_ENABLED=1` +
   `JEV_API_KEY`; the `/scan` "Compare with Jev" checkbox activates it. See
   [docs/jev-comparison.md](docs/jev-comparison.md).
+- **[Laya comparison](https://runware.ai/models/laya)** — a second optional
+  comparison rail, same contract as Jev: Convai's Laya decision model (via
+  Runware) answers a yes/no "is this an injection?" on gray-zone content and
+  its probability is shown next to the rule engine's verdict. Never adjusts
+  the verdict. Cheaper and lower-latency than Jev, and Apache-2.0 open weights
+  (self-hostable via `LAYA_BASE_URL`). Set `LAYA_ENABLED=1` + a Runware key
+  (`LAYA_API_KEY` or `RUNWARE_API_KEY`); pass `laya_enabled=true`. Calibrate
+  against the corpus first: `scripts/laya_calibration.py`.
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
   affects agent compliance with injected instructions. Executed 2026-08-30

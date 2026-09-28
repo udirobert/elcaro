@@ -113,6 +113,23 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       / MCP, routed via Telegraph
 - [ ] Organic user acquisition from day one; track installs, weekly actives,
       scans — no scripted traffic
+- [x] Multi-model comparison rails on gray-zone scans: alongside Jev
+      (TypeSafe), added Laya (Convai via Runware, `core/laya_reasoner.py`) —
+      a Noul "is this injection?" probability shown beside the rule verdict,
+      comparison-only, never moves the score. Cheaper/lower-latency than Jev,
+      Apache-2.0 (self-hostable). Groundwork for the Truvian-style "compose
+      several decision sources" checkpoint
+- [x] Calibrate Laya on `eval/corpus.json` before surfacing it —
+      `scripts/laya_calibration.py`. **Result (28 Sep, live Runware, 26/26
+      calls OK, ~375ms):** Laya is a *weak* injection signal off the shelf —
+      Brier 0.32 (worse than a 0.25 coin flip), TPR 0.11 / TNR 1.0 at 0.5. It
+      is not calibrated for this task, exactly as the launch note warned. Only
+      notable hits are D004/D005 (translation indirection, token-splitting) —
+      the obfuscation cases our rule engine misses. **Decision: keep Laya a
+      comparison rail only; do not let it near the verdict.** Re-run before
+      any promotion.
+- [ ] Wire Laya into the web `/scan` UI (types, form toggle, result panel) —
+      Python side is done; frontend deferred
 - **Done when:** published extension, real users, counted engine traffic
 
 ### W4 — Distribution and credibility

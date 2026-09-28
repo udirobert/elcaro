@@ -209,6 +209,17 @@ class ScanRequest(BaseModel):
             "call, no key required."
         ),
     )
+    laya_enabled: bool = Field(
+        default=False,
+        description=(
+            "Optional comparison toggle: when true AND the server is configured "
+            "with a Runware key + LAYA_ENABLED=1, borderline (gray-zone) scans "
+            "also get a shadow verdict from Convai's Laya decision model (via "
+            "Runware) for side-by-side comparison. Like Jev, Laya never adjusts "
+            "risk_score or risk_level. Default off; no network call, no key "
+            "required."
+        ),
+    )
 
 
 class ScanResponse(BaseModel):
@@ -367,6 +378,46 @@ class ScanResponse(BaseModel):
             "(console-observed pricing, not a published rate — see "
             "core/jev_reasoner.py). Informational only — never fed back into "
             "the quarantine decision."
+        ),
+    )
+    # ── Laya (Convai via Runware) comparison observability ────────────────────
+    # A second shadow pass, identical contract to Jev: reports what Laya saw on
+    # the same borderline content, purely for comparison. Never contributes to
+    # risk_score / risk_level / safe_content.
+    laya_available: bool = Field(
+        default=False,
+        description=(
+            "True when the miner is configured with a Runware key and "
+            "LAYA_ENABLED=1 — the Laya comparison pass is ready to run."
+        ),
+    )
+    laya_attempted: bool = Field(
+        default=False,
+        description=(
+            "True when the engine attempted to call Laya for this scan "
+            "(gray-zone AND laya_enabled). False when the request stayed on "
+            "the rule-only fast path or fell outside the gray zone."
+        ),
+    )
+    laya_used: bool = Field(
+        default=False,
+        description=(
+            "True when the Laya call succeeded and laya_comparison is "
+            "populated. False when Laya was unavailable, in cooldown, timed "
+            "out, or returned an error — laya_comparison is None in that case."
+        ),
+    )
+    laya_comparison: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Side-by-side comparison of the rule engine's verdict and Laya's "
+            "injection probability on the same content, present only when "
+            "laya_used=True. Keys: rule_score, rule_level, laya_score "
+            "(P(injection), 0-1), laya_level, laya_confidence (|2p-1|), "
+            "probabilities (map<true|false, prob>), agrees_with_rules, "
+            "input_tokens, output_tokens, cost_usd (free until 2026-10-12, "
+            "then launch-note pricing — see core/laya_reasoner.py). "
+            "Informational only — never fed back into the quarantine decision."
         ),
     )
     scanned_at: int | None = Field(

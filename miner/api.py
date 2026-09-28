@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
 from core.jev_reasoner import JevReasoner
+from core.laya_reasoner import LayaReasoner
 from core.sandbox import (
     SandboxConfig,
     run_sandbox,
@@ -278,9 +279,11 @@ async def config():
     """Return miner configuration status for client-side feature flags."""
     serv = ServReasoner.from_env()
     jev = JevReasoner.from_env()
+    laya = LayaReasoner.from_env()
     return {
         "serv_available": serv is not None,
         "jev_available": jev is not None,
+        "laya_available": laya is not None,
         "version": "0.1.0",
     }
 

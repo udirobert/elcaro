@@ -28,6 +28,7 @@ from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
 from core.detectors.task_reframe import TaskReframeDetector
 from core.jev_reasoner import JevReasoner
+from core.laya_reasoner import LayaReasoner
 from core.llm_classifier import LlmClassifier
 from core.normalize import normalization_indicators, normalize
 from core.quarantine import DEFAULT_RISK_THRESHOLD, quarantine_decision
@@ -112,6 +113,7 @@ BREADTH_BONUS_CONFIDENCE_FLOOR = 0.6
 _CLASSIFIER_UNSET = object()
 _SERV_UNSET = object()
 _JEV_UNSET = object()
+_LAYA_UNSET = object()
 
 
 def _load_classifier_from_env() -> LlmClassifier | None:
@@ -134,6 +136,14 @@ def _load_jev_reasoner_from_env() -> JevReasoner | None:
     Returns None when Jev is disabled — the engine attaches no comparison.
     """
     return JevReasoner.from_env()
+
+
+def _load_laya_reasoner_from_env() -> LayaReasoner | None:
+    """Build the Laya comparison reasoner from LAYA_* / RUNWARE_* env vars.
+
+    Returns None when Laya is disabled — the engine attaches no comparison.
+    """
+    return LayaReasoner.from_env()
 
 
 # ── Scoring engine ─────────────────────────────────────────────────────────────
@@ -159,6 +169,7 @@ class IpiDetectionEngine:
         classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET,
         serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
         jev_reasoner: JevReasoner | None | object = _JEV_UNSET,
+        laya_reasoner: LayaReasoner | None | object = _LAYA_UNSET,
     ) -> None:
         self.detectors = [
             AuthorityDetector(),
@@ -177,6 +188,9 @@ class IpiDetectionEngine:
         if jev_reasoner is _JEV_UNSET:
             jev_reasoner = _load_jev_reasoner_from_env()
         self.jev_reasoner: JevReasoner | None = jev_reasoner  # type: ignore[assignment]
+        if laya_reasoner is _LAYA_UNSET:
+            laya_reasoner = _load_laya_reasoner_from_env()
+        self.laya_reasoner: LayaReasoner | None = laya_reasoner  # type: ignore[assignment]
 
     def scan(self, request: ScanRequest) -> ScanResponse:
         """Scan content for indirect prompt injection indicators.
@@ -337,6 +351,38 @@ class IpiDetectionEngine:
                     "cost_usd": jev_result.cost_usd,
                 }
 
+        # Laya shadow pass: same contract as Jev — gray-zone AND opted in,
+        # comparison-only, never touches weighted_score / risk_level. See
+        # core/laya_reasoner.py. Independent of Jev: either, both, or neither
+        # may run in a single scan.
+        laya_available = self.laya_reasoner is not None
+        laya_attempted = False
+        laya_used = False
+        laya_comparison: dict | None = None
+        should_run_laya = bool(request.laya_enabled) and in_gray_zone
+
+        if should_run_laya and self.laya_reasoner is not None:
+            laya_attempted = True
+            laya_result = self.laya_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if laya_result.ok:
+                laya_used = True
+                laya_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "laya_score": round(laya_result.laya_score, 4),
+                    "laya_level": laya_result.laya_level,
+                    "laya_confidence": round(laya_result.confidence, 4),
+                    "probabilities": laya_result.probabilities,
+                    "agrees_with_rules": laya_result.agrees_with_rules,
+                    "input_tokens": laya_result.input_tokens,
+                    "output_tokens": laya_result.output_tokens,
+                    # Free until 2026-10-12, then launch-note pricing — see
+                    # LAYA_INPUT_PRICE_PER_M in core/laya_reasoner.py.
+                    "cost_usd": laya_result.cost_usd,
+                }
+
         latency_ms = int((time.monotonic() - start_time) * 1000)
 
         # Generate summary
@@ -416,6 +462,10 @@ class IpiDetectionEngine:
             jev_attempted=jev_attempted,
             jev_used=jev_used,
             jev_comparison=jev_comparison,
+            laya_available=laya_available,
+            laya_attempted=laya_attempted,
+            laya_used=laya_used,
+            laya_comparison=laya_comparison,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:
