@@ -119,6 +119,12 @@ deterministic and runs in milliseconds. For borderline cases (risk score
 OpenAI-compatible model — the rules always keep veto power, and without an
 API key the flag is a safe no-op.
 
+**Three signals on borderline scans.** Gray-zone verdicts can carry side-by-side
+second opinions: SERV Reasoning (a blended judge), plus Jev and Laya
+(comparison-only rails). The rule engine decides; the other two are shown for
+calibration and transparency, never folded into the score. Jev and Laya are
+independent toggles — either, both, or neither may run on a given scan.
+
 ---
 
 ## Product surface
@@ -186,7 +192,10 @@ Everything is live — no waitlists, no gated features:
   the verdict. Cheaper and lower-latency than Jev, and Apache-2.0 open weights
   (self-hostable via `LAYA_BASE_URL`). Set `LAYA_ENABLED=1` + a Runware key
   (`LAYA_API_KEY` or `RUNWARE_API_KEY`); pass `laya_enabled=true`. Calibrate
-  against the corpus first: `scripts/laya_calibration.py`.
+  against the corpus before trusting it: `scripts/laya_calibration.py`
+  (current 26-case result: Brier 0.32 — Laya leans heavily "clean", so its
+  comparison is strictly informational and the UI says so on downward
+  disagreements).
 - **[Warn-salience experiment](scripts/warn_salience_experiment.py)** —
   tests whether the warn notice's position (prefix / suffix / sandwich)
   affects agent compliance with injected instructions. Executed 2026-08-30

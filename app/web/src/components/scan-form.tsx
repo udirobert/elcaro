@@ -319,11 +319,10 @@ export function ScanForm() {
     setContent("");
     setContentType(example.content_type);
 
-    // Auto-suggest SERV for the gray-zone demo — the whole point is to
-    // show what the LLM catches that rules miss. Gently nudge the toggle.
-    if (example.is_serv_demo && !servEnabled) {
-      setTimeout(() => setServEnabled(true), 400);
-    }
+    // The gray-zone demo lands in the 0.3–0.7 band so the second pass would
+    // have something to chew on, but toggles stay untouched — SERV is opt-in
+    // and a preset must never silently flip it on (it costs money when the
+    // miner has a SERV key). The ⚡ badge tooltip tells the user what to do.
 
     // Type in character by character — gives a sense of the content arriving
     let i = 0;

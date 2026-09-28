@@ -674,6 +674,18 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
         </div>
       </div>
 
+      {/* Calibration caveat, only where it matters: a downward disagreement
+          looks exonerating, but Laya calls "clean" on 89% of real injections
+          (Brier 0.32 on eval/corpus.json, TNR 1.0 / TPR 0.11 at threshold 0.5).
+          Rules saw ≥ 0.5 while Laya said no — keep the rules' verdict. */}
+      {!comparison.agrees_with_rules && comparison.rule_score >= 0.5 && comparison.laya_score < 0.5 && (
+        <p className="px-3 pb-2 text-[10px] text-ink-faint leading-relaxed">
+          Note: calibration runs (26-case corpus, Brier 0.32) show Laya rates
+          most real injections as clean — treat this disagreement as noise,
+          not evidence it's safe.
+        </p>
+      )}
+
       {(comparison.input_tokens != null || comparison.cost_usd != null) && (
         <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
           {comparison.input_tokens != null && (
