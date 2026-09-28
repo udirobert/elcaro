@@ -80,6 +80,22 @@ CORS is configured in `miner/api.py` as `allow_origins=["*"]` for the hackathon.
 - Target: `wasm32-unknown-unknown`
 - Build: `cargo build --target wasm32-unknown-unknown --release` from `eval/`
 - Test (native): `cargo test` from `eval/`
+- On this machine the default toolchain is a broken `solana` override and
+  Homebrew's cargo has no wasm target, so run the stable toolchain explicitly:
+  `PATH="$HOME/.cargo/bin:$PATH" rustup run stable cargo …`
+
+### Scoring module (`eval/scorer/`)
+- Separate crate from `eval/`: `no_std` on `wasm32`, **zero dependencies** —
+  do not add any, and use only `+ - * /` and comparison on floats so two
+  validators return identical bits.
+- Exports the validator ABI: `alloc`, `dealloc`, `rank_answer`,
+  `breakdown_answer`. Do not rename or change their signatures.
+- Every scoring or anti-gaming rule needs a native `#[test]` in `src/lib.rs`.
+- Before committing a rule change: `cargo test`, then
+  `node harness.mjs && node harness.mjs --attacks` (CI fails if our module
+  loses a bench pair, self-matches below 0.99, or lets an attack through).
+- Regenerate `bench.json` with `python make_bench.py` after editing
+  `eval/corpus.json`; never hand-edit `bench.json`.
 
 ### WASM ABI
 The Telegraph validator calls exported functions via WASM. The ABI for string passing must be verified against the Telegraph runtime's calling convention before submission. The current `&str` parameter on `evaluate` may require a linear-memory pointer+length approach instead. Check Telegraph's WASM eval documentation or example scripts before assuming the current signature works.

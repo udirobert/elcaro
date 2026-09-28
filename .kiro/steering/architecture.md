@@ -30,7 +30,15 @@ elcaro/
 ├── eval/                       # Track 2 — WASM evaluation script
 │   ├── Cargo.toml              # elcaro-eval, cdylib+rlib, serde+serde_json deps
 │   ├── src/lib.rs              # Eval logic: TestCase corpus (A001–N005), evaluate/get_test_cases exports
-│   └── test_cases/             # (empty — corpus is hardcoded in lib.rs)
+│   ├── test_cases/             # (empty — corpus is hardcoded in lib.rs)
+│   └── scorer/                 # Telegraph SCORING MODULE (rank_answer ABI) — the registrable Track 2 artifact
+│       ├── Cargo.toml          # elcaro-scorer, no deps, no_std on wasm32
+│       ├── src/lib.rs          # rank/breakdown: verdict > labels > numeric > text; anti-gaming caps
+│       ├── harness.mjs         # validator-style bench / --attacks / --agreement / --diff / --case
+│       ├── make_bench.py       # bench.json generator from eval/corpus.json
+│       ├── bench.json          # good/bad benchmark pairs
+│       ├── attacks.json        # anti-gaming fixtures
+│       └── champions/          # (gitignored) other authors' modules from /api/wasm
 ├── app/                        # Track 3 — Agent-facing content screener + web UI
 │   ├── web/                    # Next.js application (TypeScript, Tailwind, App Router)
 │   │   ├── src/
@@ -108,6 +116,11 @@ WASM evaluation script. Three exported functions consumed by the Telegraph valid
 
 The corpus (`TEST_CASES`) is a `&[TestCase]` of `&'static str` — hardcoded at compile time. Test cases in `eval/test_cases/` are not used at runtime (the directory exists for documentation purposes).
 
+### `eval/scorer/src/lib.rs` — Telegraph scoring module
+The registrable Track 2 artifact. `no_std`, zero imports, exports the ABI a validator node calls: `alloc(i32)->i32`, `dealloc(i32,i32)`, `rank_answer(q,q_len,gt,gt_len,ma,ma_len)->f32`, `breakdown_answer(...)->i32` (ptr to `f32[5]`). Distinct from `eval/src/lib.rs`, which is a benchmark runner bound to Elcaro's `/scan` schema and cannot be registered.
+
+`rank_answer` grades the answer's committed verdict first (injection/clean, with negation and yes/no-by-question-polarity), then category labels, then any risk figure, then text overlap. Anti-gaming caps: wrong verdict ≤ 0.15, hedge/keyword-dump ≤ 0.30, question restatement ×0.1, copied figures score 0. All float ops are `+ - * /` and comparison so two validators return identical bits. Deterministic; must stay dependency-free. Build with `PATH="$HOME/.cargo/bin:$PATH" rustup run stable cargo …` (the machine's default toolchain is a broken solana override; Homebrew cargo lacks the wasm target). `harness.mjs` benchmarks it against `champions/` (gitignored) the way a validator does.
+
 ## Key data flow
 
 ```
@@ -152,6 +165,8 @@ ElcaroMiddleware.scan()              ← app/middleware.py
 | A new miner API endpoint | `miner/api.py` |
 | A new request/response field | `core/schemas.py` |
 | A new test case for the WASM eval corpus | `eval/src/lib.rs` in `TEST_CASES` |
+| A new benchmark case for the scoring module | `eval/scorer/make_bench.py` (regenerates `bench.json`) or `eval/scorer/attacks.json` |
+| A scoring rule / anti-gaming rule | `eval/scorer/src/lib.rs` (add a native test) |
 | A new Python test | `tests/test_detection.py` |
 | A new quarantine behaviour | `app/middleware.py` in `_apply_quarantine` |
 | LLM second-pass implementation | `core/llm_classifier.py` |

@@ -211,6 +211,7 @@ Everything is live — no waitlists, no gated features:
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
 | `app/middleware.py` | Python · httpx | Drop-in middleware for Python agents |
 | `eval/` | Rust · WASM + WASI | Adversarial evaluation script — scores any miner client-side (`eval/wasm-demo/`); also a WASI binary target that runs under the **Wasmer** runtime: `scripts/wasi-eval.sh self-score` pulls the corpus via `wasmer run`, scans the live miner, and computes the EvalResult inside Wasmer |
+| `eval/scorer/` | Rust · `no_std` WASM | Telegraph scoring module (`rank_answer` ABI) for `CONTENT_MODERATION` / `TEXT_CLASSIFICATION` — grades an answer's committed verdict, not its vocabulary. `harness.mjs` benchmarks it against seated champions the way a validator does |
 
 ---
 
