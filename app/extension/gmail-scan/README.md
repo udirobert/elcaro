@@ -63,6 +63,25 @@ goes to the miner.
 | `engine` (default) | `<bridge>/api/engine-ask` `{query}` → `POST /engine/v1/ask` | **yes** — auto-routed | x402 answered **server-side by the bridge** (EIP-3009 `exact` scheme, Base Sepolia USDC, $0.01/ask) |
 | `direct` | `POST /engine/v1/ask/8848` `{method, endpoint, payload}` | no — names miner 8848 | unpaid in the extension; 402 surfaces as *"Direct mode can't pay for scans — switch to Engine"* (dev fallback) |
 
+### Auto-routing means the miner is not ours
+
+The engine picks a miner per intent, so the miner that answers is not always
+Elcaro and its schema is not always ours. A live example: a scan of an email
+from `external.com` routes to **TxLens (9002)** on intent `EMAIL_SECURITY`,
+which returns a domain-reputation report with `confidence: 0.9` and no
+`risk_score` at all.
+
+So `normalize()` distinguishes a **verdict** (a risk score, a risk level, or
+flagged techniques) from a **signal** (anything else the router returned).
+A signal renders as *"SIGNAL, NOT A VERDICT"* with the intent named — it never
+gets banded, and its `confidence` is never displayed as an injection risk.
+Showing a domain-reputation confidence as "Injection risk 0.90" would be a lie
+told with total confidence.
+
+Worth knowing when reading extension output: a scan that returns a signal has
+still been paid for and still counts — the network just routed your question
+somewhere you did not expect.
+
 The bridge (`app/web/src/app/api/engine-ask/route.ts`) is the extension's path
 to counted traffic: it forwards the query to the engine and signs the x402
 `exact` challenge with the payer key, so the extension itself needs no wallet.
@@ -154,13 +173,19 @@ learns *before* clicking whether the service is live.
 ```json
 {
   "ok": true,
-  "payerConfigured": false,
+  "payerConfigured": true,
+  "payerAddress": "0x3aB5CDE666c356B043111AAFDA16aC258E19868F",
   "tokenRequired": false,
   "extensionPinned": true,
   "dailyCap": 40, "asksUsed": 3, "asksRemaining": 37,
   "costPerAskUsd": 0.01
 }
 ```
+
+`payerConfigured: true` with `payerAddress: null` means the key is present but
+does not parse — almost always a stray space or newline from a paste. That
+distinction is the difference between "not switched on" and "misconfigured",
+and it is the reason the key is trimmed on read.
 
 ### Error codes
 
@@ -169,8 +194,9 @@ copy off the code, so infra strings never reach the overlay.
 
 `FORBIDDEN_ORIGIN` (403) · `FORBIDDEN_TOKEN` (403) · `INVALID_JSON` (400) ·
 `BAD_REQUEST` (400) · `QUERY_TOO_LARGE` (413) · `CAP_REACHED` (429) ·
-`PAYER_NOT_CONFIGURED` (502) · `PAYMENT_REJECTED` (502, envelope fine but the
-payer could not settle — usually an empty testnet wallet) ·
+`PAYER_NOT_CONFIGURED` (502) · `PAYER_KEY_INVALID` (502, the key does not
+parse) · `PAYMENT_SIGN_FAILED` (502) · `PAYMENT_REJECTED` (502, envelope fine
+but the payer could not settle — usually an empty testnet wallet) ·
 `CHALLENGE_UNREADABLE` (502) · `NO_PAYMENT_OPTION` (502) ·
 `UPSTREAM_TIMEOUT` / `UPSTREAM_UNREACHABLE` (504).
 

@@ -257,32 +257,45 @@ async function askDirect(content, contentType) {
 }
 
 // Normalize either rail's answer into the shape the overlay renders.
-// The engine rail returns the routed miner's schema; the direct rail returns
-// the miner's /scan response verbatim.
+//
+// The engine rail auto-routes, so the miner that answers is not ours and its
+// schema is not ours. A live example: asking about an email sent from
+// external.com routes to TxLens (9002) on intent EMAIL_SECURITY, which returns
+// a domain-reputation report with `confidence: 0.9` and no risk_score at all.
+// Mapping that confidence onto "Injection risk 0.90" would be a lie told with
+// total confidence, so we distinguish a verdict from a signal and render them
+// differently.
 function normalize(data, rail) {
-  const riskScore =
-    typeof data.risk_score === "number"
-      ? data.risk_score
-      : typeof data.confidence === "number"
-        ? data.confidence
-        : null;
+  const miner = data.miner || data.miner_id || data.miner_name || (rail === "direct" ? "8848" : null);
+  const riskScore = typeof data.risk_score === "number" ? data.risk_score : null;
+  const techniques = Array.isArray(data.flagged_techniques) ? data.flagged_techniques : [];
+  const riskLevel = data.risk_level || data.label || null;
+  // A verdict carries a risk signal, a label, or flagged techniques. Anything
+  // else from the auto-router is a signal about something else entirely.
+  const isVerdict = riskScore !== null || techniques.length > 0 || riskLevel !== null;
   return {
     rail,
+    miner,
+    verdict: isVerdict,
+    intent: data.intent || null,
     riskScore,
-    riskLevel: data.risk_level || data.label || null,
-    summary: data.summary || data.reason || data.human_summary || "",
-    techniques: Array.isArray(data.flagged_techniques) ? data.flagged_techniques : [],
+    // Confidence is a different quantity from injection risk; it is only
+    // surfaced for a real verdict, and never as a band.
+    confidence: isVerdict && typeof data.confidence === "number" ? data.confidence : null,
+    riskLevel,
+    summary:
+      data.summary || data.human_summary || data.answer || data.reason || "",
+    techniques,
     quarantined: Boolean(data.quarantined),
-    // Which miner actually answered, when the rail tells us. Nice for trust,
-    // and the honest answer on the direct rail is always our own 8848.
-    miner: data.miner || data.miner_id || data.miner_name || (rail === "direct" ? "8848" : null),
     raw: data,
   };
 }
 
 // Band exactly like the integrate page prescribes: >=0.5 BLOCK,
-// >=0.3 CAUTION, else SAFE (>=0.7 is always BLOCK regardless of label).
+// >=0.3 CAUTION, else SAFE. Only meaningful for a verdict — a non-verdict
+// answer from the auto-router gets UNKNOWN and a neutral presentation.
 function band(result) {
+  if (result.verdict === false) return "UNKNOWN";
   const s = result.riskScore;
   if (s === null) return "UNKNOWN";
   if (s >= 0.5) return "BLOCK";

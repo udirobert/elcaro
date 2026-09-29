@@ -172,6 +172,42 @@ async function relay(resp: Response): Promise<NextResponse> {
   return new NextResponse(text, { status: resp.status, headers });
 }
 
+/**
+ * The configured payer key, trimmed.
+ *
+ * The trim is not cosmetic: pasting a key into a web form routinely leaves a
+ * trailing newline, viem then throws "invalid private key", and without this
+ * the route 500s with an empty body — which tells the operator nothing. See
+ * payerAddress() for how we make that class of mistake visible instead.
+ */
+function payerKey(): string | null {
+  const raw = process.env.TELEGRAPH_X402_KEY?.trim();
+  return raw ? raw : null;
+}
+
+/**
+ * The address the configured key controls, or null if it does not parse.
+ *
+ * Surfaced by GET /api/engine-ask so "is my key well-formed, and which wallet
+ * is it?" is answerable without reading logs or reproducing a 500. Never the
+ * key itself — an address is public.
+ */
+let payerAddressCache: string | null | undefined;
+function payerAddress(): string | null {
+  if (payerAddressCache !== undefined) return payerAddressCache;
+  const key = payerKey();
+  if (!key) {
+    payerAddressCache = null;
+    return null;
+  }
+  try {
+    payerAddressCache = privateKeyToAccount(key as `0x${string}`).address;
+  } catch {
+    payerAddressCache = null;
+  }
+  return payerAddressCache;
+}
+
 /** Operator status. No secrets: booleans and counters only. */
 export async function GET(req: NextRequest) {
   const blocked = gateIdentity(req);
@@ -182,7 +218,11 @@ export async function GET(req: NextRequest) {
     {
       ok: true,
       service: "elcaro-telegraph-bridge",
-      payerConfigured: Boolean(process.env.TELEGRAPH_X402_KEY),
+      payerConfigured: Boolean(payerKey()),
+      // Null here with payerConfigured true means the key does not parse —
+      // almost always a stray space or newline from a paste. That is the
+      // difference between "not switched on" and "misconfigured".
+      payerAddress: payerAddress(),
       tokenRequired: Boolean(process.env.TELEGRAPH_BRIDGE_TOKEN),
       extensionPinned: pinnedExtensionIds().length > 0,
       dailyCap: capToday() || null,
@@ -242,7 +282,7 @@ export async function POST(req: NextRequest) {
     return relay(resp); // routed straight through, or a non-402 failure
   }
 
-  const key = process.env.TELEGRAPH_X402_KEY;
+  const key = payerKey();
   if (!key) {
     return fail(
       502,
@@ -268,7 +308,17 @@ export async function POST(req: NextRequest) {
     return fail(502, "NO_PAYMENT_OPTION", "the 402 challenge offered no supported payment option");
   }
 
-  const account = privateKeyToAccount(key as `0x${string}`);
+  // Parsed and signed inside try/catch on purpose. An unparseable key used to
+  // escape as a bare 500 with an empty body, which is the least useful thing
+  // this endpoint could possibly say to the operator holding the key.
+  let account: ReturnType<typeof privateKeyToAccount>;
+  try {
+    account = privateKeyToAccount(key as `0x${string}`);
+  } catch {
+    return fail(502, "PAYER_KEY_INVALID", "the configured payer key is not a valid private key", {
+      hint: "check TELEGRAPH_X402_KEY for a stray space or newline left by a copy-paste",
+    });
+  }
   const now = Math.floor(Date.now() / 1000);
   const authorization = {
     from: account.address,
@@ -279,24 +329,29 @@ export async function POST(req: NextRequest) {
     nonce: toHex(randomBytes(32)) as `0x${string}`,
   };
 
-  const signature = await account.signTypedData({
-    domain: {
-      name: accept.extra?.name ?? "USDC",
-      version: accept.extra?.version ?? "2",
-      chainId: CHAIN_ID,
-      verifyingContract: (accept.asset ?? DEFAULT_ASSET) as `0x${string}`,
-    },
-    types: EIP3009_TYPES,
-    primaryType: "TransferWithAuthorization",
-    message: {
-      from: authorization.from,
-      to: authorization.to,
-      value: authorization.value,
-      validAfter: authorization.validAfter,
-      validBefore: authorization.validBefore,
-      nonce: authorization.nonce,
-    },
-  });
+  let signature: `0x${string}`;
+  try {
+    signature = await account.signTypedData({
+      domain: {
+        name: accept.extra?.name ?? "USDC",
+        version: accept.extra?.version ?? "2",
+        chainId: CHAIN_ID,
+        verifyingContract: (accept.asset ?? DEFAULT_ASSET) as `0x${string}`,
+      },
+      types: EIP3009_TYPES,
+      primaryType: "TransferWithAuthorization",
+      message: {
+        from: authorization.from,
+        to: authorization.to,
+        value: authorization.value,
+        validAfter: authorization.validAfter,
+        validBefore: authorization.validBefore,
+        nonce: authorization.nonce,
+      },
+    });
+  } catch {
+    return fail(502, "PAYMENT_SIGN_FAILED", "the payer wallet could not sign the ask");
+  }
 
   const payload = {
     x402Version: 2,

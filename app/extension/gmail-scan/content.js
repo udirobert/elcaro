@@ -235,6 +235,15 @@
 
   function showVerdict(state) {
     const ov = newOverlay();
+
+    // The engine rail auto-routes, so the miner that answers may not be
+    // answering the question we asked. When it isn't an injection verdict we
+    // say so plainly instead of dressing its answer up as a risk score.
+    if (state.verdict === false) {
+      showSignal(ov, state);
+      return;
+    }
+
     const s = bandStyle(state.band);
     header(ov, s, railLabel(state) + (state.cached ? " · cached" : ""));
 
@@ -274,6 +283,44 @@
     if (state.band === "SAFE") {
       autoDismissTimer = setTimeout(dismissOverlay, SAFE_AUTODISMISS_MS);
     }
+  }
+
+  /**
+   * The auto-router picked a miner for some other intent — say a domain
+   * reputation check — and it answered that instead. That is the network
+   * working as designed, so it is not an error; it is just not a verdict, and
+   * we will not present a confidence value as an injection risk.
+   */
+  function showSignal(ov, state) {
+    header(
+      ov,
+      { label: "SIGNAL, NOT A VERDICT", glyph: "i", bg: "#4b5563" },
+      railLabel(state) + (state.cached ? " · cached" : ""),
+    );
+    const body = el("div", "padding:12px 14px 6px;color:#1a1a2e");
+    body.appendChild(
+      el(
+        "p",
+        "margin:0 0 8px;font-weight:600;color:#374151",
+        "A Telegraph miner answered a different question. Nothing here is an " +
+          "injection verdict — scan again, or switch the ask to direct mode to " +
+          "force Elcaro's own miner.",
+      ),
+    );
+    if (state.intent) {
+      body.appendChild(
+        el(
+          "p",
+          "margin:0 0 6px;font-size:11px;color:#6b6b7b",
+          "Intent answered: " + state.intent,
+        ),
+      );
+    }
+    if (state.summary) {
+      body.appendChild(el("p", "margin:0 0 8px;color:#3f3f52", state.summary.slice(0, 280)));
+    }
+    ov.appendChild(body);
+    appendFooter(ov, { retry: true });
   }
 
   function showError(state) {

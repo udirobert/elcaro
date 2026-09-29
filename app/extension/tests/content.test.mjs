@@ -192,6 +192,39 @@ const buttonByText = (doc, text) =>
   );
 }
 
+// --- 1d. the auto-router answered a different question ------------------------
+// A real case: asking about an email from external.com routes to TxLens
+// (9002) on intent EMAIL_SECURITY, which returns a domain-reputation report
+// with confidence 0.9 and no risk_score at all. Presenting that confidence as
+// an injection risk would be a lie told with total confidence.
+{
+  const { document } = await scenario("auto-router answered another intent", {
+    ok: true,
+    result: {
+      rail: "engine",
+      verdict: false,
+      miner: "TxLens",
+      intent: "EMAIL_SECURITY",
+      riskScore: null,
+      confidence: 0.9,
+      band: "UNKNOWN",
+      summary: "Email security for external.com is Strong. SPF is published.",
+      techniques: [],
+    },
+  });
+  scanButton(document).click();
+  await sleep(120);
+  const text = overlayText(document);
+  assert(text.includes("SIGNAL, NOT A VERDICT"), "a non-verdict says so, plainly");
+  assert(text.includes("EMAIL_SECURITY"), "it names the intent that was actually answered");
+  assert(text.includes("TxLens"), "it credits the miner that answered");
+  assert(
+    !text.includes("Injection risk"),
+    "a domain-reputation confidence is never rendered as an injection risk",
+  );
+  assert(!text.includes("0.90"), "the unrelated confidence value is not shown as a score");
+}
+
 // --- 2. a SAFE verdict -------------------------------------------------------
 {
   const { document } = await scenario("SAFE verdict", SAFE_REPLY);
