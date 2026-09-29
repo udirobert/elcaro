@@ -141,12 +141,25 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 ### W3 — Application (Track 3): Gmail extension on composed Telegraph intelligence
 
 - [x] Browser extension: one-click scan of the open Gmail message (then
-      Outlook web). **29 Sep: skeleton at `app/extension/gmail-scan/` — MV3,
-      no build step, loads unpacked.** Floating Scan button in the thread
-      toolbar → overlay with band / risk score / summary / techniques;
-      re-injection guard; rail preference persisted. Extraction heuristics
-      (`.ii.gt` / `.a3s`) need hardening against Gmail DOM churn — test with
-      plain, quoted and HTML-heavy mail. Outlook: not started.
+      Outlook web). **29 Sep: at `app/extension/gmail-scan/` — MV3, no build
+      step, loads unpacked; tested in jsdom from `app/extension/tests/`.**
+      Floating Scan button in the thread toolbar → overlay with band / risk
+      score / summary / techniques; re-injection guard; rail preference
+      persisted. UX pass landed 29 Sep: the overlay opens instantly with a
+      progress state (no silent spinner), each band carries a one-line *next
+      action* ("Don't act on this message…"), the risk score has a
+      proportional meter, techniques are chips, SAFE auto-dismisses after 8s,
+      Escape/click-outside dismiss, and the toolbar badge carries the verdict
+      when the overlay is off-screen. Re-scans are cached 5 min in the SW
+      (one $0.01 ask, not two). Failures render a human headline + explanation
+      with the infra code behind a **Details** disclosure and a **Scan again**
+      retry — a test asserts no env var name or protocol jargon reaches the
+      overlay. The popup's status card polls the bridge so a user learns the
+      service is down *before* clicking. Also fixed: the manifest never
+      granted `elcaro.trustfall.xyz`, so the engine rail's fetch would have
+      been denied outright. Extraction heuristics (`.ii.gt` / `.a3s`) still
+      need hardening against Gmail DOM churn — test with plain, quoted and
+      HTML-heavy mail. Outlook: not started.
 - [ ] Backend routes through auto-routed `POST /engine/v1/ask`
       (`app/telegraph.py`), shows which miner answered. **29 Sep: payment path
       built — `app/web/src/app/api/engine-ask/route.ts` forwards to the engine
@@ -156,11 +169,22 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       telegraph-examples `src/lib/x402.ts`, validated against the live devnode:
       well-formed-but-unfunded returns upstream "payment required" while
       malformed headers get "Invalid payment"). The extension's engine rail
-      now goes through the bridge; it needs no wallet. Gated by origin
-      allowlist + optional `TELEGRAPH_BRIDGE_TOKEN` + per-instance daily cap
+      now goes through the bridge; it needs no wallet. **29 Sep hardening pass:**
+      extension origins are pinned to `TELEGRAPH_BRIDGE_EXTENSION_IDS` instead
+      of "any `chrome-extension://`" (the GET status reports
+      `extensionPinned:false` when unset, and `ALLOW_ANY_EXTENSION=0` /
+      `ALLOW_NO_ORIGIN=1` are the kill switches); gate order is origin → token
+      → cap so a stranger can't burn the budget; `GET /api/engine-ask` returns
+      operator status (payer configured? cap left? pinned?) with no secrets;
+      every failure path returns a stable `code` the UI renders copy from; a
+      second 402 after signing is translated to `PAYMENT_REJECTED` (unfunded
+      wallet) instead of shipping the challenge to the overlay; 30s upstream
+      + 20s client timeouts. Gated by origin allowlist + optional
+      `TELEGRAPH_BRIDGE_TOKEN` + per-instance daily cap
       `TELEGRAPH_BRIDGE_DAILY_CAP` (default 40). **Remaining: fund a testnet
-      payer wallet and set `TELEGRAPH_X402_KEY` in Netlify** — the rail is
-      inert until then (502 PAYER_NOT_CONFIGURED). The 402 challenge also
+      payer wallet and set `TELEGRAPH_X402_KEY` (and
+      `TELEGRAPH_BRIDGE_EXTENSION_IDS` once published) in Netlify** — the rail
+      is inert until then (502 PAYER_NOT_CONFIGURED). The 402 challenge also
       offers an `escrow` scheme (depositUSDC once, EIP-191 personal_sign per
       ask) — probed and mapped, not yet fully cracked: the node's recovered
       signer never matches any reconstruction of the template message, so

@@ -163,6 +163,13 @@ Everything is live — no waitlists, no gated features:
 - **[Integrate](https://elcaro.trustfall.xyz/integrate)** — API, MCP,
   middleware, Telegraph routing, and a threshold-replay sandbox built from
   your own session history.
+- **[Gmail extension](app/extension/gmail-scan/)** — a one-click scan of the
+  open Gmail message, routed through Telegraph miners so it counts toward the
+  network. MV3, no build step, loads unpacked. The Scan button in the thread
+  toolbar returns SAFE / CAUTION / BLOCK with the risk score, the techniques
+  that fired, and what to do about it; payments are handled server-side by a
+  bridge, so the extension needs no wallet. Test drive:
+  `cd app/extension/tests && npm install && npm test`.
 - **[Session watch](https://elcaro.trustfall.xyz/supervise)** — a calm-mode
   supervision panel over your browser's local scan history (quarantine rate,
   technique breakdown). Stateless by construction: `noindex`, nothing leaves

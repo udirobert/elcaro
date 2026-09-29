@@ -1,16 +1,56 @@
 // Elcaro IPI Guard — Gmail content script.
-// Finds the open message body, offers a floating "Scan" action, and renders
-// the verdict band as an overlay. Gmail's DOM is obfuscated and reshuffles its
-// class names; the extraction below is deliberately defensive and is the part
-// most likely to need iteration after first load. Structure: overlay skeleton
-// now, extraction tuning next, then composed multi-miner checkpoint.
+//
+// Mounts a floating "Scan" action in the thread toolbar and renders the verdict
+// as an overlay. Two things to keep in mind when editing:
+//
+//   1. Gmail's DOM is obfuscated and reshuffles its class names. The extraction
+//      below (activeMessageBody) is the part most likely to need iteration
+//      after first load.
+//   2. This file owns presentation only. It never sees an HTTP status or an
+//      env var name: background.js hands it either a normalized result or a
+//      `ui` object ({ headline, detail, tone, retryable, code }) and we render
+//      that. Adding a new failure mode means editing background.js's
+//      ERROR_COPY, not this file.
 
 (() => {
   if (window.__elcaroIpiGuard) return; // re-injection guard
   window.__elcaroIpiGuard = true;
 
   const CONTENT_TYPE = "email";
+  const OVERLAY_ID = "elcaro-ipi-overlay";
+  const STYLE_ID = "elcaro-ipi-style";
+  const SAFE_AUTODISMISS_MS = 8_000;
+
   let button = null;
+  let lastScan = null; // re-runnable by the overlay's Try again button
+  let autoDismissTimer = null;
+
+  const TEXT = {
+    SAFE: {
+      label: "SAFE",
+      glyph: "✓",
+      bg: "#14532d",
+      next: "Nothing hidden found — read it as you normally would.",
+    },
+    CAUTION: {
+      label: "CAUTION",
+      glyph: "!",
+      bg: "#92400e",
+      next: "Something didn't add up. Check the sender and any links before you act.",
+    },
+    BLOCK: {
+      label: "BLOCK",
+      glyph: "⛔",
+      bg: "#7f1d1d",
+      next: "Don't act on this message. It contains instructions aimed at an AI agent.",
+    },
+    UNKNOWN: {
+      label: "NO VERDICT",
+      glyph: "?",
+      bg: "#374151",
+      next: "The miner didn't return a score for this message.",
+    },
+  };
 
   function activeMessageBody() {
     // The open message lives in an adB/.aB class-less region; walk up from the
@@ -34,23 +74,72 @@
     return host ? (host.innerText || host.textContent || "").trim() : "";
   }
 
-  function bandStyle(band) {
-    switch (band) {
-      case "BLOCK":
-        return { bg: "#7f1d1d", fg: "#fff", label: "BLOCK" };
-      case "CAUTION":
-        return { bg: "#92400e", fg: "#fff", label: "CAUTION" };
-      case "SAFE":
-        return { bg: "#14532d", fg: "#fff", label: "SAFE" };
-      default:
-        return { bg: "#374151", fg: "#fff", label: "UNKNOWN" };
-    }
+  // Injected once into the page; keeps the animation out of the inline-style
+  // soup below.
+  function ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      @keyframes elcaroSweep { 0% { transform: translateX(-100%);} 100% { transform: translateX(320%);} }
+      @keyframes elcaroPulse { 0%,100% { opacity:.35;} 50% { opacity:1;} }
+      #${OVERLAY_ID} .elcaro-bar span {
+        display:block; width:32%; height:100%; border-radius:999px;
+        background:linear-gradient(90deg,transparent,#7c3aed,transparent);
+        animation:elcaroSweep 1.1s ease-in-out infinite;
+      }
+      #${OVERLAY_ID} button { font: inherit; }
+      #${OVERLAY_ID} .elcaro-btn {
+        padding:5px 12px;border-radius:9px;border:1px solid #d5d5dd;background:#fff;
+        font-size:11.5px;font-weight:600;color:#1a1a2e;cursor:pointer;
+      }
+      #${OVERLAY_ID} .elcaro-btn:hover { background:#f4f4f8; }
+      #${OVERLAY_ID} .elcaro-btn-primary { background:#7c3aed;border-color:#7c3aed;color:#fff; }
+      #${OVERLAY_ID} .elcaro-btn-primary:hover { background:#6d28d9; }
+      #${OVERLAY_ID} summary { cursor:pointer; font-size:11px; color:#6b6b7b; }
+      #${OVERLAY_ID} pre {
+        margin:6px 0 0;padding:8px;background:#f4f4f8;border-radius:8px;
+        font-family:ui-monospace,monospace;font-size:10.5px;white-space:pre-wrap;
+        word-break:break-word;max-height:140px;overflow:auto;color:#3f3f52;
+      }
+      #${OVERLAY_ID} .elcaro-glyph { animation:elcaroPulse 1.4s ease-in-out infinite; }
+    `;
+    (document.head || document.documentElement).appendChild(style);
   }
 
-  function showOverlay(state) {
+  function el(tag, css, text) {
+    const n = document.createElement(tag);
+    if (css) n.style.cssText = css;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+
+  function bandStyle(b) {
+    return TEXT[b] || TEXT.UNKNOWN;
+  }
+
+  function dismissOverlay() {
+    if (autoDismissTimer) {
+      clearTimeout(autoDismissTimer);
+      autoDismissTimer = null;
+    }
+    const old = document.getElementById(OVERLAY_ID);
+    if (old) old.remove();
+    document.removeEventListener("keydown", onKeydown, true);
+  }
+
+  function onKeydown(e) {
+    if (e.key === "Escape") dismissOverlay();
+  }
+
+  // --- overlay shells -------------------------------------------------------
+
+  function newOverlay() {
     dismissOverlay();
-    const ov = document.createElement("div");
-    ov.id = "elcaro-ipi-overlay";
+    ensureStyles();
+    const ov = el("div", null);
+    ov.id = OVERLAY_ID;
+    ov.setAttribute("role", "status");
     ov.style.cssText = [
       "position:fixed",
       "top:16px",
@@ -64,74 +153,175 @@
       "box-shadow:0 8px 30px rgba(0,0,0,.18)",
       "overflow:hidden",
     ].join(";");
+    document.documentElement.appendChild(ov);
+    document.addEventListener("keydown", onKeydown, true);
+    return ov;
+  }
 
-    const head = document.createElement("div");
+  function header(ov, { label, glyph, bg }, right) {
+    const head = el(
+      "div",
+      "padding:10px 14px;color:#fff;background:" +
+        bg +
+        ";display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.03em",
+    );
+    head.appendChild(el("span", "font-size:14px;line-height:1", glyph));
+    head.appendChild(el("span", null, label));
+    if (right) {
+      const meta = el("span", "margin-left:auto;font-weight:400;font-size:11px;opacity:.9", right);
+      head.appendChild(meta);
+    }
+    ov.appendChild(head);
+    return head;
+  }
+
+  function railLabel(state) {
+    if (state.rail === "engine") return "engine rail · counted";
+    if (state.rail === "direct") return "direct rail";
+    return "elcaro";
+  }
+
+  // --- states ---------------------------------------------------------------
+
+  function showScanning() {
+    const ov = newOverlay();
+    header(ov, { label: "Scanning", glyph: "◌", bg: "#4c1d95" }, "engine rail");
+    const body = el("div", "padding:12px 14px 14px;color:#1a1a2e");
+    body.appendChild(
+      el("p", "margin:0 0 8px;color:#6b6b7b", "Checking this message for hidden instructions…"),
+    );
+    const bar = el("div", "margin:0 14px 4px;height:3px;background:#ece9f7;border-radius:999px;overflow:hidden");
+    bar.appendChild(el("span"));
+    ov.appendChild(body);
+    ov.appendChild(bar);
+    const hint = el(
+      "p",
+      "margin:8px 14px 12px;font-size:11px;color:#8b8b9c",
+      "Paid per scan through the Telegraph network — usually a couple of seconds.",
+    );
+    ov.appendChild(hint);
+    return ov;
+  }
+
+  /** Score readout + proportional bar. Returns the nodes it needs to fill in. */
+  function riskMeter(score, level) {
+    const label = el(
+      "div",
+      "display:flex;justify-content:space-between;font-size:11px;color:#6b6b7b;margin-bottom:4px",
+    );
+    label.appendChild(el("span", null, "Injection risk"));
+    label.appendChild(
+      el(
+        "span",
+        "font-weight:700;color:#1a1a2e",
+        score.toFixed(2) + (level ? "  ·  " + level : ""),
+      ),
+    );
+    const fill = el("div", "height:100%;border-radius:999px;width:" + Math.round(score * 100) + "%");
+    const track = el("div", "height:6px;background:#eeeef4;border-radius:999px;overflow:hidden");
+    track.appendChild(fill);
+    const wrap = el("div", "margin:0 0 10px");
+    wrap.appendChild(label);
+    wrap.appendChild(track);
+    return { wrap, fill };
+  }
+
+  function showVerdict(state) {
+    const ov = newOverlay();
     const s = bandStyle(state.band);
-    head.style.cssText =
-      "padding:10px 14px;color:" + s.fg + ";background:" + s.bg +
-      ";font-weight:700;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center";
-    head.textContent = "Elcaro · " + s.label;
+    header(ov, s, railLabel(state) + (state.cached ? " · cached" : ""));
 
-    const meta = document.createElement("span");
-    meta.style.cssText = "font-weight:400;font-size:11px;opacity:.85";
-    meta.textContent =
-      state.rail === "engine" ? "engine rail · counted" : "direct rail";
-    head.appendChild(meta);
+    const body = el("div", "padding:12px 14px 6px;color:#1a1a2e");
 
-    const body = document.createElement("div");
-    body.style.cssText = "padding:10px 14px 12px;color:#1a1a2e";
-
-    if (state.error) {
-      const p = document.createElement("p");
-      p.style.cssText = "margin:0 0 6px;font-weight:600;color:#7f1d1d";
-      p.textContent = state.error;
-      body.appendChild(p);
-      if (state.hint) {
-        const h = document.createElement("p");
-        h.style.cssText = "margin:0;color:#6b6b7b";
-        h.textContent = state.hint;
-        body.appendChild(h);
-      }
-    } else {
-      const score = document.createElement("p");
-      score.style.cssText = "margin:0 0 4px;font-weight:600";
-      score.textContent =
-        "Injection risk: " +
-        (state.riskScore === null ? "n/a" : state.riskScore.toFixed(2)) +
-        (state.riskLevel ? "  ·  " + state.riskLevel : "");
-      body.appendChild(score);
-
-      if (state.summary) {
-        const p = document.createElement("p");
-        p.style.cssText = "margin:0 0 6px";
-        p.textContent = state.summary.slice(0, 280);
-        body.appendChild(p);
-      }
-      if (state.techniques && state.techniques.length) {
-        const p = document.createElement("p");
-        p.style.cssText = "margin:0;color:#6b6b7b;font-size:11.5px";
-        p.textContent = "Techniques: " + state.techniques.join(", ");
-        body.appendChild(p);
-      }
+    if (state.riskScore !== null && state.riskScore !== undefined) {
+      const score = Math.max(0, Math.min(1, state.riskScore));
+      const meter = riskMeter(score, state.riskLevel);
+      meter.fill.style.background =
+        state.band === "BLOCK" ? "#b91c1c" : state.band === "CAUTION" ? "#b45309" : "#15803d";
+      body.appendChild(meter.wrap);
     }
 
-    const close = document.createElement("button");
-    close.textContent = "Dismiss";
-    close.style.cssText =
-      "margin:0 14px 12px;padding:4px 10px;border:1px solid #d5d5dd;" +
-      "border-radius:8px;background:#fff;font:inherit;font-size:11.5px;cursor:pointer";
-    close.addEventListener("click", dismissOverlay);
+    body.appendChild(el("p", "margin:0 0 8px;font-weight:600;color:" + s.bg, s.next));
 
-    ov.appendChild(head);
+    if (state.summary) {
+      body.appendChild(el("p", "margin:0 0 8px", state.summary.slice(0, 280)));
+    }
+    if (state.techniques && state.techniques.length) {
+      const row = el("div", "margin:0 0 6px;display:flex;flex-wrap:wrap;gap:4px");
+      row.appendChild(el("span", "font-size:11px;color:#6b6b7b;align-self:center;margin-right:2px", "Techniques:"));
+      for (const t of state.techniques.slice(0, 8)) {
+        row.appendChild(
+          el(
+            "span",
+            "font-size:10.5px;background:#f2f0fb;color:#4c1d95;border-radius:999px;padding:2px 8px",
+            t,
+          ),
+        );
+      }
+      body.appendChild(row);
+    }
+
     ov.appendChild(body);
-    ov.appendChild(close);
-    document.documentElement.appendChild(ov);
+    appendFooter(ov, { retry: true });
+
+    if (state.band === "SAFE") {
+      autoDismissTimer = setTimeout(dismissOverlay, SAFE_AUTODISMISS_MS);
+    }
   }
 
-  function dismissOverlay() {
-    const old = document.getElementById("elcaro-ipi-overlay");
-    if (old) old.remove();
+  function showError(state) {
+    const ov = newOverlay();
+    const ui = state.ui || {
+      headline: "Scan failed",
+      detail: "Something went wrong.",
+      retryable: true,
+    };
+    const warn = ui.tone !== "error";
+    header(
+      ov,
+      { label: "SCAN UNAVAILABLE", glyph: "⚠", bg: warn ? "#92400e" : "#7f1d1d" },
+      "elcaro",
+    );
+    const body = el("div", "padding:12px 14px 6px;color:#1a1a2e");
+    body.appendChild(el("p", "margin:0 0 6px;font-weight:600", ui.headline));
+    body.appendChild(el("p", "margin:0 0 4px;color:#4a4a5c", ui.detail));
+
+    // Operator detail, kept out of the way until someone actually wants it.
+    const bits = [];
+    if (ui.code) bits.push("code: " + ui.code);
+    if (state.rail) bits.push("rail: " + state.rail);
+    if (state.challenge) bits.push(state.challenge);
+    else if (ui.detail_extra) bits.push(String(ui.detail_extra));
+    if (bits.length) {
+      const det = el("details", "margin:6px 0 0");
+      det.appendChild(el("summary", null, "Details"));
+      det.appendChild(el("pre", null, bits.join("\n\n")));
+      body.appendChild(det);
+    }
+
+    ov.appendChild(body);
+    appendFooter(ov, { retry: ui.retryable !== false });
+
+    // A non-retryable misconfiguration won't fix itself in 8 seconds, so no
+    // auto-dismiss here — the user has to read it.
   }
+
+  function appendFooter(ov, { retry }) {
+    const row = el("div", "margin:0 14px 12px;display:flex;gap:8px");
+    if (retry && lastScan) {
+      const again = el("button", null, "Scan again");
+      again.className = "elcaro-btn elcaro-btn-primary";
+      again.addEventListener("click", () => scan(lastScan.content));
+      row.appendChild(again);
+    }
+    const close = el("button", null, "Dismiss");
+    close.className = "elcaro-btn";
+    close.addEventListener("click", dismissOverlay);
+    row.appendChild(close);
+    ov.appendChild(row);
+  }
+
+  // --- scan flow ------------------------------------------------------------
 
   function setLoading(on) {
     if (!button) return;
@@ -139,18 +329,21 @@
     button.textContent = on ? "Scanning…" : "Scan";
   }
 
-  async function scan() {
-    const content = activeMessageBody();
-    setLoading(true);
+  async function scan(contentOverride) {
+    const content = contentOverride === undefined ? activeMessageBody() : contentOverride;
     if (!content) {
-      showOverlay({
-        band: "UNKNOWN",
-        error: "No open message found.",
-        hint: "Open a message, then click Scan again.",
+      showError({
+        ui: {
+          headline: "No message open",
+          detail: "Open a message in Gmail, then scan it.",
+          retryable: false,
+        },
       });
-      setLoading(false);
       return;
     }
+    lastScan = { content };
+    showScanning();
+    setLoading(true);
     const { rail = "engine" } = await chrome.storage.local.get("rail");
     try {
       const resp = await chrome.runtime.sendMessage({
@@ -159,21 +352,19 @@
         contentType: CONTENT_TYPE,
         rail,
       });
-      if (resp.ok) {
-        showOverlay({ ...resp.result, error: null });
-      } else if (resp.code === "PAYMENT_REQUIRED") {
-        showOverlay({
-          band: "UNKNOWN",
-          error: "Engine rail needs x402 payment.",
-          hint:
-            "The first call returns HTTP 402 with a PAYMENT-REQUIRED challenge. " +
-            "Wire the x402 wallet client (Telegraph-examples, x402:engine-ask) into background.js next.",
-        });
+      if (resp && resp.ok) {
+        showVerdict({ ...resp.result, error: null });
       } else {
-        showOverlay({ band: "UNKNOWN", error: resp.error });
+        showError({ ui: (resp && resp.ui) || null, rail, challenge: resp && resp.challenge });
       }
     } catch (e) {
-      showOverlay({ band: "UNKNOWN", error: String(e.message || e) });
+      showError({
+        ui: {
+          headline: "The extension lost contact",
+          detail: "Reload the page and try again.",
+          retryable: true,
+        },
+      });
     }
     setLoading(false);
   }
@@ -193,7 +384,7 @@
       "margin:0 8px;padding:4px 12px;border:1px solid #7c3aed;border-radius:14px;" +
       "background:#7c3aed;color:#fff;font:12px/1.4 ui-sans-serif,system-ui,sans-serif;" +
       "font-weight:600;cursor:pointer";
-    button.addEventListener("click", scan);
+    button.addEventListener("click", () => scan());
     anchor.appendChild(button);
   }
 

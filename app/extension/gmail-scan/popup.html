@@ -3,71 +3,182 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      :root {
+        --ink: #1a1a2e;
+        --muted: #6b6b7b;
+        --line: #e4e4ec;
+        --violet: #7c3aed;
+      }
       body {
-        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
-        width: 280px;
+        font: 13px/1.5 ui-sans-serif, system-ui, sans-serif;
+        width: 300px;
         margin: 0;
-        padding: 14px;
-        color: #1a1a2e;
+        padding: 16px;
+        color: var(--ink);
+        background: #fff;
+      }
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 2px;
       }
       h1 {
         font-size: 14px;
-        margin: 0 0 2px;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .brand {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--violet);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
       p.sub {
-        margin: 0 0 12px;
-        color: #6b6b7b;
+        margin: 0 0 14px;
+        color: var(--muted);
         font-size: 11.5px;
       }
+
+      /* status card */
+      .status {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+      }
+      .status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 5px;
+        flex: 0 0 auto;
+        background: #c4c4d0;
+      }
+      .status[data-state="live"] {
+        background: #f2fbf5;
+        border-color: #cbe9d5;
+      }
+      .status[data-state="live"] .dot {
+        background: #15803d;
+      }
+      .status[data-state="off"] {
+        background: #fffbf0;
+        border-color: #f0e2c0;
+      }
+      .status[data-state="off"] .dot {
+        background: #b45309;
+      }
+      .status[data-state="down"] {
+        background: #fdf6f6;
+        border-color: #f0d3d3;
+      }
+      .status[data-state="down"] .dot {
+        background: #b91c1c;
+      }
+      .status b {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .status span {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .status code {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        background: #f2f2f7;
+        padding: 0 3px;
+        border-radius: 4px;
+      }
+
       label {
         display: block;
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #6b6b7b;
+        color: var(--muted);
         margin-bottom: 4px;
       }
       select {
         width: 100%;
-        padding: 6px 8px;
-        border: 1px solid #d5d5dd;
-        border-radius: 8px;
+        padding: 7px 9px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
         font: inherit;
         background: #fff;
+        color: var(--ink);
       }
-      p.note {
-        margin: 12px 0 0;
+      p.railhint {
+        margin: 6px 0 14px;
+        font-size: 11px;
+        color: var(--muted);
+        min-height: 2.4em;
+      }
+
+      ol.steps {
+        margin: 0 0 12px;
+        padding-left: 18px;
         font-size: 11.5px;
-        color: #6b6b7b;
-        line-height: 1.5;
+        color: #3f3f52;
       }
-      code {
-        font-family: ui-monospace, monospace;
+      ol.steps li {
+        margin-bottom: 3px;
+      }
+      footer {
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
         font-size: 10.5px;
-        background: #f2f2f7;
-        padding: 1px 4px;
-        border-radius: 4px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      footer a {
+        color: var(--violet);
+        text-decoration: none;
       }
     </style>
   </head>
   <body>
-    <h1>Elcaro IPI Guard</h1>
-    <p class="sub">Scan-before-act for Gmail, via Telegraph miners.</p>
+    <header>
+      <span class="brand">Elcaro</span>
+      <h1>IPI Guard</h1>
+    </header>
+    <p class="sub">Catches hidden instructions in email before you or your agent act on it.</p>
+
+    <div class="status" id="status" data-state="checking" aria-live="polite">
+      <span class="dot"></span>
+      <div>
+        <b id="statusTitle">Checking service…</b>
+        <span id="statusBody">One moment.</span>
+      </div>
+    </div>
 
     <label for="rail">Route scans through</label>
     <select id="rail">
-      <option value="engine">Engine (auto-routed, counted)</option>
-      <option value="direct">Direct miner 8848 (fallback)</option>
+      <option value="engine">Engine — recommended</option>
+      <option value="direct">Direct miner — development only</option>
     </select>
+    <p class="railhint" id="railHint"></p>
 
-    <p class="note">
-      Open a message in Gmail, then click the floating
-      <strong>Scan</strong> button in the thread toolbar. The verdict band
-      (SAFE / CAUTION / BLOCK) comes from the miner's risk score. The engine
-      rail is the one Telegraph judges; the direct rail bypasses routing but
-      still reaches the same miner.
-    </p>
+    <ol class="steps">
+      <li>Open a message in Gmail.</li>
+      <li>Click the violet <strong>Scan</strong> button in the thread toolbar.</li>
+      <li>Read the verdict before you reply, click, or forward.</li>
+    </ol>
+
+    <footer>
+      <span>Scans are paid per request via Telegraph.</span>
+      <a href="https://elcaro.trustfall.xyz" target="_blank" rel="noreferrer">elcaro.trustfall.xyz</a>
+    </footer>
 
     <script src="popup.js"></script>
   </body>

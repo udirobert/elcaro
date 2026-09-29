@@ -1,0 +1,13 @@
+{
+  "name": "elcaro-extension-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "jsdom driver for the Gmail extension content script (no build step in the extension itself).",
+  "scripts": {
+    "test": "node content.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

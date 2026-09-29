@@ -2,6 +2,16 @@
 # The miner API runs on a separate VPS — set ELCARO_MINER_URL in Netlify
 # environment variables (Site settings → Environment variables).
 #
+# Gmail extension bridge (/api/engine-ask) — every successful ask spends $0.01
+# of the payer wallet's USDC, so it is gated. See
+# app/extension/gmail-scan/README.md for the full table.
+#   TELEGRAPH_X402_KEY                 payer key, Base Sepolia, holds testnet USDC
+#   TELEGRAPH_BRIDGE_TOKEN             optional; requests must send x-bridge-token
+#   TELEGRAPH_BRIDGE_DAILY_CAP         per-instance daily ask backstop (default 40)
+#   TELEGRAPH_BRIDGE_EXTENSION_IDS     pinned chrome-extension:// ids (set this)
+#   TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION=0   close the bridge to unpinned ids
+#   TELEGRAPH_BRIDGE_ALLOW_NO_ORIGIN   1 to re-allow Origin-less (server) callers
+#
 # NOTE: `base` changes Netlify's working directory, so `command` and `publish`
 # are resolved RELATIVE TO `base` — do not prefix them with "app/web" again.
 # (A prior version had publish = "app/web/.next", which resolved to
