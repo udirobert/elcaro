@@ -52,22 +52,40 @@ node harness.mjs --case "question" "ground truth" "answer"
 The harness exits non-zero if our module loses a bench pair, scores its own
 ground truth below 0.99, or lets an attack through. CI runs all three.
 
-## Current numbers (our corpus, 28 Sep 2026)
+## Current numbers (our corpus, 29 Sep 2026)
+
+Seated champions downloaded from `https://devnode.telegraphprotocol.com/api/wasm`
+into `champions/` (gitignored). All three are zkasuran salience scorers. The
+`wasm_hash` on chain does not match the downloaded bytes (sha256 or sha3-256) —
+consistent with the IPFS re-serialisation issue, so champions are verified by
+loading them, not by hash.
 
 | module | margin | wins | worst self-match |
 |---|---|---|---|
 | elcaro_scorer | 0.6287 | 29/29 | 1.0000 |
+| url_c3 (champion, URL_SCAN) | 0.6278 | 27/29 | 1.0000 |
+| cmod_r5 (champion, CONTENT_MODERATION) | 0.4828 | 26/29 | 1.0000 |
+| tc_pen0 (champion, TEXT_CLASSIFICATION) | 0.4373 | 15/29 | 0.9888 |
 | text-baseline (token F1) | 0.1301 | 22/29 | 1.0000 |
 
-Attacks: 10/10 held (text baseline: 4/10). Elcaro miner summaries for the 26
-corpus cases average 0.813 under this module and 0.434 under the text baseline.
+Rank agreement (ours vs champion, ladder proxy for the 0.60 registration
+gate): cmod_r5 **0.7925**, tc_pen0 **0.7436**, url_c3 **0.9431** — all clear it.
 
-These are measured on our own fixtures, and `text-baseline` stands in for the
-network's text-overlap modules; it is not a real champion. Before registering:
+Attacks: elcaro_scorer 10/10 held; champions hold 4/10 (cmod_r5), 2/10
+(tc_pen0), 6/10 (url_c3). The champions are salience models: they give 1.0 to
+an answer that copies the ground truth verbatim, 0.0 to an honest paraphrase
+(`cmod_r5` scores every honest fixture 0.0), and 1.0 to the hedge,
+false-positive and restated-score attacks. `text-baseline` stands in for the
+network's text-overlap modules; the three champions above are the real thing.
 
-1. Download the seated modules for the target intents from
-   `https://devnode.telegraphprotocol.com/api/wasm` into `champions/`.
-2. `node harness.mjs` must show our margin and wins at least matching the champion's.
-3. `--agreement` must be ≥ 0.60: the node rejects modules that order real
-   miner answers too differently from the incumbent. Our ladder only
-   approximates that gate.
+Elcaro miner summaries for the 26 corpus cases average 0.813 under this module
+and 0.434 under the text baseline.
+
+## Registration checklist
+
+1. [x] Seated champions downloaded (see `docs/telegraph-season-2.md` W1).
+2. [x] `node harness.mjs`: margin and wins at least matching the champion.
+3. [x] `--agreement` ≥ 0.60 against the seated champion.
+
+Remaining before sending a registration: widen the bench with answers written
+by other people / real miner outputs, then pay the registration bond.

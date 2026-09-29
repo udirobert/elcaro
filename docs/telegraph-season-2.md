@@ -58,10 +58,20 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 
 ### W1 — Evaluator (Track 2): rewrite `eval/` as a real scoring module
 
-- [ ] Fetch seated modules for `CONTENT_MODERATION` / `TEXT_CLASSIFICATION`
+- [x] Fetch seated modules for `CONTENT_MODERATION` / `TEXT_CLASSIFICATION`
       (and any mission-relevant intent) from `devnode…/api/wasm`; store under
-      `eval/scorer/champions/` (gitignored — third-party binaries). Blocked
-      28 Sep: devnode API timed out.
+      `eval/scorer/champions/` (gitignored — third-party binaries).
+      **29 Sep: done.** Devnode responded (2417 intents; the 28 Sep timeout was
+      transient). Seated champions are all zkasuran salience scorers:
+      `cmod_r5` (CONTENT_MODERATION, eval 0.80), `tc_pen0`
+      (TEXT_CLASSIFICATION, eval 1.0), and `url_c3` (URL_SCAN, eval 0.948 —
+      candidate for W2's second intent). On our 29-case bench ours beats all
+      three on margin and wins (0.6287/29 vs 0.4828/26, 0.4373/15, 0.6278/27)
+      and rank agreement clears the 0.60 gate against each (0.79 / 0.74 / 0.94).
+      Caveat: the downloaded bytes do not reproduce the on-chain `wasm_hash`
+      under sha256 or sha3-256 — consistent with the known IPFS
+      re-serialisation mismatch, so champions are verified by loading and
+      running them, not by hash.
 - [x] Scoring module at `eval/scorer/` (own crate): `no_std`, zero imports,
       exports `alloc`, `dealloc`, `rank_answer`, `breakdown_answer`; ~11 KB;
       deterministic float ops only
@@ -96,7 +106,21 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       legitimate fit (e.g. URL/phishing/text-auth intents) — check the live
       intent catalog; do not declare intents we can't answer well
 - [ ] Test an ERC-8183 job end-to-end: Amanat found `strings[i]` params arrive
-      empty/zeroed, and our `on_chain.request` maps `content` from `strings.0`
+      empty/zeroed, and our `on_chain.request` maps `content` from `strings.0`.
+      **29 Sep: harness ready — `scripts/erc8183_job_test.sh` (preflight / fund /
+      create / watch / cancel), blocked only on a funded signer.** Facts
+      established: registration 406 is active and its registration-pinned
+      intentId is `0x8b47bf24…5981` (field 5 of `getMiner(406)`); jobBasePrice
+      is 1 USDC + demand multiplier, paid from Diamond escrow (0 today); the
+      registering wallet `0x1e17…5D40` is an EOA holding nothing and its key is
+      not scripted anywhere, so a funded test key is needed. Diagnostic: empty
+      `content` is valid per our schema and returns a normal `safe, 0.00`
+      verdict — so if the node delivers empty strings, the job still settles
+      Terminal with a safe verdict, which IS the smoking gun. A healthy run
+      shows 0.664/suspicious for the default fixture. Note: CONTENT_MODERATION
+      now has competition (TxLens 9002, ChainSight 302) — the broadcast
+      (intent-name-hash) mode may route to them, so prefer the pinned intentId
+      for this test.
 - [ ] Any YAML change → `updateMiner` in the same window
       (`scripts/print_update_miner.sh`); note `updateMiner` deregisters the old
       record before the new one validates — have the fix ready before sending
@@ -104,9 +128,20 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 
 ### W3 — Application (Track 3): Gmail extension on composed Telegraph intelligence
 
-- [ ] Browser extension: one-click scan of the open Gmail message (then Outlook web)
+- [x] Browser extension: one-click scan of the open Gmail message (then
+      Outlook web). **29 Sep: skeleton at `app/extension/gmail-scan/` — MV3,
+      no build step, loads unpacked.** Floating Scan button in the thread
+      toolbar → overlay with band / risk score / summary / techniques;
+      re-injection guard; rail preference persisted. Extraction heuristics
+      (`.ii.gt` / `.a3s`) need hardening against Gmail DOM churn — test with
+      plain, quoted and HTML-heavy mail. Outlook: not started.
 - [ ] Backend routes through auto-routed `POST /engine/v1/ask`
-      (`app/telegraph.py`), shows which miner answered
+      (`app/telegraph.py`), shows which miner answered. 29 Sep: the extension
+      background worker routes the engine rail by default (direct
+      `/engine/v1/ask/8848` fallback, same distinction as `app/telegraph.py`);
+      the first call surfaces the engine's 402 PAYMENT-REQUIRED challenge in
+      the overlay. Blocked on wiring an x402 wallet client
+      (Telegraph-examples, `x402:engine-ask`) before counted traffic flows.
 - [ ] Compose ≥ 3 signals from different Telegraph miners (our IPI verdict +
       URL scan + sender/domain reputation or similar, per live catalog) into
       SAFE / CAUTION / BLOCK with evidence attached
@@ -145,7 +180,9 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 - [ ] Publish MCP server (`app/mcp_server.py`) to PyPI/npm; list in the
       official MCP registry
 - [ ] Write up protocol findings as a bug report (IPFS re-serialisation hash
-      mismatch, missing-`intents` routing no-op, anything W1/W2 surface)
+      mismatch — 29 Sep: champions' on-chain `wasm_hash` ≠ the bytes served by
+      their `wasm_url`, three modules confirmed under sha256 and sha3-256;
+      missing-`intents` routing no-op, anything W1/W2 surface)
 - [ ] X cadence: kickoff, scorer benchmark table, miner live, app launch,
       weekly usage numbers
 
@@ -167,4 +204,12 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       `TEXT_CLASSIFICATION` now, and its current bar
 - [ ] Whether Season I registrations (miner 8848 / reg 406) carry over
 - [ ] How app usage is measured (engine traffic only? installs? on-chain jobs?)
-- [ ] Current state of ERC-8183 job routing and param mapping on testnet
+- [ ] Current state of ERC-8183 job routing and param mapping on testnet.
+      29 Sep: docs read (erc8183-jobs, onchain-miner-requests). Two separate
+      rails — jobs target an intent (~1 USDC from escrow, callback optional,
+      failed jobs sit in Funded forever → `cancelJob` refunds); miner requests
+      target a miner+endpoint (gas only, callback mandatory, one outstanding
+      protocol-wide). The old `strings[i]` bug may be a listener/params issue
+      on the job rail; our miner-side mapping (`strings.0` → content) is
+      declared in `miner/telegraph.yaml`. Live test pending funded signer
+      (`scripts/erc8183_job_test.sh`).

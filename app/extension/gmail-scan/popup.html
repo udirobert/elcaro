@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+        width: 280px;
+        margin: 0;
+        padding: 14px;
+        color: #1a1a2e;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 2px;
+      }
+      p.sub {
+        margin: 0 0 12px;
+        color: #6b6b7b;
+        font-size: 11.5px;
+      }
+      label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b6b7b;
+        margin-bottom: 4px;
+      }
+      select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #d5d5dd;
+        border-radius: 8px;
+        font: inherit;
+        background: #fff;
+      }
+      p.note {
+        margin: 12px 0 0;
+        font-size: 11.5px;
+        color: #6b6b7b;
+        line-height: 1.5;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+        font-size: 10.5px;
+        background: #f2f2f7;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Elcaro IPI Guard</h1>
+    <p class="sub">Scan-before-act for Gmail, via Telegraph miners.</p>
+
+    <label for="rail">Route scans through</label>
+    <select id="rail">
+      <option value="engine">Engine (auto-routed, counted)</option>
+      <option value="direct">Direct miner 8848 (fallback)</option>
+    </select>
+
+    <p class="note">
+      Open a message in Gmail, then click the floating
+      <strong>Scan</strong> button in the thread toolbar. The verdict band
+      (SAFE / CAUTION / BLOCK) comes from the miner's risk score. The engine
+      rail is the one Telegraph judges; the direct rail bypasses routing but
+      still reaches the same miner.
+    </p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
