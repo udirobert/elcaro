@@ -136,12 +136,25 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       (`.ii.gt` / `.a3s`) need hardening against Gmail DOM churn — test with
       plain, quoted and HTML-heavy mail. Outlook: not started.
 - [ ] Backend routes through auto-routed `POST /engine/v1/ask`
-      (`app/telegraph.py`), shows which miner answered. 29 Sep: the extension
-      background worker routes the engine rail by default (direct
-      `/engine/v1/ask/8848` fallback, same distinction as `app/telegraph.py`);
-      the first call surfaces the engine's 402 PAYMENT-REQUIRED challenge in
-      the overlay. Blocked on wiring an x402 wallet client
-      (Telegraph-examples, `x402:engine-ask`) before counted traffic flows.
+      (`app/telegraph.py`), shows which miner answered. **29 Sep: payment path
+      built — `app/web/src/app/api/engine-ask/route.ts` forwards to the engine
+      rail and answers the x402 challenge server-side** (exact scheme,
+      EIP-3009 TransferWithAuthorization over Base Sepolia USDC, header
+      `PAYMENT-SIGNATURE`, x402Version 2, accepts[] echoed — shape from
+      telegraph-examples `src/lib/x402.ts`, validated against the live devnode:
+      well-formed-but-unfunded returns upstream "payment required" while
+      malformed headers get "Invalid payment"). The extension's engine rail
+      now goes through the bridge; it needs no wallet. Gated by origin
+      allowlist + optional `TELEGRAPH_BRIDGE_TOKEN` + per-instance daily cap
+      `TELEGRAPH_BRIDGE_DAILY_CAP` (default 40). **Remaining: fund a testnet
+      payer wallet and set `TELEGRAPH_X402_KEY` in Netlify** — the rail is
+      inert until then (502 PAYER_NOT_CONFIGURED). The 402 challenge also
+      offers an `escrow` scheme (depositUSDC once, EIP-191 personal_sign per
+      ask) — probed and mapped, not yet fully cracked: the node's recovered
+      signer never matches any reconstruction of the template message, so
+      the bridge uses `exact` where the reference client pins the contract.
+      Also surfaced: direct `/engine/v1/ask/8848` (NOT counted) uses a
+      different body — `{method, endpoint, payload}`.
 - [ ] Compose ≥ 3 signals from different Telegraph miners (our IPI verdict +
       URL scan + sender/domain reputation or similar, per live catalog) into
       SAFE / CAUTION / BLOCK with evidence attached

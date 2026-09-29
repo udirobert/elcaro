@@ -17,16 +17,30 @@ SAFE / CAUTION / BLOCK — this skeleton ships the IPI verdict first.
 
 | Rail | Endpoint | Counts for judging | Payment |
 |---|---|---|---|
-| `engine` (default) | `POST /engine/v1/ask` `{query}` | **yes** — auto-routed | x402; first call returns **402 + PAYMENT-REQUIRED challenge** |
-| `direct` | `POST /engine/v1/ask/8848` `{method, endpoint, payload}` | no — names the miner | x402, same 402 handshake |
+| `engine` (default) | `<bridge>/api/engine-ask` `{query}` → `POST /engine/v1/ask` | **yes** — auto-routed | x402 answered **server-side by the bridge** (EIP-3009 exact scheme, Base Sepolia USDC, $0.01/ask) |
+| `direct` | `POST /engine/v1/ask/8848` `{method, endpoint, payload}` | no — names the miner | unpaid in the extension; 402 surfaces in the overlay (dev fallback) |
 
-The rail preference is set in the popup and persisted in
-`chrome.storage.local`. **Neither rail works end-to-end yet**: an x402 wallet
-client must answer the 402 challenge. Wire
-[Telegraph-examples](https://github.com/telegraphprotocol/Telegraph-examples)
-(`x402:engine-ask`) into `background.js` — that is the single blocking step
-before real counted traffic flows. The 402 path is already surfaced in the
-overlay so the handshake state is visible.
+The bridge (`app/web/src/app/api/engine-ask/route.ts`) is the extension's
+path to counted traffic: it forwards the query to the engine and signs the
+x402 `exact` challenge with the payer key, so the extension itself needs no
+wallet. Envelope shape verified against the live devnode on 29 Sep 2026 — a
+well-formed but unfunded signature returns upstream's "payment required",
+while malformed headers return "Invalid payment".
+
+Bridge configuration (Netlify env vars, **testnet key only** — it signs
+USDC payments):
+
+| Var | Purpose |
+|---|---|
+| `TELEGRAPH_X402_KEY` | Payer private key on Base Sepolia; must hold testnet USDC. Unset → bridge returns 502 `PAYER_NOT_CONFIGURED`. |
+| `TELEGRAPH_BRIDGE_TOKEN` | Optional shared secret; when set, requests must carry `x-bridge-token`. |
+| `TELEGRAPH_BRIDGE_DAILY_CAP` | Per-instance daily ask backstop (default 40). In-memory, so treat as a guardrail, not a ceiling. |
+
+Origin allowlist inside the route: the production site, `mail.google.com`,
+and `chrome-extension://` (any extension id — tighten if the published one
+is the only consumer). The rail preference is set in the popup and persisted
+in `chrome.storage.local`; `chrome.storage.local.set({bridge})` overrides the
+bridge base URL for local development.
 
 ## Banding
 
@@ -36,7 +50,9 @@ Exactly as the `/integrate` page prescribes: `risk_score ≥ 0.5` → BLOCK,
 
 ## Roadmap (mirrors docs/telegraph-season-2.md W3)
 
-- [ ] x402 wallet client answering the 402 challenge (engine rail, counted)
+- [x] Engine rail payment path — bridge answers the x402 exact challenge
+      server-side; extension needs no wallet. Remaining: fund a testnet payer
+      wallet and set `TELEGRAPH_X402_KEY` in Netlify to light the rail up.
 - [ ] Gmail extraction hardening — `.ii.gt` / `.a3s` heuristics will need
       iteration; test with plain, quoted, and HTML-heavy mail
 - [ ] Compose ≥ 3 miners (IPI + URL/domain reputation + sender signals from the

@@ -1,23 +1,24 @@
 // Elcaro IPI Guard — background service worker (MV3).
 //
-// Two rails, matching app/telegraph.py's distinction:
+// Two rails:
 //
-//   engine (default) — POST /engine/v1/ask  { "query": "<natural language>" }
-//     Auto-routed: the engine classifies the query to an intent and picks the
-//     miner. This is the rail that counts for Telegraph miner judging. It is
-//     x402-paid (jobBasePrice is separate; per-call it's the miner's floor,
-//     0.01 USDC for miner 8848), so the FIRST call returns 402 with a
-//     PAYMENT-REQUIRED challenge. This skeleton surfaces that response instead
-//     of paying: wiring an x402 wallet client
-//     (github.com/telegraphprotocol/Telegraph-examples, x402:engine-ask) is the
-//     next step.
+//   engine (default) — POST <bridge>/api/engine-ask { "query": "<nl>" }
+//     Auto-routed Telegraph traffic: the bridge forwards to
+//     /engine/v1/ask and answers the x402 402 challenge server-side
+//     (EIP-3009 exact scheme over Base Sepolia USDC). This is the rail that
+//     counts as miner volume. The extension needs no wallet; the bridge holds
+//     the paying key and is gated by origin allowlist + optional token + a
+//     daily ask cap.
 //
 //   direct — POST /engine/v1/ask/8848 { method, endpoint, payload }
 //     Same protocol host, but names the miner. Works without routing, still
-//     x402-paid, and does NOT count as miner volume. Kept as the fallback and
-//     for local development.
+//     x402-paid, and does NOT count as miner volume. Unpaid here: it remains
+//     as the development fallback and will surface 402 in the overlay.
 
-const ENGINE_URL = "https://devnode.telegraphprotocol.com/engine/v1/ask";
+// Where the bridge lives. Override for local dev:
+//   chrome.storage.local.set({ bridge: "http://localhost:3000" })
+const DEFAULT_BRIDGE = "https://elcaro.trustfall.xyz";
+
 const DIRECT_URL =
   "https://devnode.telegraphprotocol.com/engine/v1/ask/8848";
 
@@ -34,27 +35,33 @@ function buildQuery(content, contentType) {
 }
 
 async function askEngine(content, contentType) {
-  const resp = await fetch(ENGINE_URL, {
+  const { bridge = DEFAULT_BRIDGE } = await chrome.storage.local.get("bridge");
+  const resp = await fetch(bridge.replace(/\/$/, "") + "/api/engine-ask", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query: buildQuery(content, contentType) }),
   });
-  if (resp.status === 402) {
-    const challenge = await resp.text().catch(() => "");
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
     const err = new Error(
-      "402 payment required by the engine rail — an x402 wallet client must answer the PAYMENT-REQUIRED challenge before this rail works."
+      data.error || "bridge ask failed: HTTP " + resp.status,
     );
-    err.code = "PAYMENT_REQUIRED";
-    err.challenge = challenge.slice(0, 2000);
+    err.code = data.code || (resp.status === 402 ? "PAYMENT_REQUIRED" : null);
+    err.hint =
+      resp.status === 502 && data.code === "PAYER_NOT_CONFIGURED"
+        ? "The bridge has no payer wallet configured yet (TELEGRAPH_X402_KEY). " +
+          "Every paid ask spends $0.01 — set the key deliberately."
+        : resp.status === 429
+          ? "Bridge daily cap reached — try again later or raise " +
+            "TELEGRAPH_BRIDGE_DAILY_CAP."
+          : null;
     throw err;
   }
-  if (!resp.ok) {
-    throw new Error("engine ask failed: HTTP " + resp.status);
-  }
-  return resp.json();
+  return data;
 }
 
-// Direct rail payload per the miner's registered schema.
+// Direct rail payload per the miner's registered schema. NOTE: unpaid — kept
+// for development; will surface the 402 challenge in the overlay.
 async function askDirect(content, contentType) {
   const resp = await fetch(DIRECT_URL, {
     method: "POST",
@@ -68,7 +75,8 @@ async function askDirect(content, contentType) {
   if (resp.status === 402) {
     const challenge = await resp.text().catch(() => "");
     const err = new Error(
-      "402 payment required by the direct rail — an x402 wallet client must answer the PAYMENT-REQUIRED challenge before this rail works."
+      "Direct rail is not paid by the extension — the challenge was surfaced " +
+        "instead. Use the engine rail for real scans."
     );
     err.code = "PAYMENT_REQUIRED";
     err.challenge = challenge.slice(0, 2000);
@@ -131,6 +139,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         ok: false,
         error: String(e.message || e),
         code: e.code || null,
+        hint: e.hint || null,
         challenge: e.challenge || null,
       });
     }
