@@ -31,7 +31,7 @@
       const bodies = document.querySelectorAll(".ii.gt div, .a3s.aiL");
       host = bodies[bodies.length - 1] || null;
     }
-    return host ? (host.innerText || "").trim() : "";
+    return host ? (host.innerText || host.textContent || "").trim() : "";
   }
 
   function bandStyle(band) {

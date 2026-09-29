@@ -87,8 +87,20 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       prose / terse / JSON / paraphrase styles) + 10 attack fixtures.
       28 Sep: margin 0.6287, 29/29 wins, 10/10 attacks held; token-F1 text
       baseline 0.1301, 22/29, 4/10
-- [ ] Widen fixtures with answers written by other people / real miner
-      outputs, so the bench isn't only our own phrasing
+- [x] Widen fixtures with answers written by other people / real miner
+      outputs, so the bench isn't only our own phrasing. **29 Sep:
+      `bench_wide.json` (79 cases) via `make_bench_wide.py` — 26 real miner
+      outputs fetched live from prod and cached in `miner_outputs.json`, plus
+      24 independent-voice verdict pairs written by the configured LLM
+      (llama-3.3-70b) without seeing our ground truth.** Ours wins **75/75**
+      at margin 0.577 (text baseline 0.156, 63/75); the champions collapse on
+      realistic answers — cmod_r5 0.280/64, tc_pen0 0.263/29, url_c3 0.408/61
+      — while rank agreement still clears the gate (0.79 / 0.74 / 0.91).
+      Generation-side filter rejects uncommitted LLM verdict pairs (hedges,
+      double negations) — 6 of 26 failed, echoing the Laya calibration
+      finding. Champion calls are ~0.5 s each on this set, so `bench_wide.mjs`
+      caches scores in `champions/score-cache.json` (first run ~15 min, then
+      ~0.1 s).
 - **Done when:** our module beats the seated champion on margin and wins, with
   rank agreement ≥ 0.60, on our harness — then register
 

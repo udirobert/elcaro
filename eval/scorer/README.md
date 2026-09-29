@@ -47,6 +47,10 @@ node harness.mjs --attacks        # anti-gaming fixtures (attacks.json)
 node harness.mjs --agreement target/wasm32-unknown-unknown/release/elcaro_scorer.wasm champions/X.wasm
 node harness.mjs --diff    target/wasm32-unknown-unknown/release/elcaro_scorer.wasm champions/X.wasm
 node harness.mjs --case "question" "ground truth" "answer"
+python make_bench_wide.py         # widen with real miner outputs (cached in miner_outputs.json)
+                                  # + independent LLM-written verdicts -> bench_wide.json
+node bench_wide.mjs               # same metrics on the widened set (champions take ~0.5 s/call there:
+                                  # long content ×24 MB transformer ≈ 15 min; ours runs in ms)
 ```
 
 The harness exits non-zero if our module loses a bench pair, scores its own
@@ -78,6 +82,31 @@ an answer that copies the ground truth verbatim, 0.0 to an honest paraphrase
 false-positive and restated-score attacks. `text-baseline` stands in for the
 network's text-overlap modules; the three champions above are the real thing.
 
+## Widened bench (75 cases, 29 Sep 2026)
+
+`make_bench_wide.py` adds the answers the W1 checklist asked for: the REAL
+miner output for every corpus case (fetched live, cached in
+`miner_outputs.json`) and independent-voice verdict pairs written by an LLM
+that never saw our ground truth (`llm_verdicts.json`). Pairs are filtered to
+fully committed verdicts on both poles — the model's hedges and double
+negations are rejected at generation time (6 of 26 pairs failed; see the
+Laya calibration finding). This is the fairer test — none of it is our
+phrasing:
+
+| module | margin | wins | worst self-match |
+|---|---|---|---|
+| elcaro_scorer | 0.5765 | 75/75 | 1.0000 |
+| url_c3 (champion, URL_SCAN) | 0.4084 | 61/75 | 1.0000 |
+| cmod_r5 (champion, CONTENT_MODERATION) | 0.2800 | 64/75 | 1.0000 |
+| tc_pen0 (champion, TEXT_CLASSIFICATION) | 0.2631 | 29/75 | 0.9888 |
+| text-baseline (token F1) | 0.1557 | 63/75 | 1.0000 |
+
+Rank agreement on the wide set: cmod_r5 **0.7883**, tc_pen0 **0.7373**,
+url_c3 **0.9113** — all ≥ 0.60. The salience champions lose ~half their
+margin when answers stop copying the ground truth verbatim; ours is built
+for paraphrase. Run `node bench_wide.mjs` (champion scores are cached in
+`champions/score-cache.json`; first full run takes ~15 min, reruns ~0.1 s).
+
 Elcaro miner summaries for the 26 corpus cases average 0.813 under this module
 and 0.434 under the text baseline.
 
@@ -86,6 +115,7 @@ and 0.434 under the text baseline.
 1. [x] Seated champions downloaded (see `docs/telegraph-season-2.md` W1).
 2. [x] `node harness.mjs`: margin and wins at least matching the champion.
 3. [x] `--agreement` ≥ 0.60 against the seated champion.
+4. [x] Bench widened beyond our own phrasing (`bench_wide.mjs`); ours wins
+       every pair on the widened set and leads every champion on margin.
 
-Remaining before sending a registration: widen the bench with answers written
-by other people / real miner outputs, then pay the registration bond.
+Remaining before sending a registration: the registration bond.
