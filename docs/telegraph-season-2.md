@@ -263,7 +263,7 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
 | Days | Focus |
 |---|---|
 | Pre-start | Resolve open questions; W1 harness + champion download; W2 on-chain job test |
-| 1–7 | W2 `summary` + `updateMiner`; W1 scorer core + anti-gaming tests; W3 extension skeleton |
+| 1–7 | W2 `summary` + `updateMiner`; W1 scorer core + anti-gaming tests; W3 extension MVP (rail + UX) |
 | 8–14 | W1 register once it beats champion; W3 composed checkpoint live, first users |
 | 15–24 | W3 user growth; W2 second intent if justified; W4 MCP publish + bug report |
 | 25–30 | Freeze; reproducible numbers in README; submission forms; final posts |

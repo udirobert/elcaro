@@ -256,9 +256,23 @@ testing from a non-browser client — browser fetches always send an `Origin`.
 ## Roadmap (mirrors docs/telegraph-season-2.md W3)
 
 - [x] Engine rail payment path — bridge answers the x402 exact challenge
-      server-side; extension needs no wallet. **Remaining: fund a testnet payer
-      wallet and set `TELEGRAPH_X402_KEY` + `TELEGRAPH_BRIDGE_EXTENSION_IDS`
-      in Netlify to light the rail up.**
+      server-side; extension needs no wallet. Payer wallet funded
+      (`0x3aB5…9868F`, 20 USDC) and `TELEGRAPH_X402_KEY` set in Netlify; a live
+      ask settles at $0.01 and returns a real miner verdict. **Remaining:
+      re-paste the key without stray whitespace, then set
+      `TELEGRAPH_BRIDGE_EXTENSION_IDS` once the extension is published.**
+- [ ] Extension icon (16/32/48/128) — Chrome currently renders a default
+      puzzle piece, which is the first thing a user sees
+- [ ] Drop the unused `activeTab` + `scripting` permissions; a security tool
+      should not ask for more than it uses
+- [ ] Move the `direct` rail out of the user-facing popup behind a dev flag
+- [ ] "See the full report" deep link — the overlay stops at a summary while
+      the API already returns evidence, offsets and TTP mappings
+- [ ] Steer the query at a moderation intent — auto-routing currently hands
+      many scans to unrelated intents (see "Auto-routing means the miner is not
+      ours"), which come back as a signal rather than a verdict
+- [ ] Accessibility pass: `aria-live` announcement, focus management, keyboard
+      order in the overlay
 - [x] Pinned extension origin, operator status endpoint, honest error copy
 - [x] UX pass: progress state, risk meter, per-band next action, retry, badge,
       verdict cache
