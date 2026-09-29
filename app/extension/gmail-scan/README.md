@@ -30,11 +30,31 @@ wallet.
 - **Failures explain themselves.** Every error is a human headline plus an
   explanation, with the infra code (e.g. `PAYER_NOT_CONFIGURED`) tucked behind
   a **Details** disclosure. Retryable errors get a **Scan again** button.
-- **The toolbar badge** carries the result (`!` red, `?` amber, cleared for
-  SAFE) so the verdict registers even when the overlay is off-screen.
+- **The toolbar badge** carries the result (`!` red, `?` amber) for six
+  seconds, then settles into the day's running count of BLOCKed messages —
+  the number someone actually wants to glance at. Zero blocks, no badge.
 - **Re-scanning is free.** Verdicts are cached in the service worker for 5
   minutes, so clicking Scan twice on the same message costs one $0.01 ask, not
   two. Cached verdicts say so.
+- **Scan without the mouse.** `⌘⇧S` (macOS) / `Alt+S` — rebindable at
+  <kbd>chrome://extensions/shortcuts</kbd>. The shortcut lands in the same
+  content-script path as a click, so it costs the same and hits the same cache.
+- **Today, at a glance.** The popup opens on a proportional bar of the day's
+  scans — clear / caution / blocked — with a "Clear history" button.
+  History lives in `chrome.storage.local` and never leaves the machine, the
+  same stance as the site's `/supervise` page. It is erasable on purpose.
+- **Who answered.** When the rail names the miner that handled the ask, the
+  overlay credits it (*"engine rail · counted · miner 9002"*).
+- **One tip, once.** The first scan mentions the keyboard shortcut; after
+  that the overlay never nags.
+
+### What it deliberately does not do
+
+It never trims quoted replies or signatures out of the message before
+scanning. It would cut noise and false positives, and it would also be a
+bypass: an attacker who wants their instructions ignored just writes
+`-----Original Message-----` above them. Everything visible in the thread
+goes to the miner.
 
 ## Rails (`background.js`)
 
@@ -175,18 +195,25 @@ Exactly as the `/integrate` page prescribes: `risk_score ≥ 0.5` → BLOCK,
 
 ## Tests
 
-`app/extension/tests/` drives `content.js` in jsdom against a Gmail-shaped
-fixture — button mount, extraction, the progress state, each band's copy, the
-error path, `Escape`/Dismiss, and a guard that no env var name or protocol
-jargon leaks into the overlay.
+`app/extension/tests/` drives the extension in jsdom against a Gmail-shaped
+fixture and the real popup HTML:
+
+- `content.test.mjs` — button mount, extraction, the progress state, each
+  band's copy, the shortcut path, miner attribution, the error path,
+  `Escape`/Dismiss, and a guard that no env var name or protocol jargon leaks
+  into the overlay.
+- `popup.test.mjs` — renders the popup against stubbed worker replies (live,
+  not-configured, unreachable, empty history) and asserts what the user
+  reads. The popup's loudest failure mode is a null element, so every `$("id")`
+  is checked against a rendered panel.
 
 ```bash
 cd app/extension/tests && npm install && npm test
 ```
 
-It has already earned its keep: it caught the message body being read with
-`innerText` only, which jsdom (and some other engines) do not implement, so
-every scan shipped an empty message.
+They have already earned their keep: the content test caught the message body
+being read with `innerText` only, which jsdom (and some other engines) do not
+implement, so every scan shipped an empty message.
 
 ## Local dev overrides
 

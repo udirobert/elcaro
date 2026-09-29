@@ -17,9 +17,16 @@
 //
 // This worker also owns everything the user should never have to think about:
 // request timeouts, a short verdict cache (a re-scan of the same message is
-// instant and free), toolbar badge state, and the single mapping from
-// infrastructure error codes to human copy. The content script renders what
-// `ui` it is handed and does not know what an x402 challenge is.
+// instant and free), a local scan history, toolbar badge state, the keyboard
+// shortcut, and the single mapping from infrastructure error codes to human
+// copy. The content script renders what `ui` it is handed and does not know
+// what an x402 challenge is.
+//
+// A note on what we deliberately do NOT do: we never trim quoted replies or
+// signatures out of the message before scanning. It would cut noise and false
+// positives, and it would also be a bypass — an attacker who wants their
+// instructions ignored just writes "-----Original Message-----" above them.
+// Everything the user can see in the thread goes to the miner.
 
 // Where the bridge lives. Override for local dev:
 //   chrome.storage.local.set({ bridge: "http://localhost:3000" })
@@ -39,6 +46,14 @@ const STATUS_TIMEOUT_MS = 5_000;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 50;
 const verdictCache = new Map();
+
+// Local scan history. Stays on this machine (chrome.storage.local) and is the
+// only thing the popup reports on — it mirrors the /supervise page's stance
+// that scan history is the user's, not ours. Capped, and clearable from the
+// popup, because a privacy feature you cannot erase is not a privacy feature.
+const HISTORY_KEY = "history";
+const HISTORY_MAX = 100;
+const BADGE_REVERT_MS = 6_000;
 
 // code -> what the user is told. Keep this the only place infra strings get
 // translated; the overlay never sees a status code or an env var name.
@@ -258,6 +273,9 @@ function normalize(data, rail) {
     summary: data.summary || data.reason || data.human_summary || "",
     techniques: Array.isArray(data.flagged_techniques) ? data.flagged_techniques : [],
     quarantined: Boolean(data.quarantined),
+    // Which miner actually answered, when the rail tells us. Nice for trust,
+    // and the honest answer on the direct rail is always our own 8848.
+    miner: data.miner || data.miner_id || data.miner_name || (rail === "direct" ? "8848" : null),
     raw: data,
   };
 }
@@ -272,7 +290,47 @@ function band(result) {
   return "SAFE";
 }
 
+// --- local scan history -----------------------------------------------------
+
+async function readHistory() {
+  const got = await chrome.storage.local.get(HISTORY_KEY);
+  return Array.isArray(got[HISTORY_KEY]) ? got[HISTORY_KEY] : [];
+}
+
+async function recordScan(entry) {
+  const history = await readHistory();
+  history.unshift(entry);
+  await chrome.storage.local.set({ [HISTORY_KEY]: history.slice(0, HISTORY_MAX) });
+  return history.slice(0, HISTORY_MAX);
+}
+
+async function clearHistory() {
+  await chrome.storage.local.remove(HISTORY_KEY);
+  verdictCache.clear();
+}
+
+function isToday(iso) {
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
+/** Counts + a short recent list, which is all the popup renders. */
+async function historySummary() {
+  const history = await readHistory();
+  const today = history.filter((h) => isToday(h.at));
+  const tally = { safe: 0, caution: 0, block: 0, unknown: 0 };
+  for (const h of today) tally[String(h.band || "unknown").toLowerCase()] += 1;
+  return {
+    today: today.length,
+    tally,
+    blockedToday: tally.block,
+    recent: history.slice(0, 4),
+    stored: history.length,
+  };
+}
+
 // Toolbar badge: the user gets feedback even when the overlay is off-screen.
+// After a few seconds it settles into the day's running count of BLOCKed
+// messages, which is the number someone actually wants to glance at.
 async function setBadge(text, color) {
   try {
     await chrome.action.setBadgeText({ text: text || "" });
@@ -289,13 +347,39 @@ const BAND_BADGE = {
   SAFE: ["", "#15803d"],
 };
 
+let badgeTimer = null;
+
+async function restBadge() {
+  const { blockedToday } = await historySummary();
+  if (blockedToday > 0) await setBadge(String(blockedToday), "#b91c1c");
+  else await setBadge("", "#15803d");
+}
+
 async function announceBand(b) {
+  if (badgeTimer) clearTimeout(badgeTimer);
   const [text, color] = BAND_BADGE[b] || BAND_BADGE.UNKNOWN;
   await setBadge(text, color);
-  if (b === "SAFE") setTimeout(() => chrome.action.setBadgeText({ text: "" }).catch(() => {}), 6000);
+  badgeTimer = setTimeout(() => {
+    restBadge().catch(() => {});
+  }, BADGE_REVERT_MS);
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "elcaro:history") {
+    historySummary()
+      .then((summary) => sendResponse({ ok: true, summary }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (msg?.type === "elcaro:clear-history") {
+    clearHistory()
+      .then(() => restBadge())
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
   if (msg?.type === "elcaro:status") {
     (async () => {
       try {
@@ -334,6 +418,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       result.band = band(result);
       cachePut(key, result);
       await announceBand(result.band);
+      // Only real verdicts enter the history — a failed ask is not a finding,
+      // and counting it would make the day's numbers a lie.
+      await recordScan({
+        at: new Date().toISOString(),
+        band: result.band,
+        riskScore: result.riskScore,
+        techniques: result.techniques.slice(0, 3),
+        rail,
+      }).catch(() => {});
       sendResponse({ ok: true, result });
     } catch (e) {
       await setBadge("!", "#b91c1c");
@@ -347,4 +440,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   })();
 
   return true; // keep the message channel open for the async reply
+});
+
+// Keyboard shortcut (⌘⇧S / Alt+S by default, rebindable at
+// chrome://extensions/shortcuts). Asks the active tab's content script to
+// scan, so it behaves exactly like clicking the button — same code path, same
+// cost, same cache. If the active tab isn't Gmail there is no content script
+// to answer and the message is simply dropped.
+chrome.commands?.onCommand.addListener(async (command) => {
+  if (command !== "scan-current") return;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    await chrome.tabs.sendMessage(tab.id, { type: "elcaro:trigger-scan" });
+  } catch {
+    /* no receiver: not a Gmail tab, or the content script hasn't mounted */
+  }
 });

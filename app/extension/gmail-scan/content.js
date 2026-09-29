@@ -20,6 +20,10 @@
   const OVERLAY_ID = "elcaro-ipi-overlay";
   const STYLE_ID = "elcaro-ipi-style";
   const SAFE_AUTODISMISS_MS = 8_000;
+  const SHORTCUT_HINT = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+    ? "⌘⇧S"
+    : "Alt+S";
+  const FIRST_RUN_KEY = "welcomed";
 
   let button = null;
   let lastScan = null; // re-runnable by the overlay's Try again button
@@ -176,14 +180,15 @@
   }
 
   function railLabel(state) {
-    if (state.rail === "engine") return "engine rail · counted";
-    if (state.rail === "direct") return "direct rail";
+    const who = state.miner ? " · miner " + state.miner : "";
+    if (state.rail === "engine") return "engine rail · counted" + who;
+    if (state.rail === "direct") return "direct rail" + who;
     return "elcaro";
   }
 
   // --- states ---------------------------------------------------------------
 
-  function showScanning() {
+  function showScanning(firstRun) {
     const ov = newOverlay();
     header(ov, { label: "Scanning", glyph: "◌", bg: "#4c1d95" }, "engine rail");
     const body = el("div", "padding:12px 14px 14px;color:#1a1a2e");
@@ -194,12 +199,14 @@
     bar.appendChild(el("span"));
     ov.appendChild(body);
     ov.appendChild(bar);
-    const hint = el(
-      "p",
-      "margin:8px 14px 12px;font-size:11px;color:#8b8b9c",
-      "Paid per scan through the Telegraph network — usually a couple of seconds.",
-    );
-    ov.appendChild(hint);
+    if (firstRun) {
+      const tip = el(
+        "p",
+        "margin:8px 14px 12px;font-size:11px;color:#8b8b9c",
+        "Tip: you can press " + SHORTCUT_HINT + " to rescan this message without leaving the keyboard.",
+      );
+      ov.appendChild(tip);
+    }
     return ov;
   }
 
@@ -342,7 +349,11 @@
       return;
     }
     lastScan = { content };
-    showScanning();
+    // The shortcut tip is worth exactly one impression, on the first scan.
+    const seen = await chrome.storage.local.get(FIRST_RUN_KEY).catch(() => ({}));
+    const firstRun = !(seen && seen[FIRST_RUN_KEY]);
+    showScanning(firstRun);
+    if (firstRun) chrome.storage.local.set({ [FIRST_RUN_KEY]: true }).catch(() => {});
     setLoading(true);
     const { rail = "engine" } = await chrome.storage.local.get("rail");
     try {
@@ -392,4 +403,10 @@
   const observer = new MutationObserver(() => mountButton());
   observer.observe(document.body, { childList: true, subtree: true });
   mountButton();
+
+  // The keyboard shortcut lands here, so it takes the identical path as a
+  // click — same extraction, same cost, same cache.
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === "elcaro:trigger-scan") scan();
+  });
 })();

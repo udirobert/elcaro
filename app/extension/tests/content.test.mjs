@@ -75,11 +75,15 @@ async function scenario(name, reply, { onSend } = {}) {
   });
   const { window } = dom;
   const sent = [];
+  const listeners = [];
+  const store = { rail: "engine" };
   window.chrome = {
     storage: {
       local: {
-        get: async (k) => (k === "rail" ? { rail: "engine" } : {}),
-        set: async () => {},
+        get: async (k) => (k === "rail" || k === ["rail"] ? { rail: store.rail } : {}),
+        set: async (obj) => {
+          Object.assign(store, obj);
+        },
       },
     },
     runtime: {
@@ -88,11 +92,14 @@ async function scenario(name, reply, { onSend } = {}) {
         if (onSend) return onSend(msg, sent);
         return reply;
       },
+      onMessage: { addListener: (fn) => listeners.push(fn) },
     },
   };
+  window.__store = store;
+  window.__listeners = listeners;
   window.eval(readFileSync(CONTENT_JS, "utf8"));
   await sleep(80);
-  return { window, document: window.document, sent, dom };
+  return { window, document: window.document, sent, dom, store, listeners };
 }
 
 const scanButton = (doc) => doc.querySelector("button[title^='Scan this message']");
@@ -151,6 +158,37 @@ const buttonByText = (doc, text) =>
   assert(
     !document.getElementById("elcaro-ipi-overlay"),
     "Dismiss removes the overlay",
+  );
+}
+
+// --- 1b. the keyboard shortcut ----------------------------------------------
+{
+  const { document, sent, listeners, store } = await scenario("keyboard shortcut", BLOCK_REPLY);
+  assert(listeners.length > 0, "content script listens for runtime messages");
+  assert(store.welcomed === undefined, "not welcomed before the first scan");
+
+  listeners.forEach((fn) => fn({ type: "elcaro:trigger-scan" }));
+  await sleep(120);
+  assert(sent.length === 1, "shortcut triggers exactly one scan");
+  assert(sent[0].type === "elcaro:scan", "shortcut takes the same path as a click");
+  assert(
+    sent[0].content.includes(BODY_MARKER),
+    "shortcut extracts the same message body",
+  );
+  assert(store.welcomed === true, "the first scan marks the extension as welcomed");
+}
+
+// --- 1c. which miner answered ------------------------------------------------
+{
+  const { document } = await scenario("miner attribution", {
+    ok: true,
+    result: { ...BLOCK_REPLY.result, miner: "9002" },
+  });
+  scanButton(document).click();
+  await sleep(120);
+  assert(
+    overlayText(document).includes("miner 9002"),
+    "overlay credits the miner that answered",
   );
 }
 

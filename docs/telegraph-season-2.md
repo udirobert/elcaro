@@ -155,11 +155,23 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       with the infra code behind a **Details** disclosure and a **Scan again**
       retry — a test asserts no env var name or protocol jargon reaches the
       overlay. The popup's status card polls the bridge so a user learns the
-      service is down *before* clicking. Also fixed: the manifest never
+      service is down *before* clicking. **Second UX pass (29 Sep, once the
+      payer wallet was funded):** ⌘⇧S / Alt+S scans from the keyboard
+      (rebindable, same code path and same cache as a click); the popup leads
+      with a proportional today-bar of clear/caution/blocked plus a
+      clearable local history in `chrome.storage.local` (never leaves the
+      machine, mirroring `/supervise`); the badge settles after 6s into the
+      day's running blocked count; the overlay credits the miner that
+      answered when the rail names one; a one-time tip mentions the shortcut.
+      Deliberately NOT done: trimming quoted replies before scanning — it
+      would be a bypass, since an attacker just writes "-----Original
+      Message-----" above their payload. Also fixed: the manifest never
       granted `elcaro.trustfall.xyz`, so the engine rail's fetch would have
-      been denied outright. Extraction heuristics (`.ii.gt` / `.a3s`) still
-      need hardening against Gmail DOM churn — test with plain, quoted and
-      HTML-heavy mail. Outlook: not started.
+      been denied outright. `app/extension/tests/` now covers content.js and
+      renders the real popup HTML in jsdom (33 + 22 assertions). Extraction
+      heuristics (`.ii.gt` / `.a3s`) still need hardening against Gmail DOM
+      churn — test with plain, quoted and HTML-heavy mail. Outlook: not
+      started.
 - [ ] Backend routes through auto-routed `POST /engine/v1/ask`
       (`app/telegraph.py`), shows which miner answered. **29 Sep: payment path
       built — `app/web/src/app/api/engine-ask/route.ts` forwards to the engine

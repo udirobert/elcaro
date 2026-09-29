@@ -46,7 +46,7 @@
         border: 1px solid var(--line);
         border-radius: 10px;
         padding: 10px 12px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
         display: flex;
         gap: 9px;
         align-items: flex-start;
@@ -90,12 +90,90 @@
         font-size: 11px;
         line-height: 1.45;
       }
-      .status code {
-        font-family: ui-monospace, monospace;
+
+      /* today panel */
+      .today {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+      }
+      .today .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 7px;
+      }
+      .today .count {
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .today .count em {
+        font-style: normal;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .bar {
+        display: flex;
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #eeeef4;
+        margin-bottom: 8px;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+      }
+      .bar .safe {
+        background: #15803d;
+      }
+      .bar .caution {
+        background: #b45309;
+      }
+      .bar .block {
+        background: #b91c1c;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        font-size: 10.5px;
+        color: var(--muted);
+      }
+      .legend b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .today .foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 7px;
+        border-top: 1px solid var(--line);
+      }
+      .today .foot span {
         font-size: 10px;
-        background: #f2f2f7;
-        padding: 0 3px;
-        border-radius: 4px;
+        color: var(--muted);
+      }
+      .today .foot button {
+        font: inherit;
+        font-size: 10px;
+        color: var(--muted);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .today .foot button:hover {
+        color: #b91c1c;
+      }
+      .empty {
+        font-size: 11px;
+        color: var(--muted);
+        margin: 0;
       }
 
       label {
@@ -132,6 +210,15 @@
       ol.steps li {
         margin-bottom: 3px;
       }
+      kbd {
+        font: inherit;
+        font-size: 10.5px;
+        background: #f2f2f7;
+        border: 1px solid var(--line);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        padding: 0 4px;
+      }
       footer {
         border-top: 1px solid var(--line);
         padding-top: 10px;
@@ -162,6 +249,23 @@
       </div>
     </div>
 
+    <div class="today" id="today">
+      <div class="row">
+        <span class="count" id="todayCount">Today</span>
+        <span class="count" id="todayBlocked"></span>
+      </div>
+      <div class="bar" id="todayBar">
+        <i class="safe" style="width: 0"></i>
+        <i class="caution" style="width: 0"></i>
+        <i class="block" style="width: 0"></i>
+      </div>
+      <div class="legend" id="todayLegend"></div>
+      <div class="foot" id="todayFoot" hidden>
+        <span id="todayStored"></span>
+        <button id="clearHistory" type="button">Clear history</button>
+      </div>
+    </div>
+
     <label for="rail">Route scans through</label>
     <select id="rail">
       <option value="engine">Engine — recommended</option>
@@ -171,7 +275,10 @@
 
     <ol class="steps">
       <li>Open a message in Gmail.</li>
-      <li>Click the violet <strong>Scan</strong> button in the thread toolbar.</li>
+      <li>
+        Click the violet <strong>Scan</strong> button — or press
+        <kbd id="kbd">⌘⇧S</kbd>.
+      </li>
       <li>Read the verdict before you reply, click, or forward.</li>
     </ol>
 
