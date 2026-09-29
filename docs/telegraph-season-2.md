@@ -181,10 +181,21 @@ Reference repo reviewed: [PugarHuda/amanat](https://github.com/PugarHuda/amanat)
       wallet) instead of shipping the challenge to the overlay; 30s upstream
       + 20s client timeouts. Gated by origin allowlist + optional
       `TELEGRAPH_BRIDGE_TOKEN` + per-instance daily cap
-      `TELEGRAPH_BRIDGE_DAILY_CAP` (default 40). **Remaining: fund a testnet
-      payer wallet and set `TELEGRAPH_X402_KEY` (and
-      `TELEGRAPH_BRIDGE_EXTENSION_IDS` once published) in Netlify** — the rail
-      is inert until then (502 PAYER_NOT_CONFIGURED). The 402 challenge also
+      `TELEGRAPH_BRIDGE_DAILY_CAP` (default 40). **29 Sep: a dedicated payer
+      wallet now exists** — `0x3aB5CDE666c356B043111AAFDA16aC258E19868F` on
+      Base Sepolia, key in the macOS Keychain (`elcaro-telegraph-x402-payer`)
+      and `~/.config/elcaro/telegraph-x402-payer.env` (0600), deliberately NOT
+      the miner registration key. The signing path is proven end to end: with
+      the key set but the wallet empty, a live ask signs a valid EIP-3009
+      envelope and upstream answers with a *second* 402 `"payment required"`,
+      which the bridge surfaces as `PAYMENT_REJECTED` — i.e. envelope accepted,
+      balance is the only thing missing. **Remaining: send testnet USDC to
+      that address on Base Sepolia, set `TELEGRAPH_X402_KEY` (and
+      `TELEGRAPH_BRIDGE_EXTENSION_IDS` once published) in Netlify, redeploy.**
+      Blocked on the deploy side because the `elcaro` site lives in the
+      `udirobert` Netlify team while the local CLI token is scoped to
+      `papajams` — the API reads the site but 404s on env writes. The 402
+      challenge also
       offers an `escrow` scheme (depositUSDC once, EIP-191 personal_sign per
       ask) — probed and mapped, not yet fully cracked: the node's recovered
       signer never matches any reconstruction of the template message, so

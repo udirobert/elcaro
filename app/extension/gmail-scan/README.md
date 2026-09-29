@@ -70,6 +70,40 @@ Netlify env vars for `app/web`. **Testnet key only** — it signs USDC payments.
 | `TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION` | `1` | `0` closes the bridge to non-pinned extension ids without naming one. |
 | `TELEGRAPH_BRIDGE_ALLOW_NO_ORIGIN` | `0` | `1` re-allows requests with no `Origin` header (server-to-server callers). |
 
+### Payer wallet
+
+The bridge signs every ask with one dedicated wallet. It is deliberately **not**
+the miner registration key — mixing a registration signer with a payment signer
+means one compromise spends both.
+
+| | |
+|---|---|
+| Address (Base Sepolia, chain 84532) | `0x3aB5CDE666c356B043111AAFDA16aC258E19868F` |
+| Pays | USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+| Per ask | 10000 (6dp) = $0.01 |
+| Private key | **not in this repo.** macOS Keychain service `elcaro-telegraph-x402-payer`, mirrored in `~/.config/elcaro/telegraph-x402-payer.env` (0600, dir 0700) |
+
+```bash
+# read the key without printing it into a shell that logs history
+security find-generic-password -a "$USER" -s elcaro-telegraph-x402-payer -w
+```
+
+Funding: send testnet USDC to the address above on **Base Sepolia** (chain
+84532) — not Ethereum mainnet. The default `TELEGRAPH_BRIDGE_DAILY_CAP` of 40
+asks/day is $0.40/day, so a few dollars of testnet USDC lasts a long time. No
+ETH is needed: x402 `exact` transfers are gasless, the facilitator submits them.
+
+Set the key in Netlify (`elcaro` is in the `udirobert` team — `netlify login`
+as that account first, then `netlify link`):
+
+```bash
+netlify env:set "TELEGRAPH_X402_KEY=$(security find-generic-password -a "$USER" \
+  -s elcaro-telegraph-x402-payer -w)" \
+  --context production --site 1a5219cc-1d31-45f1-8482-039e086c8020
+```
+
+Env var changes only reach the site on the next deploy.
+
 ### Origin policy
 
 Every ask spends $0.01, so the bridge gates on origin first, then token, then
