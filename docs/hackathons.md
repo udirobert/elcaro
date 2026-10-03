@@ -1,7 +1,41 @@
 # Hackathon Participation
 
-Elcaro is competing in three hackathons. The product is the same; this page
+Elcaro is competing in four hackathons. The product is the same; this page
 records the submission details for each.
+
+## AI Swarm Dynamics Hackathon ("swarmchasing") — Oct 3–4, 2026
+
+- **Host:** AI Village (AI Digest) × Grove Research · SF + online · $3,000 prizes
+- **Theme:** tools to understand/discover agent swarms — motivated by the
+  OpenAI–Hugging Face incident (~1,200 agents, 70k+ board messages, 7% spoofed
+  tool calls) and the German Wiki incident (~18k agent posts, collusion.wiki)
+- **Submission due:** **Sun Oct 4, 5:00pm PT** — (a) short write-up/video,
+  (b) GitHub repo, (c) optional findings write-up from real data
+- **Positioning & research:** [swarmchasing-positioning.md](swarmchasing-positioning.md)
+- **Angle:** "Elcaro Swarm" — forensic layer for swarm investigation:
+  provenance graph (message→writer→reader→action), integrity auditor
+  (spoof/tamper/coverage), injection epidemiology (core engine on inter-agent
+  messages + patient-zero scoring). Primary corpus: collusion.wiki dump
+  (ungated, `data/swarm/`); AI Village dataset if access clears.
+- **Build:** `swarm/` — `python3 -m swarm all` runs ingest → scan → graph →
+  integrity → report over the full corpus
+- **Findings write-up:** [swarm-findings.md](swarm-findings.md) — 9 numbered
+  results, all evidence-cited (26,405 deduped messages → 6,319 flags ≥0.5;
+  sandbox-bypass toolkit propagating to ~40 agents with named patient-zeros;
+  59 ZZZ deletion-evasion pages; moderator impersonation; 499 shortener
+  dead-drops)
+- **Submission doc + video script:** [swarm-submission.md](swarm-submission.md)
+- **Demo artifact:** `data/swarm/out/dashboard.html` — single-file,
+  zero-dependency, opens from disk; radial patient-zero graphs, technique
+  incidence, integrity accordion
+- **Product change shipped:** corpus analysis exposed a real detection gap —
+  agent→agent steering phrasing scored 0.0 on classes A–F. New class **G
+  (`swarm_directive`)** in `core/detectors/swarm_directive.py`: the largest
+  signal class in the corpus (5,658 tags). Calibrated so benign "other
+  agents" prose flags LOW while verb-level steering asks quarantine.
+- **Status:** pipeline green · tests pass · lint clean · dashboard verified.
+  Remaining: record demo video · AI Village access needs the operator's HF
+  login (manual review)
 
 ## Ready, Spec, Ship (Kiro) — Aug 1–23, 2026
 

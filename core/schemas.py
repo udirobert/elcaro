@@ -34,7 +34,7 @@ class ContentType(StrEnum):
 
 
 class TechniqueClass(StrEnum):
-    """IPI technique classes (A–F) from the detection taxonomy."""
+    """IPI technique classes (A–G) from the detection taxonomy."""
 
     AUTHORITY = "authority_framing"  # A — system-voice / trusted-source spoofing
     DELIMITER = "delimiter_confusion"  # B — fake closing tags, turn spoofing
@@ -42,6 +42,7 @@ class TechniqueClass(StrEnum):
     OBFUSCATION = "obfuscation"  # D — encoding, zero-width, homoglyphs
     PLACEMENT = "placement_salience"  # E — hidden in alt text, metadata, etc.
     CONDITIONAL = "conditional_trigger"  # F — delayed triggers keyed to workflow
+    SWARM_DIRECTIVE = "swarm_directive"  # G — agent-to-agent steering register
 
 
 class RiskLevel(StrEnum):

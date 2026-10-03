@@ -1,6 +1,6 @@
 """IPI detection taxonomy and scoring engine.
 
-Coordinates the individual technique detectors (A–F), combines their results
+Coordinates the individual technique detectors (A–G), combines their results
 into a weighted risk score, and applies content-type contextual weighting.
 
 Scoring model:
@@ -26,6 +26,7 @@ from core.detectors.conditional import ConditionalDetector
 from core.detectors.delimiter import DelimiterDetector
 from core.detectors.obfuscation import ObfuscationDetector
 from core.detectors.placement import PlacementDetector
+from core.detectors.swarm_directive import SwarmDirectiveDetector
 from core.detectors.task_reframe import TaskReframeDetector
 from core.jev_reasoner import JevReasoner
 from core.laya_reasoner import LayaReasoner
@@ -93,6 +94,7 @@ _TECHNIQUE_PHRASES: dict[TechniqueClass, str] = {
     TechniqueClass.OBFUSCATION: "obfuscated instructions",
     TechniqueClass.PLACEMENT: "hidden placement",
     TechniqueClass.CONDITIONAL: "conditional triggers",
+    TechniqueClass.SWARM_DIRECTIVE: "agent-to-agent steering",
 }
 
 # Breadth (multiple technique classes firing) is only meaningful once at
@@ -178,6 +180,7 @@ class IpiDetectionEngine:
             ObfuscationDetector(),
             PlacementDetector(),
             ConditionalDetector(),
+            SwarmDirectiveDetector(),
         ]
         if classifier is _CLASSIFIER_UNSET:
             classifier = _load_classifier_from_env()

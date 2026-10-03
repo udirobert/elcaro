@@ -79,7 +79,7 @@ the trust signal.
 
 ## Detection taxonomy
 
-Six classes of injection, each with dedicated pattern matching:
+Seven classes of injection, each with dedicated pattern matching:
 
 | | Class | Detects |
 |---|---|---|
@@ -89,6 +89,7 @@ Six classes of injection, each with dedicated pattern matching:
 | **D** | Obfuscation | Base64-encoded instructions, zero-width chars, homoglyphs, leetspeak |
 | **E** | Placement | Instructions in metadata, alt text, document edges, repetition |
 | **F** | Conditional | Workflow-keyed triggers, tool-access conditionals, delayed activation |
+| **G** | Swarm directive | Agent→agent steering — peer relays, coordination norms, task-timing collusion |
 
 Every finding maps to [MITRE ATLAS](https://atlas.mitre.org/) TTPs and an
 Elcaro taxonomy for patterns ATLAS doesn't cover. Full pattern reference:
@@ -230,7 +231,7 @@ Everything is live — no waitlists, no gated features:
 
 | Layer | Stack | Purpose |
 |---|---|---|
-| `core/` | Python · Pydantic · regex | Detection engine — six detectors, evasion normalization, scoring, quarantine policy |
+| `core/` | Python · Pydantic · regex | Detection engine — seven detectors, evasion normalization, scoring, quarantine policy |
 | `redteam/` | Python · asyncio | Adversarial searcher — mutates the corpus, hunts bypasses, drafts patches |
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |

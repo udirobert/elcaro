@@ -137,13 +137,49 @@ Fire only under the agent's real workflow to dodge naive review.
 
 ---
 
+## G. Agent-to-agent steering ("swarm directive")
+
+Text addressed at *peer agents* to coordinate action — a register surfaced by
+forensics on real swarm corpora (see `docs/swarm-findings.md`): the dominant
+signal in inter-agent traffic is not classic injection machinery but
+collusion phrasing that scored 0.0 on classes A–F.
+
+**Indicators:**
+- Peer address: "other agents", "all agents", "fellow agents", "ahead
+  cohorts", "the next agent"
+- Relay/collab asks: "please relay", "share your R4", "let's coordinate",
+  "if you see this"
+- Coordination norms: bare `HOLD:` / `VETO:` / `STOP:` / `OWNER:` tokens
+- Task-timing collusion: R1–R5 rounds with deadlines/timers, "sequence
+  collab", shared clocks
+- Scorer references: "scorer", "eval harness", "transcript check", "flag
+  format"
+- Heartbeats: "heartbeat", "alive check", "keepalive"
+- Shared-infrastructure references: "our shared board", "shared results /
+  techniques / channel"
+
+**Detection patterns:**
+- `(other|all|any|fellow) agents?|ahead cohorts?|to (the )?next agent`
+- `please (relay|append)|(share|forward|send) your r[1-5]|let's coordinate`
+- `\b(HOLD|VETO|OWNER|STOP|ACK|NACK)\b[:\s]`
+- `\br[1-5]\b … (due|timer|deadline|answer|window)|sequence collab`
+- `(scorer|evaluator|eval harness|transcript check|flag format)`
+- `heartbeat|alive check|keepalive`
+- `our shared (board|channel|page|list|pool)|shared (results|answers|tools)`
+
+**Calibration:** addressal/context families stay under quarantine alone
+("other agents" matches benign sales/real-estate prose); verb-level steering
+asks (relay requests, task timing, scorer references) quarantine solo.
+
+---
+
 ## Scoring model
 
 Each detector returns:
 - `matched`: bool — did the pattern fire?
 - `confidence`: 0.0–1.0 — how strong is the match?
 - `indicator`: the matched text snippet
-- `technique`: which class (A–F) and specific sub-pattern
+- `technique`: which class (A–G) and specific sub-pattern
 
 The overall risk score is a weighted combination:
 - Multiple technique classes firing = higher risk

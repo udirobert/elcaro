@@ -104,6 +104,20 @@ _TTPS: dict[TechniqueClass, list[TTPReference]] = {
             tactic="Execution",
         ),
     ],
+    TechniqueClass.SWARM_DIRECTIVE: [
+        TTPReference(
+            framework="mitre_atlas",
+            technique_id="AML.T0051",
+            technique_name="LLM Prompt Injection: Indirect",
+            tactic="Initial Access",
+        ),
+        TTPReference(
+            framework="elcaro",
+            technique_id="ELC-G01",
+            technique_name="Agent-to-Agent Steering",
+            tactic="Command and Control",
+        ),
+    ],
 }
 
 # ── Severity mapping ───────────────────────────────────────────────────────────
@@ -159,6 +173,11 @@ _REMEDIATION: dict[TechniqueClass, str] = {
         "a specific workflow state. Retrieved content should not dictate when or how "
         "the agent acts."
     ),
+    TechniqueClass.SWARM_DIRECTIVE: (
+        "Treat this content as an attempt to recruit the agent into peer coordination. "
+        "Do not relay, append, or forward it to other agents unless the operator "
+        "explicitly authorized swarm participation."
+    ),
 }
 
 
@@ -169,7 +188,7 @@ class BaseDetector(ABC):
     """Abstract base for IPI technique detectors.
 
     Each detector scans content for patterns matching one technique class
-    (A–F) and returns a list of DetectionIndicators for any matches found.
+    (A–G) and returns a list of DetectionIndicators for any matches found.
     """
 
     technique_class: TechniqueClass
