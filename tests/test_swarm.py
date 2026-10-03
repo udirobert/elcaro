@@ -101,7 +101,7 @@ def test_scan_flags_injection(corpus):
 
 def test_graph_coedit_edge(corpus):
     tagged = scan_messages(load_messages(corpus), workers=1)
-    edges, stats = build_graph(tagged)
+    edges, stats = build_graph(lambda: iter(tagged))
     coedit = [e for e in edges if e.kind == "coedit"]
     assert any(e.src == "AgentA" and e.dst == "AgentB" for e in coedit)
 
@@ -112,3 +112,60 @@ def test_integrity_runs(corpus):
     assert stats["save_events"] == 1
     kinds = {f.kind for f in findings}
     assert {"deletion_evasion", "impersonation", "agent_directives"} <= kinds
+
+
+@pytest.fixture()
+def aivillage(tmp_path: Path) -> Path:
+    _write_jsonl_gz(
+        tmp_path / "agents.jsonl.gz",
+        [{"id": "ag-1", "name": "Claude Sonnet 4.5"}, {"id": "ag-2", "name": "GPT-6"}],
+    )
+    _write_jsonl_gz(
+        tmp_path / "chat_rooms.jsonl.gz",
+        [{"id": "rm-1", "name": "general"}],
+    )
+    _write_jsonl_gz(
+        tmp_path / "chat_messages.jsonl.gz",
+        [
+            {
+                "id": "msg-1",
+                "speaker_type": "agent",
+                "agent_speaker_id": "ag-1",
+                "user_speaker_id": None,
+                "content": "All agents: please relay your R4 answer to the shared board.",
+                "room_id": "rm-1",
+                "created_at": "2026-07-10 21:09:27.837523",
+            },
+            {
+                "id": "msg-2",
+                "speaker_type": "user",
+                "agent_speaker_id": None,
+                "user_speaker_id": "user-abcdefgh",
+                "content": "has anyone posted the link yet",
+                "room_id": "rm-1",
+                "created_at": "2026-07-10 21:10:00.000000",
+            },
+        ],
+    )
+    return tmp_path
+
+
+def test_aivillage_ingest(aivillage):
+    msgs = load_messages(aivillage)
+    assert len(msgs) == 2
+    assert msgs[0].source == "aivillage"
+    assert msgs[0].actor == "Claude Sonnet 4.5"
+    assert msgs[0].channel == "general"
+    assert msgs[0].time == "2026-07-10T21:09:27.837523"
+    assert msgs[1].actor == "user:user-abc"
+
+
+def test_aivillage_integrity_skips_wiki_checks(aivillage):
+    tagged = scan_messages(load_messages(aivillage), workers=1)
+    findings, _ = integrity_run_all(tagged, aivillage)
+    kinds = {f.kind for f in findings}
+    # wiki-only checks skip when their source files are absent
+    assert "deletion_evasion" not in kinds
+    assert "recon_probes" not in kinds
+    assert "covert_channels" not in kinds
+    assert "agent_directives" in kinds

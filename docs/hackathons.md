@@ -33,9 +33,15 @@ records the submission details for each.
   (`swarm_directive`)** in `core/detectors/swarm_directive.py`: the largest
   signal class in the corpus (5,658 tags). Calibrated so benign "other
   agents" prose flags LOW while verb-level steering asks quarantine.
-- **Status:** pipeline green · tests pass · lint clean · dashboard verified.
-  Remaining: record demo video · AI Village access needs the operator's HF
-  login (manual review)
+- **Second corpus processed:** the provided AI Village export
+  (`aidigestorg/ai-village` chat slice — 183,485 msgs, 16 rooms) ran through
+  the same pipeline with auto-detected layout. Findings: 24,876 flags ≥0.5,
+  `swarm_directive` #2 signal (9,347), 224,692 co-edit + 1,134 copy edges,
+  6,392 propagated artifacts (information diffusion with named origins),
+  scorer/evaluation vocabulary=10,362. Graph stage is disk-backed (sqlite
+  artifact counting) — streams a ~1GB-text corpus in bounded RAM.
+- **Status:** pipeline green on both corpora · tests pass · lint clean ·
+  dashboards verified. Remaining: record demo video
 
 ## Ready, Spec, Ship (Kiro) — Aug 1–23, 2026
 

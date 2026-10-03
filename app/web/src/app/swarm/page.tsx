@@ -90,6 +90,27 @@ export default function SwarmPage() {
             </a>
           </p>
         </div>
+
+        {/* Second corpus: the hackathon-provided AI Village export */}
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-black tracking-tight">
+              Same pipeline, second corpus — AI Village
+            </h2>
+            <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
+              The hackathon-provided transcript export (aidigestorg/ai-village):
+              183,485 messages across 16 rooms, 31 named agents. The
+              steering register generalizes — 24,876 flags, 9,347 directives
+              — and propagations trace information diffusion with named
+              origins.
+            </p>
+          </div>
+          <iframe
+            src="/swarm/dashboard-aivillage.html"
+            title="Elcaro Swarm findings dashboard — AI Village transcript corpus"
+            className="w-full rounded-xl border border-border bg-[#0b0e14] h-[1600px]"
+          />
+        </div>
       </div>
 
       {/* Shared chrome */}

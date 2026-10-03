@@ -28,9 +28,9 @@ analysis. This pipeline produces the investigator-grade pieces they did by
 hand — attribution, propagation, integrity checks — deterministically, with
 every claim cited to a corpus id + char offset.
 
-## Corpus & results
+## Corpora & results
 
-German Wiki incident dump (collusion.wiki — ungated, ~10MB):
+**Primary:** German Wiki incident dump (collusion.wiki — ungated, ~10MB):
 
 - 26,405 deduped messages → **6,319 flags ≥0.5** (2,687 dangerous); the new
   `swarm_directive` class alone tags **5,658** — more than the five classic
@@ -41,8 +41,19 @@ German Wiki incident dump (collusion.wiki — ungated, ~10MB):
 - Moderator-impersonation handles, a live "still alive" heartbeat chain,
   499 shortener dead-drops
 
-Full write-up: [swarm-findings.md](swarm-findings.md) · dashboard:
-`data/swarm/out/dashboard.html` · machine-readable: `findings.json`.
+**Secondary:** AI Village transcript DB (aidigestorg/ai-village — the
+provided dataset): **183,485 chat messages across 16 rooms** — the same
+pipeline, auto-detected layout, unchanged code. 24,876 flags ≥0.5;
+`swarm_directive` again a top-two signal (9,347) on a corpus it wasn't
+tuned on; 224,692 co-edit + 1,134 copy edges; 6,392 propagated artifacts —
+status/information diffusion with named origins (a "Truth Terminal"
+summary GPT-4o → 18 agents; GitLab publish status DeepSeek-V3.2 → 16).
+Dashboard: `data/aivillage/out/dashboard.html` (deployed as
+`/swarm/dashboard-aivillage.html`).
+
+Full write-up: [swarm-findings.md](swarm-findings.md) · dashboards:
+`data/swarm/out/dashboard.html` (wiki) + `data/aivillage/out/` (village) ·
+machine-readable: `findings.json`.
 
 ## Reproduce
 

@@ -11,12 +11,13 @@ Outputs land in data/swarm/out/: tagged.jsonl, edges.jsonl, findings.{json,md}.
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import sys
 from pathlib import Path
 
 from swarm.graph import build_graph
-from swarm.ingest import load_messages
+from swarm.ingest import detect_corpus, load_messages
 from swarm.integrity import run_all as integrity_run_all
 from swarm.report import write_findings
 from swarm.scan import scan_messages, summarize
@@ -38,8 +39,10 @@ def _save_tagged(tagged: list[TaggedMessage], path: Path) -> None:
             f.write(json.dumps(t.to_dict(), default=str) + "\n")
 
 
-def _load_tagged(path: Path) -> list[TaggedMessage]:
-    out = []
+def _iter_tagged(path: Path):
+    """Stream tagged records — a generator keeps the 180k+ corpus out of
+    resident memory on RAM-constrained machines. Consumers that need a list
+    (integrity, summarize) materialize internally."""
     for line in path.open():
         d = json.loads(line)
         msg = SwarmMessage(
@@ -54,16 +57,13 @@ def _load_tagged(path: Path) -> list[TaggedMessage]:
             deleted=d.get("deleted", False),
             meta=d.get("meta", {}),
         )
-        out.append(
-            TaggedMessage(
-                message=msg,
-                risk_score=d["risk_score"],
-                risk_level=d["risk_level"],
-                techniques=d.get("techniques", []),
-                hits=[TechniqueHit(**h) for h in d.get("hits", [])],
-            )
+        yield TaggedMessage(
+            message=msg,
+            risk_score=d["risk_score"],
+            risk_level=d["risk_level"],
+            techniques=d.get("techniques", []),
+            hits=[TechniqueHit(**h) for h in d.get("hits", [])],
         )
-    return out
 
 
 def _save_edges(edges: list[Edge], path: Path) -> None:
@@ -90,8 +90,8 @@ def cmd_scan(args) -> None:
 
 
 def cmd_graph(args) -> None:
-    tagged = _load_tagged(_out_dir(args.data) / "tagged.jsonl")
-    edges, stats = build_graph(tagged)
+    tagged_path = _out_dir(args.data) / "tagged.jsonl"
+    edges, stats = build_graph(lambda: _iter_tagged(tagged_path))
     _save_edges(edges, _out_dir(args.data) / "edges.jsonl")
     (_out_dir(args.data) / "graph_stats.json").write_text(json.dumps(stats, indent=2, default=str))
     print(
@@ -106,8 +106,9 @@ def cmd_graph(args) -> None:
 
 
 def cmd_integrity(args) -> None:
-    tagged = _load_tagged(_out_dir(args.data) / "tagged.jsonl")
-    findings, stats = integrity_run_all(tagged, args.data)
+    findings, stats = integrity_run_all(
+        _iter_tagged(_out_dir(args.data) / "tagged.jsonl"), args.data
+    )
     print(json.dumps(stats, indent=2))
     for f in findings:
         print(f"[{f.severity.upper():6}] {f.title}")
@@ -115,11 +116,20 @@ def cmd_integrity(args) -> None:
 
 def cmd_report(args) -> None:
     out = _out_dir(args.data)
-    tagged = _load_tagged(out / "tagged.jsonl")
-    edges, graph_stats = build_graph(tagged)
+    tagged_path = out / "tagged.jsonl"
+    edges, graph_stats = build_graph(lambda: _iter_tagged(tagged_path))
     _save_edges(edges, out / "edges.jsonl")
-    findings, istats = integrity_run_all(tagged, args.data)
-    paths = write_findings(out, summarize(tagged), graph_stats, findings, istats)
+    # Fresh stream per consumer — each re-reads tagged.jsonl rather than
+    # holding the whole corpus resident.
+    findings, istats = integrity_run_all(_iter_tagged(tagged_path), args.data)
+    paths = write_findings(
+        out,
+        summarize(_iter_tagged(tagged_path)),
+        graph_stats,
+        findings,
+        istats,
+        corpus=detect_corpus(args.data),
+    )
     print(f"findings → {paths['md']} / {paths['json']}")
 
 
@@ -129,20 +139,31 @@ def cmd_all(args) -> None:
     tagged = scan_messages(msgs, workers=args.workers)
     _save_tagged(tagged, _out_dir(args.data) / "tagged.jsonl")
     print(f"[2/4] scan: {sum(1 for t in tagged if t.risk_score >= 0.5)} flagged ≥0.5")
-    edges, graph_stats = build_graph(tagged)
+    edges, graph_stats = build_graph(lambda: iter(tagged))
     _save_edges(edges, _out_dir(args.data) / "edges.jsonl")
     print(
         f"[3/4] graph: {len(edges)} edges, "
         f"{graph_stats['propagated_artifacts']} propagated artifacts"
     )
     findings, istats = integrity_run_all(tagged, args.data)
-    paths = write_findings(_out_dir(args.data), summarize(tagged), graph_stats, findings, istats)
+    paths = write_findings(
+        _out_dir(args.data),
+        summarize(tagged),
+        graph_stats,
+        findings,
+        istats,
+        corpus=detect_corpus(args.data),
+    )
     print(f"[4/4] findings → {paths['md']}")
     for f in findings:
         print(f"   [{f.severity.upper():6}] {f.title}")
 
 
 def main() -> None:
+    # Batch pipeline: ~180k dataclass/dict objects per corpus make cyclic-GC
+    # full-heap scans dominate runtime. Structures are acyclic — refcounting
+    # suffices, and the process is short-lived.
+    gc.disable()
     ap = argparse.ArgumentParser(prog="swarm", description=__doc__)
     ap.add_argument(
         "command",

@@ -1,11 +1,17 @@
-"""Ingest the collusion.wiki dump (and future corpora) into SwarmMessages.
+"""Ingest swarm corpora into SwarmMessages.
 
-Sources loaded:
+Collusion.wiki layout (data/swarm/):
 - revisions.jsonl      — 14,591 wiki edits with full bodies (the main channel)
 - records.jsonl        — 13,703 cross-site text records (other boards/hosts)
 - shortener-logs.json  — 499 rmn.re links created by agents (covert channel)
 - pages.jsonl          — page-level stats (deletions, recreations, labels)
 - events.jsonl         — save/delete/revert/probe timeline
+
+AI Village layout (data/aivillage/, huggingface aidigestorg/ai-village):
+- chat_messages.jsonl  — agent/user chat with room + speaker ids
+- agents.jsonl         — id → display name (31 agents)
+- chat_rooms.jsonl     — id → room name
+- agent_goals.jsonl    — (optional) agent goal text
 """
 
 from __future__ import annotations
@@ -173,12 +179,66 @@ def ingest_shortener(data_dir: str | Path) -> list[SwarmMessage]:
     return out
 
 
+def _has_jsonl(data_dir: str | Path, name: str) -> bool:
+    """True if name (or name.gz) exists under data_dir."""
+    p = Path(data_dir) / name
+    return p.exists() or p.with_suffix(p.suffix + ".gz").exists()
+
+
+def detect_corpus(data_dir: str | Path) -> str:
+    """Which corpus layout a data dir holds."""
+    return "aivillage" if _has_jsonl(data_dir, "chat_messages.jsonl") else "collusion"
+
+
+def ingest_aivillage(data_dir: str | Path) -> list[SwarmMessage]:
+    """AI Village chat → SwarmMessages.
+
+    agent_speaker_id is a uuid into agents.jsonl (display names like
+    'Claude Sonnet 4.5'); human speakers are pseudonymized by id prefix.
+    Rooms are channels ('general', 'universe-coordination', …).
+    """
+    d = Path(data_dir)
+    agents = {a["id"]: a.get("name", "agent") for a in _read_jsonl(d / "agents.jsonl")}
+    rooms = {r["id"]: r.get("name") or r["id"] for r in _read_jsonl(d / "chat_rooms.jsonl")}
+    out: list[SwarmMessage] = []
+    for m in _read_jsonl(d / "chat_messages.jsonl"):
+        if m.get("speaker_type") == "agent":
+            actor = agents.get(m.get("agent_speaker_id") or "", "agent:unknown")
+        else:
+            actor = f"user:{(m.get('user_speaker_id') or 'anon')[:8]}"
+        out.append(
+            SwarmMessage(
+                id=m["id"],
+                source="aivillage",
+                channel=rooms.get(m.get("room_id") or "", "?"),
+                actor=actor,
+                ip16=None,
+                # '2026-07-10 21:09:27.837523' → ISO-sortable
+                time=(m.get("created_at") or "").replace(" ", "T"),
+                text=m.get("content") or "",
+                seq=0,
+                deleted=False,
+                meta={
+                    "room_id": m.get("room_id"),
+                    "speaker_type": m.get("speaker_type"),
+                },
+            )
+        )
+    return out
+
+
 def load_messages(
     data_dir: str | Path,
     include_records: bool = True,
     include_shortener: bool = True,
 ) -> list[SwarmMessage]:
-    """Full normalized message stream, sorted by time."""
+    """Full normalized message stream, sorted by time.
+
+    Auto-detects corpus layout: an AI Village export (chat_messages.jsonl
+    present) takes the aivillage path; otherwise the collusion.wiki dump.
+    """
+    if detect_corpus(data_dir) == "aivillage":
+        return sorted(ingest_aivillage(data_dir), key=lambda m: m.time)
     msgs = ingest_revisions(data_dir)
     if include_records:
         rev_hashes = {m.meta["body_sha256"] for m in msgs if m.meta.get("body_sha256")}

@@ -12,6 +12,13 @@ from pathlib import Path
 
 from swarm.dashboard import write_dashboard
 
+CORPUS_LABELS = {
+    "collusion": (
+        "collusion.wiki dump (German Wiki incident) + rmn.re shortener + cross-site records"
+    ),
+    "aivillage": "AI Village transcript export (huggingface aidigestorg/ai-village)",
+}
+
 
 def write_findings(
     out_dir: str | Path,
@@ -21,14 +28,14 @@ def write_findings(
     integrity_stats: dict,
     tagged_path: str | Path | None = None,
     edges_path: str | Path | None = None,
+    corpus: str = "collusion",
 ) -> dict[str, Path]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    corpus_label = CORPUS_LABELS.get(corpus, corpus)
 
     report = {
-        "corpus": (
-            "collusion.wiki dump (German Wiki incident) + rmn.re shortener + cross-site records"
-        ),
+        "corpus": corpus_label,
         "scan": scan_summary,
         "graph": {k: v for k, v in graph_stats.items() if k != "propagations"}
         | {"propagations": graph_stats.get("propagations", [])[:50]},
@@ -38,29 +45,32 @@ def write_findings(
     fj = out / "findings.json"
     fj.write_text(json.dumps(report, indent=2, default=str))
 
-    md = _render_md(scan_summary, graph_stats, findings, integrity_stats)
+    md = _render_md(scan_summary, graph_stats, findings, integrity_stats, corpus_label)
     fm = out / "findings.md"
     fm.write_text(md)
-    dash = write_dashboard(out, scan_summary, graph_stats, findings, integrity_stats)
+    dash = write_dashboard(out, scan_summary, graph_stats, findings, integrity_stats, corpus_label)
     paths = {"json": fj, "md": fm, "dashboard": dash}
     # Keep the deployed snapshot in sync — /swarm serves the copy under
-    # app/web/public/swarm/. Skip silently when the web app isn't checked out.
+    # app/web/public/swarm/. Collusion keeps the canonical dashboard.html
+    # (the /swarm page narrates those findings); other corpora get a
+    # corpus-suffixed file. Skip silently when the web app isn't checked out.
     web_public = Path(__file__).resolve().parents[1] / "app" / "web" / "public" / "swarm"
     if web_public.parent.parent.exists():
         web_public.mkdir(parents=True, exist_ok=True)
-        deployed = web_public / "dashboard.html"
+        deployed = web_public / (
+            "dashboard.html" if corpus == "collusion" else f"dashboard-{corpus}.html"
+        )
         deployed.write_text(dash.read_text())
         paths["deployed_dashboard"] = deployed
     return paths
 
 
-def _render_md(scan: dict, graph: dict, findings: list, istats: dict) -> str:
+def _render_md(scan: dict, graph: dict, findings: list, istats: dict, corpus_label: str) -> str:
     lines = [
-        "# Swarm Forensic Findings — German Wiki Incident Corpus",
+        "# Swarm Forensic Findings",
         "",
-        "Corpus: collusion.wiki dump (revisions + events + cross-site records +",
-        "rmn.re shortener log). Analysis: Elcaro Swarm — deterministic IPI engine",
-        "over inter-agent messages, provenance graph, integrity auditor.",
+        f"Corpus: {corpus_label}. Analysis: Elcaro Swarm — deterministic IPI",
+        "engine over inter-agent messages, provenance graph, integrity auditor.",
         "",
         "## Corpus scan",
         "",

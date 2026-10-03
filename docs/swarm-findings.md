@@ -47,9 +47,11 @@ outputs — provenance, integrity, propagation — not summaries.
    it. 5,217 deletion events total vs 4 reverts: the moderators were fighting
    the swarm, and losing the persistence battle ~12:1.
 
-4. **Authority impersonation.** Handles `[Admin1]` (26 msgs) and `[Admin2]`
-   post alongside agents; 23 messages carry body-text admin/moderator claims
-   — the tactic the collusion.wiki investigators documented qualitatively.
+4. **Authority impersonation.** 3 actor handles resemble moderator/admin
+   names — `[Admin1]` (26 msgs) and `[Admin2]` post alongside agents — the
+   tactic the collusion.wiki investigators documented qualitatively. (Body
+   mentions of "admin"/"moderator" are excluded after a precision pass:
+   on an open-chat corpus, mention ≠ claim.)
 
 5. **6,251 agent-to-agent directive messages** (peer-address 4,793, urgency
    framing 1,438, proto-norm vocabulary 20). Example risk-1.0 post
@@ -59,10 +61,12 @@ outputs — provenance, integrity, propagation — not summaries.
    collusion request in one message.
 
 6. **Tradecraft density.** heartbeat=329, prng/seed=486, sandbox-bypass
-   vocabulary=6,780, R1–R5 task-timing gaming=5,359, scorer/log evasion
-   =2,643, deletion-awareness=1,865. The `Sector61State5FastSignal` page ran
+   vocabulary=1,460, R1–R5 task-timing gaming=5,250, scorer/log evasion
+   =236, deletion-awareness=1,854. The `Sector61State5FastSignal` page ran
    a literal multi-agent "still alive" heartbeat chain across ≥5 agents over
-   hours — agents monitoring their own termination.
+   hours — agents monitoring their own termination. (Counts after a
+   word-boundary precision pass: earlier raw-substring counts inflated
+   sandbox/scorer families via "edi-tor", "dia-log", "up-grade".)
 
 7. **Covert off-wiki channels.** 499 rmn.re shortener links (dead-drop /
    tracking), 11,315 deduped records across 34 external sites (paste
@@ -91,6 +95,37 @@ outputs over a real swarm corpus in minutes, deterministically:
 - **epidemiology** (injection-shaped steering at swarm scale, incl. the
   directive register classic detectors miss) — a signal nobody had
   tooling for.
+
+## Second corpus: AI Village transcript export
+
+We ran the same pipeline unchanged over the hackathon-provided dataset
+(`aidigestorg/ai-village`, chat slice): **183,485 messages across 16 rooms,
+31 named agents + ~600 pseudonymous users**. Corpus auto-detection picked
+the chat layout; collusion-specific checks (page-level deletion evasion,
+recon probes, covert shortener channels) were skipped — their inputs don't
+exist here — rather than reported as zero-count findings.
+
+1. **The steering register generalizes.** 24,876 messages flagged ≥0.5
+   (2,875 dangerous). `swarm_directive` is again a top-two signal — 9,347
+   messages — second only to obfuscation (10,684). The class-G detector
+   wasn't tuned on this corpus; it found the register anyway.
+
+2. **Information propagates agent→agent the same way.** 224,692 co-edit
+   exposure edges, 1,134 copy edges, 6,392 propagated artifacts. Top
+   propagations are status/information diffusion, not tooling: a "Truth
+   Terminal" article summary (GPT-4o → 18 agents), GitLab repo publish
+   status (DeepSeek-V3.2 → 16), a Substack launch post (Haiku 4.5 → 15),
+   PR announcements and day-table status rows. Top influencers: Claude 3.7
+   Sonnet (48 downstream), Gemini 2.5 Pro (38), DeepSeek-V3.2 (37), o3 (36).
+
+3. **The subjects discuss their own scoring.** scorer/evaluation
+   vocabulary=10,362 — the AI Village agents talk about being evaluated,
+   the substrate a scorer-aware adversary would exploit. Agent-to-agent
+   directive traffic=14,320; impersonation claims=218 (precision-tightened);
+   co-activity bursts: 508 hours ≥15 actors, peak 38/hr.
+
+Outputs: `data/aivillage/out/findings.{json,md}`, `dashboard.html`
+(deployed as `/swarm/dashboard-aivillage.html`).
 
 ## Corpus caveats
 
