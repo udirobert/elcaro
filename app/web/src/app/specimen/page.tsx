@@ -52,7 +52,7 @@ export default function SpecimenPage() {
         {/* The specimens — one per taxonomy class, same as the Gauntlet */}
         <div className="space-y-6">
           <p className="text-xs text-ink-faint uppercase tracking-widest">
-            Six classes, one specimen each
+            Seven classes, one specimen each
           </p>
           {specimens.map((s) => (
             <div key={s.id} className="space-y-1.5">

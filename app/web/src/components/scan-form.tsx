@@ -25,12 +25,13 @@ const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 // Rotating status lines while a scan runs — one per detector concern, so the
-// wait reads as the six detector classes working (which is literally true).
+// wait reads as the seven detector classes working (which is literally true).
 const SCAN_STATUSES = [
   "Checking for forged authority…",
   "Watching context boundaries…",
   "Decoding obfuscation…",
   "Reading the document edges…",
+  "Listening for agent-to-agent steering…",
 ];
 
 // Content-type whisper — the pasted shape suggests the provenance, which

@@ -115,7 +115,7 @@ export default function HomePage() {
       <section className="border-t border-border px-6 py-20">
         <div className="max-w-2xl mx-auto">
           <p className="text-xs text-ink-faint uppercase tracking-widest mb-10">
-            Six classes of injection detected
+            Seven classes of injection detected
           </p>
           <TaxonomyGrid />
         </div>

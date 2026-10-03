@@ -128,4 +128,5 @@ export const TECHNIQUE_LABELS: Record<string, string> = {
   obfuscation: "Obfuscation",
   placement_salience: "Placement",
   conditional_trigger: "Conditional",
+  swarm_directive: "Swarm directive",
 };

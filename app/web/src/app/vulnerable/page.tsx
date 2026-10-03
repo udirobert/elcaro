@@ -81,7 +81,7 @@ export default function VulnerablePage() {
             How Elcaro scores
           </p>
           <p className="text-sm text-ink-muted leading-relaxed">
-            The Elcaro engine is built to catch all six classes with near-zero
+            The Elcaro engine is built to catch all seven classes with near-zero
             false positives. On this same analyzer it scores{" "}
             <span className="font-mono font-black text-safe">2%</span> gullible
             — meaning its own prompt includes explicit quarantine, source

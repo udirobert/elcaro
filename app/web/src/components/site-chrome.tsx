@@ -11,6 +11,7 @@ export type NavKey =
   | "vulnerable"
   | "redteam"
   | "specimen"
+  | "swarm"
   | "supervise"
   | "integrate"
   | "for-agents";
@@ -21,6 +22,7 @@ const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: "vulnerable", href: "/vulnerable", label: "Vulnerable" },
   { key: "redteam", href: "/redteam", label: "Red team" },
   { key: "specimen", href: "/specimen", label: "Specimen" },
+  { key: "swarm", href: "/swarm", label: "Swarm" },
   { key: "supervise", href: "/supervise", label: "Supervise" },
   { key: "integrate", href: "/integrate", label: "Integrate" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },

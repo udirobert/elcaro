@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Elcaro — see what your agent can't",
     description:
-      "Prompt injection detection for autonomous agents. Six technique classes. Sub-10ms response. Open source.",
+      "Prompt injection detection for autonomous agents. Seven technique classes. Sub-10ms response. Open source.",
     type: "website",
     siteName: "Elcaro",
     locale: "en_US",

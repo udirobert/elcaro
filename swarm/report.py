@@ -42,7 +42,16 @@ def write_findings(
     fm = out / "findings.md"
     fm.write_text(md)
     dash = write_dashboard(out, scan_summary, graph_stats, findings, integrity_stats)
-    return {"json": fj, "md": fm, "dashboard": dash}
+    paths = {"json": fj, "md": fm, "dashboard": dash}
+    # Keep the deployed snapshot in sync — /swarm serves the copy under
+    # app/web/public/swarm/. Skip silently when the web app isn't checked out.
+    web_public = Path(__file__).resolve().parents[1] / "app" / "web" / "public" / "swarm"
+    if web_public.parent.parent.exists():
+        web_public.mkdir(parents=True, exist_ok=True)
+        deployed = web_public / "dashboard.html"
+        deployed.write_text(dash.read_text())
+        paths["deployed_dashboard"] = deployed
+    return paths
 
 
 def _render_md(scan: dict, graph: dict, findings: list, istats: dict) -> str:

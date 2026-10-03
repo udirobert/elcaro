@@ -17,7 +17,8 @@ export type TechniqueClass =
   | "task_reframing"
   | "obfuscation"
   | "placement_salience"
-  | "conditional_trigger";
+  | "conditional_trigger"
+  | "swarm_directive";
 
 export interface TTPReference {
   framework: string;

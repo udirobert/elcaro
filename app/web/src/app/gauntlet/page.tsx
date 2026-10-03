@@ -5,7 +5,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 export const metadata: Metadata = {
   title: "The Gauntlet",
   description:
-    "Eight payloads, one click: watch Elcaro catch all six classes of indirect prompt injection — live, against the production engine.",
+    "Nine payloads, one click: watch Elcaro catch all seven classes of indirect prompt injection — live, against the production engine.",
 };
 
 export default function GauntletPage() {
