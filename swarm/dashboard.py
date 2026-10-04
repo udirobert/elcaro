@@ -63,8 +63,40 @@ footer { padding: 16px 32px 32px; color: #566178; font-size: 11px; }
    stretching the document — keeps the page single-axis on mobile. */
 .tw { overflow-x: auto; }
 .tw table { min-width: 720px; }
+/* Dossier mode: chapter nav + scroll-snap + reveal-on-scroll + artifact
+   reel + capped tables. All pure CSS — the artifact stays zero-JS. */
+html { scroll-behavior: smooth; scroll-padding-top: 64px; scroll-snap-type: y proximity; }
+nav.chapters { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 10px 32px; background: rgba(11,14,20,.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #1e2635; font-size: 11px; }
+nav.chapters .label { color: #ffd479; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-right: 4px; }
+nav.chapters a { color: #7f8ba3; text-decoration: none; text-transform: uppercase; letter-spacing: 1px; padding: 4px 8px; border: 1px solid transparent; border-radius: 4px; }
+nav.chapters a:hover { color: #d7dde8; border-color: #2a3752; background: #121826; }
+section.chapter { scroll-snap-align: start; }
+.chapnum { color: #ffd479; margin-right: 10px; }
+.reelhint { font-size: 10px; color: #566178; text-transform: uppercase; letter-spacing: 1.5px; margin: 16px 0 8px; }
+.vizreel { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 12px; scrollbar-width: thin; scrollbar-color: #2a3752 transparent; }
+.vizreel .vizcard { flex: 0 0 min(340px, 84%); scroll-snap-align: center; }
+.bar { transform-origin: left; }
+details.morewrap { border: none; margin: 10px 0 0; }
+.morewrap > summary { display: inline-block; padding: 7px 14px; border: 1px solid #2a3752; border-radius: 4px; color: #ffd479; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; }
+.morewrap > summary::after { content: " ↓"; }
+.morewrap[open] > summary::after { content: " ↑"; }
+@keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes grow { from { transform: scaleX(0); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: scale(1); } }
+@supports (animation-timeline: view()) {
+  section.chapter { animation: rise .7s ease-out both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
+  .bar { animation: grow .9s cubic-bezier(.2,.7,.3,1) both; animation-timeline: view(); animation-range: entry 5% entry 70%; }
+  .edge { stroke-dasharray: 640; stroke-dashoffset: 640; animation: draw 1.1s ease-out both; animation-timeline: view(); animation-range: entry 20% cover 35%; }
+  .node { transform-box: fill-box; transform-origin: center; animation: pop .5s ease-out both; animation-timeline: view(); animation-range: entry 30% entry 85%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; }
+}
 @media (max-width: 640px) {
   header, section, footer { padding-left: 16px; padding-right: 16px; }
+  nav.chapters { padding-left: 16px; padding-right: 16px; }
   .stats { padding-left: 16px; padding-right: 16px; }
   .casefile { margin: 16px 16px 0; padding: 16px; }
   .casefile .statement { font-size: 17px; }
@@ -124,12 +156,12 @@ def _propagation_svg(p: dict, w: int = 350, h: int = 300, max_nodes: int = 14) -
         x, y = cx + r * math.cos(ang), cy + r * math.sin(ang)
         nodes.append((x, y, a["actor"]))
         parts.append(
-            f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" '
+            f'<line class="edge" x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" '
             f'stroke="#2a3752" stroke-width="1"/>'
         )
     for x, y, actor in nodes:
         right = x >= cx
-        parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="#3b82f6"/>')
+        parts.append(f'<circle class="node" cx="{x:.1f}" cy="{y:.1f}" r="4" fill="#3b82f6"/>')
         name = actor if len(actor) <= 16 else actor[:15] + "…"
         parts.append(
             f'<text x="{x + (7 if right else -7):.1f}" y="{y + 3:.1f}" font-size="9" '
@@ -138,7 +170,7 @@ def _propagation_svg(p: dict, w: int = 350, h: int = 300, max_nodes: int = 14) -
         )
     origin = p["origin_actor"]
     origin = origin if len(origin) <= 22 else origin[:21] + "…"
-    parts.append(f'<circle cx="{cx}" cy="{cy}" r="8" fill="#ffd479"/>')
+    parts.append(f'<circle class="node" cx="{cx}" cy="{cy}" r="8" fill="#ffd479"/>')
     parts.append(
         f'<text x="{cx}" y="{cy + 24}" font-size="10" fill="#ffd479" '
         f'text-anchor="middle">{_esc(origin)}</text>'
@@ -238,10 +270,30 @@ def write_dashboard(
     out = Path(out_dir)
     props = graph_stats.get("propagations", [])[:25]
     village = "village" in corpus_label.lower()
-    influencer_rows = "\n".join(
-        f"<tr><td class='actor'>{_esc(a)}</td><td>{n}</td></tr>"
-        for a, n in graph_stats.get("top_influencers", [])[:15]
+    infl = graph_stats.get("top_influencers", [])[:15]
+
+    def _infl_rows(rows):
+        return "\n".join(f"<tr><td class='actor'>{_esc(a)}</td><td>{n}</td></tr>" for a, n in rows)
+
+    infl_head = "<tr><th>agent</th><th>downstream</th></tr>"
+    influencer_html = f"<table>{infl_head}{_infl_rows(infl[:8])}</table>"
+    if len(infl) > 8:
+        influencer_html += (
+            f'<details class="morewrap"><summary>Show all {len(infl)}</summary>'
+            f"<table>{infl_head}{_infl_rows(infl[8:])}</table></details>"
+        )
+    prop_head = (
+        "<tr><th>kind</th><th>artifact</th><th>origin agent</th>"
+        "<th>first seen</th><th>adopters</th><th>posts</th>"
+        "<th>adopting agents</th></tr>"
     )
+    prop_html = f'<div class="tw"><table>{prop_head}{_propagation_rows(props[:8])}</table></div>'
+    if len(props) > 8:
+        prop_html += (
+            f'<details class="morewrap"><summary>Show all {len(props)} entries</summary>'
+            f'<div class="tw"><table>{prop_head}'
+            f"{_propagation_rows(props[8:])}</table></div></details>"
+        )
     feature = props[0] if props else None
     page = f"""<!doctype html>
 <html><head><meta charset="utf-8">
@@ -253,6 +305,13 @@ def write_dashboard(
 <div class="sub">Forensic findings — {_esc(corpus_label)}
 · deterministic engine · every claim evidence-cited</div>
 </header>
+<nav class="chapters"><span class="label">Case file</span>
+<a href="#incidence">01 · Incidence</a>
+<a href="#propagation">02 · Propagation</a>
+<a href="#artifacts">03 · Patient-zero</a>
+<a href="#influencers">04 · Influencers</a>
+<a href="#integrity">05 · Integrity</a>
+</nav>
 {_case_file(scan, graph_stats, findings, village)}
 <div class="stats">
 <div class="stat"><b>{scan["messages"]:,}</b><span>messages</span></div>
@@ -270,9 +329,11 @@ def write_dashboard(
             f'<div class="stat"><b>{istats["probe_events"]:,}</b><span>recon probes</span></div>'
         )
     }</div>
-<section><h2>Technique incidence</h2>{_bar_rows(scan.get("technique_counts", {}))}</section>
-<section><h2>Propagation — watch a technique spread through the swarm</h2>
-<div class="vizgrid">{
+<section id="incidence" class="chapter"><h2><span class="chapnum">01</span>Technique incidence</h2>{
+        _bar_rows(scan.get("technique_counts", {}))
+    }</section>
+<section id="propagation" class="chapter"><h2><span class="chapnum">02</span>Propagation — watch a technique spread through the swarm</h2>
+{
         (
             f'<div class="vizcard feature"><h3><b>{_esc(feature["artifact"][:90])}</b>'
             f" · {feature['n_adopters']} adopters · {feature['n_posts']} posts"
@@ -281,20 +342,28 @@ def write_dashboard(
             if feature
             else ""
         )
-        + "".join(
+    }
+{
+        (
+            f'<p class="reelhint">Artifact reel — {min(len(props), 7) - 1} '
+            "more propagation paths · scroll sideways →</p>"
+            if len(props) > 1
+            else ""
+        )
+    }
+<div class="vizreel">{
+        "".join(
             f'<div class="vizcard"><h3><b>{_esc(p["artifact"][:60])}</b>'
             f" · {p['n_adopters']} adopters · {p['n_posts']} posts</h3>"
             f"{_propagation_svg(p)}</div>"
             for p in props[1:7]
         )
     }</div></section>
-<section><h2>Top propagated artifacts — patient-zero view</h2>
-<div class="tw"><table><tr><th>kind</th><th>artifact</th><th>origin agent</th><th>first seen</th>
-<th>adopters</th><th>posts</th><th>adopting agents</th></tr>
-{_propagation_rows(props)}</table></div></section>
-<section><h2>Top influencers (distinct downstream agents)</h2>
-<table><tr><th>agent</th><th>downstream</th></tr>{influencer_rows}</table></section>
-<section><h2>Integrity findings</h2>
+<section id="artifacts" class="chapter"><h2><span class="chapnum">03</span>Top propagated artifacts — patient-zero view</h2>
+{prop_html}</section>
+<section id="influencers" class="chapter"><h2><span class="chapnum">04</span>Top influencers (distinct downstream agents)</h2>
+{influencer_html}</section>
+<section id="integrity" class="chapter"><h2><span class="chapnum">05</span>Integrity findings</h2>
 {"".join(_finding_block(f.to_dict()) for f in findings)}</section>
 <footer>Generated by `python3 -m swarm report` · corpus: {_esc(corpus_label)}
 · engine: elcaro core detectors A–G ·

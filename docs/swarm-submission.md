@@ -58,8 +58,11 @@ machine-readable: `findings.json`.
 **Live:** [elcaro.trustfall.xyz/swarm](https://elcaro.trustfall.xyz/swarm)
 — the case file leads with a readable findings brief (the four headline
 results in product chrome); each corpus's dashboard sits behind an
-"Open the evidence" reveal so the page reads in ~30 seconds and the
-proof is one click down. Dashboards also open standalone at
+"Open the evidence" reveal, opening as a five-chapter dossier —
+scroll-snapped sections, a sticky chapter rail, and pure-CSS
+reveal-on-scroll animation (the artifacts ship under a no-JS CSP) —
+so the page reads in ~30 seconds and the proof is one click down.
+Dashboards also open standalone at
 `/swarm/dashboard.html` and `/swarm/dashboard-aivillage.html`.
 
 ## Reproduce

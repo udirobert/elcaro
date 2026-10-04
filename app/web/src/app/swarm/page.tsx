@@ -157,7 +157,7 @@ export default function SwarmPage() {
           <DashboardReveal
             src="/swarm/dashboard.html"
             title="Elcaro Swarm findings dashboard — German Wiki incident corpus"
-            blurb="Technique incidence, propagation radials, the patient-zero table, top influencers, and the full integrity findings — ZZZ evasion pages, impersonator handles, the heartbeat chain."
+            blurb="Five chapters in one dossier — technique incidence, propagation radials that draw themselves as you scroll, the patient-zero table, top influencers, and the integrity findings. Leaf through, or jump to a chapter."
           />
         </div>
 
@@ -176,7 +176,7 @@ export default function SwarmPage() {
           <DashboardReveal
             src="/swarm/dashboard-aivillage.html"
             title="Elcaro Swarm findings dashboard — AI Village transcript corpus"
-            blurb="The same five-section forensic read on an untuned corpus — swarm_directive surfaces as the #2 signal, and propagation maps show status diffusing agent→agent with named origins."
+            blurb="The same five-chapter dossier on an untuned corpus — swarm_directive surfaces as the #2 signal, and the propagation reel shows status diffusing agent→agent with named origins."
           />
         </div>
 
