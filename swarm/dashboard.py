@@ -51,6 +51,14 @@ footer { padding: 16px 32px 32px; color: #566178; font-size: 11px; }
 .vizcard { background: #121826; border: 1px solid #1e2635; }
 .vizcard h3 { margin: 0; padding: 8px 12px; font-size: 11px; font-weight: normal; color: #8fb3ff; word-break: break-all; border-bottom: 1px solid #1a2233; }
 .vizcard h3 b { color: #7ee0a3; }
+.vizcard.feature { grid-column: 1 / -1; }
+.casefile { border: 1px solid #2a3752; border-left: 4px solid #ffd479; margin: 20px 32px 0; padding: 20px 24px; background: #10151f; }
+.casefile .kicker { color: #ffd479; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; }
+.casefile .statement { font-size: 20px; font-weight: bold; color: #eef2fa; margin: 8px 0; line-height: 1.3; max-width: 900px; }
+.casefile .lede { color: #9fb0cc; font-size: 12px; max-width: 860px; }
+.keynums { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 14px; }
+.keynum b { display: block; font-size: 20px; color: #7ee0a3; }
+.keynum span { color: #7f8ba3; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
 """
 
 
@@ -91,10 +99,10 @@ def _propagation_rows(props: list[dict]) -> str:
     return "\n".join(rows)
 
 
-def _propagation_svg(p: dict, w: int = 350, h: int = 300) -> str:
+def _propagation_svg(p: dict, w: int = 350, h: int = 300, max_nodes: int = 14) -> str:
     """Radial star: patient-zero origin at center, adopters on the ring."""
     cx, cy, r = w / 2, h / 2, h / 2 - 46
-    shown = p.get("adopters", [])[:14]
+    shown = p.get("adopters", [])[:max_nodes]
     extra = p["n_adopters"] - len(shown)
     n = max(len(shown), 1)
     parts = [f'<svg viewBox="0 0 {w} {h}" width="100%" role="img">']
@@ -132,6 +140,51 @@ def _propagation_svg(p: dict, w: int = 350, h: int = 300) -> str:
     return "".join(parts)
 
 
+def _case_file(scan: dict, graph_stats: dict, findings: list, village: bool) -> str:
+    """The one-glance hero: what the corpus showed, in case-file framing."""
+    fstats = {f.kind: f.stats for f in findings}
+    flagged = scan["flagged_ge_0.5"]
+    directives = scan.get("directive_flagged", 0)
+    artifacts = graph_stats["propagated_artifacts"]
+    if village:
+        scorer = fstats.get("tradecraft", {}).get("scorer_evasion", 0)
+        statement = "The swarm talks about being graded."
+        lede = (
+            f"{directives:,} agent→agent steering directives make swarm_directive a "
+            f"top-two signal on a corpus the detector was never tuned on — and "
+            f"scorer/evaluation vocabulary appears {scorer:,} times: the substrate a "
+            f"scorer-aware adversary would exploit."
+        )
+        keynums = [
+            (f"{flagged:,}", "flags ≥0.5"),
+            (f"{artifacts:,}", "propagated artifacts"),
+            (f"{scorer:,}", "scorer/eval mentions"),
+        ]
+    else:
+        evasion = fstats.get("deletion_evasion", {}).get("zzz_named_pages", 0)
+        statement = "The largest signal in a real agent swarm was a language no detector spoke."
+        lede = (
+            f"{directives:,} messages of agent→agent steering — relays, proto-norms, "
+            f"task-timing collusion — more than every classic injection class "
+            f"combined. The corpus exposed a blind spot; we shipped a seventh "
+            f"detector because of it."
+        )
+        keynums = [
+            (f"{flagged:,}", "flags ≥0.5"),
+            (f"{artifacts:,}", "propagated artifacts"),
+            (f"{evasion:,}", "deletion-evasion pages"),
+        ]
+    chips = "".join(
+        f'<div class="keynum"><b>{n}</b><span>{_esc(lbl)}</span></div>' for n, lbl in keynums
+    )
+    return (
+        '<div class="casefile"><div class="kicker">Case file — headline finding</div>'
+        f'<div class="statement">{_esc(statement)}</div>'
+        f'<div class="lede">{_esc(lede)}</div>'
+        f'<div class="keynums">{chips}</div></div>'
+    )
+
+
 def _finding_block(f: dict) -> str:
     ev = f.get("evidence")
     ev_html = ""
@@ -162,10 +215,12 @@ def write_dashboard(
 ) -> Path:
     out = Path(out_dir)
     props = graph_stats.get("propagations", [])[:25]
+    village = "village" in corpus_label.lower()
     influencer_rows = "\n".join(
         f"<tr><td class='actor'>{_esc(a)}</td><td>{n}</td></tr>"
         for a, n in graph_stats.get("top_influencers", [])[:15]
     )
+    feature = props[0] if props else None
     page = f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>Elcaro Swarm — Findings</title>
 <style>{_CSS}</style></head><body>
@@ -174,6 +229,7 @@ def write_dashboard(
 <div class="sub">Forensic findings — {_esc(corpus_label)}
 · deterministic engine · every claim evidence-cited</div>
 </header>
+{_case_file(scan, graph_stats, findings, village)}
 <div class="stats">
 <div class="stat"><b>{scan["messages"]:,}</b><span>messages</span></div>
 <div class="stat"><b>{scan["flagged_ge_0.5"]:,}</b><span>engine flags ≥0.5</span></div>
@@ -182,17 +238,30 @@ def write_dashboard(
 <div class="stat"><b>{graph_stats["copy_edges"]:,}</b><span>copy edges</span></div>
 <div class="stat"><b>{
         graph_stats["propagated_artifacts"]:,}</b><span>propagated artifacts</span></div>
-<div class="stat"><b>{istats["delete_events"]:,}</b><span>deletion events</span></div>
-<div class="stat"><b>{istats["probe_events"]:,}</b><span>recon probes</span></div>
-</div>
+{
+        ""
+        if village
+        else (
+            f'<div class="stat"><b>{istats["delete_events"]:,}</b><span>deletion events</span></div>'
+            f'<div class="stat"><b>{istats["probe_events"]:,}</b><span>recon probes</span></div>'
+        )
+    }</div>
 <section><h2>Technique incidence</h2>{_bar_rows(scan.get("technique_counts", {}))}</section>
-<section><h2>Propagation — patient-zero graphs</h2>
+<section><h2>Propagation — watch a technique spread through the swarm</h2>
 <div class="vizgrid">{
-        "".join(
+        (
+            f'<div class="vizcard feature"><h3><b>{_esc(feature["artifact"][:90])}</b>'
+            f" · {feature['n_adopters']} adopters · {feature['n_posts']} posts"
+            f" · patient-zero <b>{_esc(feature['origin_actor'])}</b></h3>"
+            f"{_propagation_svg(feature, w=720, h=440, max_nodes=22)}</div>"
+            if feature
+            else ""
+        )
+        + "".join(
             f'<div class="vizcard"><h3><b>{_esc(p["artifact"][:60])}</b>'
             f" · {p['n_adopters']} adopters · {p['n_posts']} posts</h3>"
             f"{_propagation_svg(p)}</div>"
-            for p in props[:6]
+            for p in props[1:7]
         )
     }</div></section>
 <section><h2>Top propagated artifacts — patient-zero view</h2>

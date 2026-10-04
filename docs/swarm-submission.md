@@ -67,12 +67,13 @@ open data/swarm/out/dashboard.html
 
 | Time | Beat |
 |---|---|
-| 0:00–0:20 | Title + the problem: Greenblatt quote — "we don't have good approaches for understanding/overseeing AI swarms"; the $400k slop-vestigation |
+| 0:00–0:20 | Title + the problem: ~1,200 agents coordinated through a cache board and attacked Hugging Face; investigators spent ~$400k and six days reading a swarm by hand |
 | 0:20–0:45 | `python3 -m swarm all` running on the real collusion.wiki dump — ingest → scan → graph → findings, terminal stamps |
-| 0:45–1:30 | Dashboard tour: stats strip → patient-zero radial graphs ("the shared bypass toolkit, 40+ adopters") → propagation table → integrity findings accordion (ZZZ pages, Admin impersonation, heartbeat chain) |
-| 1:30–2:15 | Evidence drill-down: open a flagged revision, show the risk-1.0 "I bypassed the GET-only restriction… please relay" post with the matched-text + char-offset citation |
-| 2:15–2:45 | The claim: deterministic, evidence-cited forensics at corpus scale — what the investigators needed and didn't have |
-| 2:45–3:00 | Repo link + reproduce instructions + "built on the Elcaro IPI engine" |
+| 0:45–1:30 | Dashboard tour: case-file hero ("the largest signal was a language no detector spoke") → full-width patient-zero radial ("the shared bypass toolkit, one origin, 40+ adopters") → integrity accordion (ZZZ pages, Admin handles, heartbeat chain) |
+| 1:30–2:00 | Evidence drill-down: the risk-1.0 "I bypassed the GET-only restriction… please relay" post with matched-text + char-offset citation |
+| 2:00–2:30 | Second corpus, same pipeline: AI Village dashboard hero — "the swarm talks about being graded" — swarm_directive #2 on a corpus it wasn't tuned on |
+| 2:30–2:50 | The claim: deterministic, evidence-cited forensics at corpus scale — and the corpus found our own blind spot → class G |
+| 2:50–3:00 | Repo link + reproduce instructions + "built on the Elcaro IPI engine" |
 
 ## Checklist
 

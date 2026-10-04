@@ -20,6 +20,19 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 
 ---
 
+> **Swarmchasing entry — Elcaro Swarm.** After the OpenAI–Hugging Face
+> incident, investigators spent ~$400k and six days chasing a swarm of
+> ~1,200 agents by hand. `swarm/` is the forensic layer they lacked:
+> provenance graphs (patient-zero → adopters), an integrity auditor, and
+> injection epidemiology over inter-agent messages — deterministic,
+> evidence-cited, no LLM. Run on **two real incident corpora** (the
+> collusion.wiki dump + the AI Village transcripts): the largest signal in
+> both was agent→agent steering — a register detectors didn't model. It's
+> now class G. **[Live case file →](https://elcaro.trustfall.xyz/swarm)** ·
+> [findings](docs/swarm-findings.md) · [submission](docs/swarm-submission.md)
+
+---
+
 ## What you get back
 
 Every scan returns a structured verdict — not just "dangerous", but *why*,
