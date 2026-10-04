@@ -185,6 +185,16 @@ def _case_file(scan: dict, graph_stats: dict, findings: list, village: bool) -> 
     )
 
 
+def _trim_ids(item):
+    if isinstance(item, dict):
+        return {k: _trim_ids(v) for k, v in item.items()}
+    if isinstance(item, list):
+        return [_trim_ids(v) for v in item]
+    if isinstance(item, str) and len(item) > 16 and all(c in "0123456789abcdef" for c in item):
+        return item[:12] + "…"
+    return item
+
+
 def _finding_block(f: dict) -> str:
     ev = f.get("evidence")
     ev_html = ""
@@ -196,7 +206,7 @@ def _finding_block(f: dict) -> str:
     elif isinstance(ev, list):
         items = ev[:10]
     for item in items:
-        ev_html += f"<code>{_esc(json.dumps(item, default=str)[:400])}</code>"
+        ev_html += f"<code>{_esc(json.dumps(_trim_ids(item), default=str)[:400])}</code>"
     return (
         f"<details><summary>"
         f'<span class="sev {_esc(f["severity"])}">{_esc(f["severity"])}</span> '
