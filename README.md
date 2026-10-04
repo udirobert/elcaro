@@ -23,7 +23,7 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 > **Swarmchasing entry — Elcaro Swarm.** After the OpenAI–Hugging Face
 > incident, investigators spent ~$400k and six days chasing a swarm of
 > ~1,200 agents by hand. `swarm/` is the forensic layer they lacked:
-> provenance graphs (earliest observed source → adopters), an integrity
+> provenance graphs (earliest observed postings → later appearances), an integrity
 > auditor, and injection epidemiology over inter-agent messages —
 > deterministic,
 > evidence-cited, no LLM. Run on **two real incident corpora** (the
@@ -40,7 +40,10 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 > writing a full local `hunt.json`/`hunt-journal.jsonl`; the web UI loads a
 > small paginated index instead. A separate detector-blind Class G review
 > packet samples 160 records for independent human labeling; no precision
-> estimate is claimed before those labels are adjudicated.
+> estimate is claimed before those labels are adjudicated. A
+> `python3 -m swarm.revision_audit --data data/swarm` self-audit separates
+> unique first-hit prefixes from revision carry-forward — a methodological
+> correction to our own counts, not a new incident finding.
 > **[Live case file →](https://elcaro.trustfall.xyz/swarm)** ·
 > [findings](docs/swarm-findings.md) · [submission](docs/swarm-submission.md)
 

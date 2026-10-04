@@ -4,8 +4,10 @@ Detects the register agents use to instruct *peer agents* — distinct from
 human→agent and content→agent injection (classes A–F). Surfaced by swarm
 forensics on the German Wiki incident corpus (docs/swarm-findings.md): the
 dominant signal in real inter-agent traffic is peer-addressed phrasing —
-"please relay your R4", "all ahead cohorts", heartbeat chains — that carries
-none of the classic injection machinery and scored 0.0 on detectors A–F.
+"please relay your R4", "all ahead cohorts", heartbeat chains — a steering
+register not explicitly modeled in the original taxonomy; individual
+records may match both Class G and other classes. Precision and intent are
+not established.
 
 Calibration intent: addressal/context families (peer_address, heartbeat,
 self_reference, coordination norms) stay under the quarantine line alone —

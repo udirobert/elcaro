@@ -12,9 +12,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CHAPTERS: [id: string, label: string][] = [
   ["incidence", "01 · incidence"],
-  ["propagation", "02 · propagation"],
-  ["artifacts", "03 · earliest source"],
-  ["influencers", "04 · influencers"],
+  ["propagation", "02 · shared artifacts"],
+  ["artifacts", "03 · earliest seen"],
+  ["influencers", "04 · later actors"],
   ["integrity", "05 · integrity"],
 ];
 

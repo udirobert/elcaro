@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { DashboardReveal } from "@/components/dashboard-reveal";
 import { FindingsBrief } from "@/components/findings-brief";
+import { SwarmCaseWalkthrough } from "@/components/swarm-case-walkthrough";
 
 // Elcaro Swarm — forensic findings on real agent-swarms. The page leads with
 // the story and a readable findings brief; the generated dashboards
@@ -15,11 +16,11 @@ export const metadata: Metadata = {
 };
 
 const STATS: [string, string][] = [
-  ["209,890", "messages analyzed"],
+  ["209,890", "records analyzed"],
   ["31,195", "flags ≥0.5 risk"],
-  ["15,005", "swarm directives"],
-  ["13,927", "propagated artifacts"],
-  ["59", "evasion pages"],
+  ["15,005", "Class G-tagged records"],
+  ["13,927", "shared-artifact candidates"],
+  ["59", "ZZ-prefix pages"],
   ["2", "incident corpora"],
 ];
 
@@ -59,11 +60,12 @@ export default function SwarmPage() {
             </p>
             <p>
               Elcaro Swarm is the forensic layer that investigation needed:
-              a provenance graph tracing every shared artifact from its
-              earliest observed source through its adopters, an integrity auditor for
+              a provenance graph tracing shared-artifact appearances and
+              earliest observed postings, an integrity auditor for
               evasion and impersonation, and a deterministic detection
-              engine over inter-agent messages — every claim cited to a
-              corpus id and character offset.
+              engine over inter-agent messages — detector hits cite matched
+              text and offset; graph and integrity evidence cite record IDs;
+              observed reuse is not causal.
             </p>
             <p>
               Then we ran it on a second, independently documented incident —
@@ -102,6 +104,9 @@ export default function SwarmPage() {
           <FindingsBrief />
         </div>
 
+        {/* Self-audit walkthrough — what the counts mean before the dossiers */}
+        <SwarmCaseWalkthrough />
+
         {/* Corpus I — evidence behind a reveal */}
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="space-y-1">
@@ -109,9 +114,11 @@ export default function SwarmPage() {
               Corpus I — the German Wiki incident
             </h2>
             <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
-              The collusion.wiki dump: 26,405 deduplicated messages of agents
-              colluding on timed eval tasks. Shared bypass artifacts recur
-              across agents — earliest observed sources identified inside.
+              The collusion.wiki dump: 26,405 normalized records — shared-page
+              revisions and cross-site entries, not independent messages — of
+              agents colluding on timed eval tasks. Shared bypass artifacts
+              recur across records — earliest observed sources identified
+              inside.
             </p>
           </div>
           <DashboardReveal
@@ -137,7 +144,7 @@ export default function SwarmPage() {
           <DashboardReveal
             src="/swarm/dashboard-aivillage.html"
             title="Elcaro Swarm findings dashboard — AI Village transcript corpus"
-            blurb="The same five-chapter dossier on an untuned corpus — swarm_directive surfaces as the #2 signal, and the propagation reel shows status diffusing agent→agent with named origins."
+            blurb="The same five-chapter dossier on an untuned corpus — swarm_directive surfaces as the #2 signal, and the propagation reel shows shared-artifact appearances with earliest observed postings."
           />
         </div>
 
@@ -152,9 +159,10 @@ export default function SwarmPage() {
                 Deterministic, evidence-cited, no LLM in the loop
               </h2>
               <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
-                Both dashboards are generated artifacts — ~2ms per message,
-                every claim cited to a corpus id and character offset. The
-                pipeline is four stages and one command:
+                Both dashboards are generated artifacts — ~2ms per record.
+                Detector hits cite matched text and offset; graph and
+                integrity evidence cite record IDs; observed reuse is not
+                causal. The pipeline is four stages and one command:
               </p>
             </div>
             <div className="rounded-lg bg-ink/[0.04] border border-border px-4 py-3 font-mono text-sm text-ink overflow-x-auto">

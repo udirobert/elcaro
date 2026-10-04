@@ -15,14 +15,14 @@ const CLAIMS: {
     corpus: "collusion",
     kicker: "New detector — class G",
     title: "A steering register the engine had missed",
-    body: "15,005 records match the Class G steering rules across two corpora. Class G ranks #1 on the Wiki corpus and #2 on AI Village. These are rule matches, not a measured malicious-steering rate.",
+    body: "15,005 tagged records match the Class G steering rules across two corpora. Class G ranks #1 on the Wiki corpus and #2 on AI Village. These are rule matches on tagged records, not a measured malicious-steering rate.",
   },
   {
     claimId: "propagation",
     corpus: "collusion",
     kicker: "Provenance",
     title: "Shared artifacts recur across agents",
-    body: "Shared sandbox-bypass infrastructure — markdown.new, jqp.vercel.app, md.succ.ai, allorigins — appears in records from 39–46 agents, with earliest observed sources identified. Shared appearances do not establish causal influence.",
+    body: "Shared converter/proxy URLs — markdown.new, jqp.vercel.app, md.succ.ai, allorigins — appear under multiple actor labels, with earliest observed postings identified. Shared-page revisions can carry links forward, and appearance does not prove adoption.",
   },
   {
     claimId: "persistence",

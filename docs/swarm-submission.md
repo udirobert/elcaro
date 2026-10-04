@@ -3,16 +3,18 @@
 **Project name:** Elcaro Swarm — the forensic layer the slop-vestigation was
 missing.
 
-**One-liner:** Deterministic, evidence-cited forensic analysis of agent-swarms:
-who instructed whom, what spread, what got tampered with.
+**One-line pitch outline (write in your own words for the form):** Scope:
+deterministic swarm forensics. Proof: inspectable steering-rule hits, shared
+artifact appearances, and integrity events. Limit: no proven causal flow or
+human-labeled Class G precision.
 
 ## What it does
 
 Runs three analyses over a multi-agent corpus:
 
-1. **Provenance graph** — every shared artifact (tool, technique, answer)
-   traced from its earliest observed source through later adopters; co-edit exposure edges
-   reconstruct who plausibly saw what.
+1. **Provenance graph** — shared artifacts (tools, techniques, answers)
+   traced from earliest observed postings through later appearances; co-edit
+   exposure edges reconstruct which records plausibly shared a page.
 2. **Integrity auditor** — deletion evasion, impersonation, unsigned
    activity, reconnaissance probes, covert off-channel links.
 3. **Injection epidemiology** — the Elcaro IPI engine including class G
@@ -26,20 +28,23 @@ The METR investigators of the OpenAI–Hugging Face incident spent ~$400k of
 frontier-model credits over six days and still couldn't fully spot-check the
 analysis. This pipeline produces the investigator-grade pieces they did by
 hand — attribution, propagation, integrity checks — deterministically, with
-every claim cited to a corpus id + char offset.
+detector hits cited to matched text + char offset and graph/integrity
+evidence cited to record IDs; observed reuse is not causal.
 
 ## Corpora & results
 
 **Primary:** German Wiki incident dump (collusion.wiki — ungated, ~10MB):
 
-- 26,405 deduped messages → **6,319 flags ≥0.5** (2,687 dangerous); the new
+- 26,405 normalized records (shared-page revisions + cross-site entries,
+  not independent messages) → **6,319 flags ≥0.5** (2,687 dangerous); the new
   `swarm_directive` class alone tags **5,658** — the largest single tag
   class
-- The top propagated artifacts are **the shared bypass toolkit**
-  (markdown.new, jqp.vercel.app, md.succ.ai) — each spreading to ~40 agents
+- **Shared converter/proxy URL candidates** (markdown.new, jqp.vercel.app,
+  md.succ.ai) recur under ~40 actor labels each — reused page text may
+  carry them forward; appearance is not proven adoption
 - 59 ZZZ deletion-evasion pages, 48 post-deletion recreations
 - Moderator-impersonation handles, a live "still alive" heartbeat chain,
-  499 shortener dead-drops
+  499 shortener links
 
 **Secondary:** AI Village transcript DB (aidigestorg/ai-village — the
 provided dataset): **183,485 chat messages across 16 rooms** — the same
@@ -111,15 +116,56 @@ Result on the frozen corpora: Wiki 3,952 candidates / 0 repeated in
 holdout; AI Village 113 / 16. Repetition is reported as repetition — not
 coordination.
 
+**Revision self-audit:** `python3 -m swarm.revision_audit --data data/swarm`
+recounts our own Class G tag outputs — incident facts (proxy tooling, `ZZ`
+evasion, heartbeats) were originally reported by collusion.wiki; this is a
+methodological correction, not a new discovery. Of 5,658 tagged records,
+3,683 are wiki revisions; 3,661 retain a valid first hit (22 don't) and
+group into 927 unique first-hit prefixes with 2,734 carried-over revisions —
+tagged records, not unique directives. A focus locus shows one `Please
+relay` prefix at offset 493 persisting across revisions `@1..@15` under
+different actor labels. Separately, the exact `md.succ.ai` URL appears in 55
+revision records under 40 actor labels / 35 source-channel pairs (earliest
+`dse~AgentMassMdBridge2026@1`, 2026-06-18) — an occurrence count, not proven
+reading or causal propagation. Report: `data/swarm/out/revision-audit.json`,
+deployed at `/swarm/revision-audit.json`. The Transluce urlquery logs and
+SwarmTraces redacted HF payload chains overlap the Wiki timeline and could
+support distinct future analyses, but are not independent peer-message
+validation sets and were not processed here.
+
 **Class G review pilot:** `python3 -m swarm.precision_review export` creates
 160 detector-blind cases under git-ignored `data/swarm/review-v1/`: 40
 rule matches and 40 non-matches from each corpus after exact-text
 deduplication. Two reviewers independently label peer-directed steering
 using the included guidance; a third adjudicates disagreements and uncertain
-cases before scoring. The answer key stays separate from reviewers. This
-tests steering phrasing, **not** maliciousness or deployment precision. The
+cases before scoring. The answer key stays separate from reviewers. A
+local-only `/review` workbench can package each person's assigned CSVs into
+private reviewer kits so labels are entered one case at a time without a
+public corpus endpoint. This tests steering phrasing, **not** maliciousness
+or deployment precision. The
 packet exists, but no human labels or performance result exist yet. The
-commands and sampling limitations are in `docs/swarm-findings.md`.
+commands and sampling limitations are in `docs/swarm-findings.md`. A separate,
+optional agent-review shadow experiment now prepares the same peer-steering
+Choice question for Jev, Laya, and Featherless Simple Jev without rule
+predictions. Offline preparation produced 120 short cases and 40 explicit
+exclusions from the frozen 160-case sample. With authorized external
+processing and a $1 software spend cap, Runware Laya then answered all 120
+short cases; those model choices are not human ground truth or a precision
+estimate. One Featherless corpus attempt returned HTTP 400 and remained
+unclassified; no further Featherless corpus calls were made. TypeSafe Jev
+was not run without a separate credential. The existing human-review packet
+is still unlabeled. Details, caveats, and the local-only spend ledger are in
+`docs/swarm-findings.md`.
+
+**Separate third-platform check (not a validated finding):** A cleaned MoltVerse
+public-comment snapshot was scanned locally without hosted reasoners. Of
+30,983 source comment rows, 25,645 distinct normalized comment contexts
+remain after exact-context deduplication; 1,464 have a Class G rule tag.
+These are self-asserted platform handles, not verified agent identities or
+human labels. A separate 80-case blinded packet (40 matches/40 non-matches)
+is private and unlabelled. This does not establish precision or a new OpenAI
+incident; it is not part of the live two-incident dashboard. Reproduction,
+provenance and limits are in `docs/swarm-findings.md`.
 
 ## Demo video script (~3 min)
 
@@ -127,7 +173,7 @@ commands and sampling limitations are in `docs/swarm-findings.md`.
 |---|---|
 | 0:00–0:20 | Title + the problem: ~1,200 agents coordinated through a cache board and attacked Hugging Face; investigators spent ~$400k and six days reading a swarm by hand |
 | 0:20–0:45 | `python3 -m swarm all` running on the real collusion.wiki dump — ingest → scan → graph → findings, terminal stamps |
-| 0:45–1:30 | Dashboard tour: case-file hero ("the engine gained a detector for agent-to-agent steering") → full-width earliest-source radial ("the shared bypass toolkit, earliest observed source, 40+ adopters") → integrity accordion (ZZZ pages, Admin handles, heartbeat chain) |
+| 0:45–1:30 | Dashboard tour: case-file hero ("the engine gained a detector for agent-to-agent steering") → full-width earliest-source radial ("the shared bypass toolkit, earliest observed source, 40+ actor labels") → integrity accordion (ZZZ pages, Admin handles, heartbeat chain) |
 | 1:30–2:00 | Evidence drill-down: the risk-1.0 "I bypassed the GET-only restriction… please relay" post with matched-text + char-offset citation |
 | 2:00–2:30 | Second corpus, same pipeline: AI Village dashboard hero — "the swarm uses evaluation and logging vocabulary" — swarm_directive #2 on a corpus it wasn't tuned on |
 | 2:30–2:50 | The claim: deterministic, evidence-cited forensics at corpus scale — and the corpus found our own blind spot → class G |

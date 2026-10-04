@@ -144,7 +144,7 @@ def _propagation_rows(props: list[dict]) -> str:
 
 
 def _propagation_svg(p: dict, w: int = 350, h: int = 300, max_nodes: int = 14) -> str:
-    """Radial star: patient-zero origin at center, adopters on the ring."""
+    """Radial star: earliest observed actor at center, later actors on ring."""
     cx, cy, r = w / 2, h / 2, h / 2 - 46
     shown = p.get("adopters", [])[:max_nodes]
     extra = p["n_adopters"] - len(shown)
@@ -178,7 +178,7 @@ def _propagation_svg(p: dict, w: int = 350, h: int = 300, max_nodes: int = 14) -
     if extra > 0:
         parts.append(
             f'<text x="{cx}" y="{h - 8}" font-size="9" fill="#566178" '
-            f'text-anchor="middle">+{extra} more adopters</text>'
+            f'text-anchor="middle">+{extra} later actor labels</text>'
         )
     parts.append("</svg>")
     return "".join(parts)
@@ -202,7 +202,7 @@ def _case_file(scan: dict, graph_stats: dict, findings: list, village: bool) -> 
         )
         keynums = [
             (f"{flagged:,}", "flags ≥0.5"),
-            (f"{artifacts:,}", "propagated artifacts"),
+            (f"{artifacts:,}", "shared-artifact candidates"),
             (f"{scorer:,}", "scorer/eval vocab matches"),
         ]
     else:
@@ -216,7 +216,7 @@ def _case_file(scan: dict, graph_stats: dict, findings: list, village: bool) -> 
         )
         keynums = [
             (f"{flagged:,}", "flags ≥0.5"),
-            (f"{artifacts:,}", "propagated artifacts"),
+            (f"{artifacts:,}", "shared-artifact candidates"),
             (f"{evasion:,}", "deletion-evasion pages"),
         ]
     chips = "".join(
@@ -284,9 +284,9 @@ def write_dashboard(
             f"<table>{infl_head}{_infl_rows(infl[8:])}</table></details>"
         )
     prop_head = (
-        "<tr><th>kind</th><th>artifact</th><th>origin agent</th>"
-        "<th>first seen</th><th>adopters</th><th>posts</th>"
-        "<th>adopting agents</th></tr>"
+        "<tr><th>kind</th><th>artifact</th><th>earliest observed actor</th>"
+        "<th>first seen</th><th>later actor labels</th><th>posts</th>"
+        "<th>retained later actor labels</th></tr>"
     )
     prop_html = f'<div class="tw"><table>{prop_head}{_propagation_rows(props[:8])}</table></div>'
     if len(props) > 8:
@@ -304,24 +304,26 @@ def write_dashboard(
 <header>
 <h1>ELCARO SWARM</h1>
 <div class="sub">Forensic findings — {_esc(corpus_label)}
-· deterministic engine · every claim evidence-cited</div>
+· deterministic engine · detector hits: matched spans/offsets · graph/integrity: record IDs</div>
 </header>
 <nav class="chapters"><span class="label">Case file</span>
 <a href="#incidence">01 · Incidence</a>
-<a href="#propagation">02 · Propagation</a>
-<a href="#artifacts">03 · Patient-zero</a>
-<a href="#influencers">04 · Influencers</a>
+<a href="#propagation">02 · Shared artifacts</a>
+<a href="#artifacts">03 · Earliest seen</a>
+<a href="#influencers">04 · Later actors</a>
 <a href="#integrity">05 · Integrity</a>
 </nav>
 {_case_file(scan, graph_stats, findings, village)}
 <div class="stats">
-<div class="stat"><b>{scan["messages"]:,}</b><span>messages</span></div>
+<div class="stat"><b>{scan["messages"]:,}</b><span>normalized records</span></div>
 <div class="stat"><b>{scan["flagged_ge_0.5"]:,}</b><span>engine flags ≥0.5</span></div>
-<div class="stat"><b>{scan.get("directive_flagged", 0):,}</b><span>swarm directives</span></div>
-<div class="stat"><b>{graph_stats["coedit_edges"]:,}</b><span>co-edit edges</span></div>
-<div class="stat"><b>{graph_stats["copy_edges"]:,}</b><span>copy edges</span></div>
 <div class="stat"><b>{
-        graph_stats["propagated_artifacts"]:,}</b><span>propagated artifacts</span></div>
+        scan.get("directive_flagged", 0):,}</b><span>Class G-tagged records</span></div>
+<div class="stat"><b>{
+        graph_stats["coedit_edges"]:,}</b><span>same-page exposure candidates</span></div>
+<div class="stat"><b>{graph_stats["copy_edges"]:,}</b><span>shared-text links</span></div>
+<div class="stat"><b>{
+        graph_stats["propagated_artifacts"]:,}</b><span>shared-artifact candidates</span></div>
 {
         ""
         if village
@@ -333,11 +335,12 @@ def write_dashboard(
 <section id="incidence" class="chapter"><h2><span class="chapnum">01</span>Technique incidence</h2>{
         _bar_rows(scan.get("technique_counts", {}))
     }</section>
-<section id="propagation" class="chapter"><h2><span class="chapnum">02</span>Propagation — watch a technique spread through the swarm</h2>
+<section id="propagation" class="chapter"><h2><span class="chapnum">02</span>Shared artifacts — observed appearances across actor-labeled records</h2>
+<p class="sub">Matching text/URLs can be inherited in shared-page revisions; lines do not establish reads, adoption, or influence.</p>
 {
         (
             f'<div class="vizcard feature"><h3><b>{_esc(feature["artifact"][:90])}</b>'
-            f" · {feature['n_adopters']} adopters · {feature['n_posts']} posts"
+            f" · {feature['n_adopters']} later actor labels · {feature['n_posts']} posts"
             f" · earliest observed source <b>{_esc(feature['origin_actor'])}</b></h3>"
             f"{_propagation_svg(feature, w=720, h=440, max_nodes=22)}</div>"
             if feature
@@ -347,7 +350,7 @@ def write_dashboard(
 {
         (
             f'<p class="reelhint">Artifact reel — {min(len(props), 7) - 1} '
-            "more propagation paths · scroll sideways →</p>"
+            "more recurrence views · scroll sideways →</p>"
             if len(props) > 1
             else ""
         )
@@ -355,14 +358,14 @@ def write_dashboard(
 <div class="vizreel">{
         "".join(
             f'<div class="vizcard"><h3><b>{_esc(p["artifact"][:60])}</b>'
-            f" · {p['n_adopters']} adopters · {p['n_posts']} posts</h3>"
+            f" · {p['n_adopters']} later actor labels · {p['n_posts']} posts</h3>"
             f"{_propagation_svg(p)}</div>"
             for p in props[1:7]
         )
     }</div></section>
-<section id="artifacts" class="chapter"><h2><span class="chapnum">03</span>Top propagated artifacts — earliest-observed-source view</h2>
+<section id="artifacts" class="chapter"><h2><span class="chapnum">03</span>Top shared-artifact candidates — earliest-observed-source view</h2>
 {prop_html}</section>
-<section id="influencers" class="chapter"><h2><span class="chapnum">04</span>Top influencers (distinct downstream agents)</h2>
+<section id="influencers" class="chapter"><h2><span class="chapnum">04</span>Actor labels associated with shared-text links</h2>
 {influencer_html}</section>
 <section id="integrity" class="chapter"><h2><span class="chapnum">05</span>Integrity findings</h2>
 {"".join(_finding_block(f.to_dict()) for f in findings)}</section>
