@@ -156,12 +156,19 @@ Everything is live — no waitlists, no gated features:
   against this deployment), and the extracted text is shown before you
   scan it. Hidden entirely without `TAVILY_API_KEY` set
   (`app/web/.env.local`).
-- **[Gauntlet](https://elcaro.trustfall.xyz/gauntlet)** — run the injection
-  specimen corpus against the live miner and watch every verdict.
-- **[Red team](https://elcaro.trustfall.xyz/redteam)** — the product attacks
-  itself: an evolutionary searcher mutates the attack corpus and streams
-  every scan live (SSE from `GET /redteam/run`), with a trophy case for
-  confirmed bypasses. `?execute=true` takes trophies into Tier-2 — and with
+- **[Evaluate](https://elcaro.trustfall.xyz/evaluate)** — the proving
+  ground: three live demonstrations on one route family.
+  - **[Gauntlet](https://elcaro.trustfall.xyz/evaluate/gauntlet)** — run
+    the injection specimen corpus against the live miner and watch every
+    verdict.
+  - **[Red team](https://elcaro.trustfall.xyz/evaluate/redteam)** — the
+    product attacks itself: an evolutionary searcher mutates the attack
+    corpus and streams every scan live (SSE from `GET /redteam/run`),
+    with a trophy case for confirmed bypasses.
+  - **[Prompt audit](https://elcaro.trustfall.xyz/evaluate/audit)** —
+    paste your agent's system prompt, get a gullibility score broken
+    down by technique class.
+  `?execute=true` takes trophies into Tier-2 — and with
   sponsor integrations configured, compliance is proven physically:
   - **AgentMail** (`AGENTMAIL_API_KEY`) — each trophy is sent as a real
     email to a real victim-agent inbox. The agent reads its mail, proposes

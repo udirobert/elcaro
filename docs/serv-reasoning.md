@@ -177,7 +177,7 @@ section comparing Free vs SERV Enhanced side-by-side.
 
 ## 代理沙盒测试（Agent Sandbox）
 
-`POST /sandbox` 是 `/vulnerable` 页面的高级分析接口，用于模拟目标 agent 面对注入指令时的实际反应。
+`POST /sandbox` 是 prompt audit 页面（`/evaluate/audit`，原 `/vulnerable`）的高级分析接口，用于模拟目标 agent 面对注入指令时的实际反应。
 
 ### 工作原理
 
@@ -209,9 +209,9 @@ POST /sandbox
 | `specimens` | array | 每样本的详细结果 |
 | `pattern_analysis_gullibility` | int\|null | 模式分析补充分数（如启用） |
 
-### 与 `/vulnerable` 的关系
+### 与 `/evaluate/audit` 的关系
 
-- `/vulnerable` 是面向最终用户的页面（含交互 UI）
+- `/evaluate/audit` 是面向最终用户的页面（含交互 UI）
 - `/sandbox` 是供外部系统调用的 API，也可供开发者验证逻辑
 
 成本估算：一次完整沙盒测试约 8 次 LLM 调用，约 $0.02 USDC（使用 gpt-5.4-mini）。
@@ -219,7 +219,7 @@ POST /sandbox
 ## Feature Flags & Analytics
 
 ### SERV availability gate
-The `/vulnerable` page queries `GET /config` on mount to check whether
+The `/evaluate/audit` page queries `GET /config` on mount to check whether
 SERV is configured. When `serv_available: false` the Sandbox Test mode
 is disabled (greyed out, shows "Requires SERV config") so users aren't
 confused by a dead button.
@@ -229,7 +229,7 @@ Events tracked (stored in localStorage, flushed to
 `POST /api/analytics`):
 - `analysis.completed` — mode (quick/sandbox), score, serv_available flag
 - `analysis.shared` — score, mode (viral loop signal)
-- `analysis.upgrade_click` — destination page (/scan, /integrate, /gauntlet)
+- `analysis.upgrade_click` — destination page (/scan, /integrate, /evaluate)
 
 Events are batch-flushed every 5 events or on page hide/unload. No PII
 is sent (no prompts, no IPs beyond x-forwarded-for header). Raw events

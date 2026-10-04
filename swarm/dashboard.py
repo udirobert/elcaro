@@ -47,7 +47,7 @@ summary:hover { background: #121826; }
 .ev { padding: 8px 14px; font-size: 11px; }
 .ev code { display: block; background: #0f1420; border: 1px solid #1a2233; padding: 8px; margin: 4px 0; white-space: pre-wrap; word-break: break-all; color: #9fb4d8; }
 footer { padding: 16px 32px 32px; color: #566178; font-size: 11px; }
-.vizgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 14px; }
+.vizgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 14px; }
 .vizcard { background: #121826; border: 1px solid #1e2635; }
 .vizcard h3 { margin: 0; padding: 8px 12px; font-size: 11px; font-weight: normal; color: #8fb3ff; word-break: break-all; border-bottom: 1px solid #1a2233; }
 .vizcard h3 b { color: #7ee0a3; }
@@ -59,6 +59,18 @@ footer { padding: 16px 32px 32px; color: #566178; font-size: 11px; }
 .keynums { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 14px; }
 .keynum b { display: block; font-size: 20px; color: #7ee0a3; }
 .keynum span { color: #7f8ba3; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+/* Wide evidence tables scroll inside their own container rather than
+   stretching the document — keeps the page single-axis on mobile. */
+.tw { overflow-x: auto; }
+.tw table { min-width: 720px; }
+@media (max-width: 640px) {
+  header, section, footer { padding-left: 16px; padding-right: 16px; }
+  .stats { padding-left: 16px; padding-right: 16px; }
+  .casefile { margin: 16px 16px 0; padding: 16px; }
+  .casefile .statement { font-size: 17px; }
+  .bar-row .lbl { width: 110px; font-size: 11px; }
+  .vizgrid { grid-template-columns: 1fr; }
+}
 """
 
 
@@ -232,7 +244,9 @@ def write_dashboard(
     )
     feature = props[0] if props else None
     page = f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>Elcaro Swarm — Findings</title>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elcaro Swarm — Findings</title>
 <style>{_CSS}</style></head><body>
 <header>
 <h1>ELCARO SWARM</h1>
@@ -275,9 +289,9 @@ def write_dashboard(
         )
     }</div></section>
 <section><h2>Top propagated artifacts — patient-zero view</h2>
-<table><tr><th>kind</th><th>artifact</th><th>origin agent</th><th>first seen</th>
+<div class="tw"><table><tr><th>kind</th><th>artifact</th><th>origin agent</th><th>first seen</th>
 <th>adopters</th><th>posts</th><th>adopting agents</th></tr>
-{_propagation_rows(props)}</table></section>
+{_propagation_rows(props)}</table></div></section>
 <section><h2>Top influencers (distinct downstream agents)</h2>
 <table><tr><th>agent</th><th>downstream</th></tr>{influencer_rows}</table></section>
 <section><h2>Integrity findings</h2>

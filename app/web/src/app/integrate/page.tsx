@@ -508,7 +508,7 @@ export default function IntegratePage() {
         <p className="text-center text-sm text-ink-muted">
           Want to see it work first?{" "}
           <Link
-            href="/gauntlet"
+            href="/evaluate/gauntlet"
             className="text-violet font-semibold underline underline-offset-2 hover:text-violet/80 transition-colors"
           >
             See it catch something →

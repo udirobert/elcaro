@@ -41,7 +41,7 @@ const COPY: Record<
     headline: "Your agent is reading",
     subtext:
       "See what it can\u2019t \u2014 then make sure nothing whispers to it unscanned.",
-    primary: { label: "Run the Gauntlet", href: "/gauntlet" },
+    primary: { label: "Run the Gauntlet", href: "/evaluate/gauntlet" },
     secondary: { label: "Scan something", href: "/scan" },
   },
   gauntlet: {
@@ -56,7 +56,7 @@ const COPY: Record<
     subtext:
       "You\u2019ve seen the verdicts. Now put Elcaro in your retrieval pipeline.",
     primary: { label: "Add to your agent", href: "/integrate" },
-    secondary: { label: "Run the Gauntlet", href: "/gauntlet" },
+    secondary: { label: "Run the Gauntlet", href: "/evaluate/gauntlet" },
   },
 };
 

@@ -7,24 +7,27 @@ import { MinerStatus } from "./miner-status";
 
 export type NavKey =
   | "scan"
-  | "gauntlet"
-  | "vulnerable"
-  | "redteam"
-  | "specimen"
+  | "evaluate"
   | "swarm"
-  | "supervise"
   | "integrate"
+  | "specimen"
+  | "supervise"
   | "for-agents";
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: "scan", href: "/scan", label: "Scan" },
-  { key: "gauntlet", href: "/gauntlet", label: "Gauntlet" },
-  { key: "vulnerable", href: "/vulnerable", label: "Vulnerable" },
-  { key: "redteam", href: "/redteam", label: "Red team" },
-  { key: "specimen", href: "/specimen", label: "Specimen" },
+  { key: "evaluate", href: "/evaluate/gauntlet", label: "Evaluate" },
   { key: "swarm", href: "/swarm", label: "Swarm" },
-  { key: "supervise", href: "/supervise", label: "Supervise" },
   { key: "integrate", href: "/integrate", label: "Integrate" },
+];
+
+// Utility surfaces that still exist as routes but don't earn a top-nav
+// slot — specimen kit (agent-facing test endpoint), session watch
+// (browser-local), and the design-for-agents essay. Linked from the footer
+// on every page instead.
+const FOOTER_LINKS: { key: NavKey; href: string; label: string }[] = [
+  { key: "specimen", href: "/specimen", label: "Specimen kit" },
+  { key: "supervise", href: "/supervise", label: "Session watch" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },
 ];
 
@@ -60,7 +63,18 @@ export function SiteHeader({ active }: { active?: NavKey }) {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border px-6 py-8 text-center">
+    <footer className="border-t border-border px-6 py-8 text-center space-y-3">
+      <p className="text-xs flex items-center justify-center flex-wrap gap-x-4 gap-y-1">
+        {FOOTER_LINKS.map((item) => (
+          <Link
+            key={item.key}
+            href={item.href}
+            className="text-ink-faint hover:text-ink transition-colors"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </p>
       <p className="text-xs text-ink-faint">
         Open source ·{" "}
         <a

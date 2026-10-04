@@ -107,7 +107,7 @@ export function GauntletRunner() {
   }
 
   async function handleShare() {
-    const url = `${window.location.origin}/gauntlet`;
+    const url = `${window.location.origin}/evaluate/gauntlet`;
     const text = `${verdictText()} ${url}`;
     try {
       if (navigator.share) {

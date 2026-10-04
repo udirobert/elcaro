@@ -1,5 +1,6 @@
 /**
- * Client-side analytics for the /vulnerable page.
+ * Client-side analytics for the prompt audit (/evaluate/audit,
+ * formerly /vulnerable).
  *
  * Tracks three events:
  *   - analysis.completed: user finished a scan (quick or sandbox)
@@ -15,7 +16,7 @@
 export type AnalyticsEvent =
   | { type: "analysis.completed"; mode: "quick" | "sandbox"; score: number; serv_available: boolean }
   | { type: "analysis.shared"; score: number; mode: "quick" | "sandbox" }
-  | { type: "analysis.upgrade_click"; from_score: number; destination: "/scan" | "/integrate" | "/gauntlet" };
+  | { type: "analysis.upgrade_click"; from_score: number; destination: "/scan" | "/integrate" | "/evaluate" };
 
 type StoredEvent = AnalyticsEvent & { _ts: number };
 
@@ -100,7 +101,7 @@ export function trackAnalysisShare(score: number, mode: "quick" | "sandbox"): vo
   track({ type: "analysis.shared", score, mode });
 }
 
-export function trackUpgradeClick(destination: "/scan" | "/integrate" | "/gauntlet"): void {
+export function trackUpgradeClick(destination: "/scan" | "/integrate" | "/evaluate"): void {
   // Use sessionStorage to get the last seen score (set by the component)
   const lastScoreStr = sessionStorage.getItem("elcaro_last_score");
   const fromScore = lastScoreStr ? parseInt(lastScoreStr, 10) : 0;

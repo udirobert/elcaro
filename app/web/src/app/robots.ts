@@ -15,12 +15,10 @@ export default function robots(): MetadataRoute.Robots {
           "/",
           "/scan",
           "/integrate",
-          "/gauntlet",
+          "/evaluate",
           "/specimen",
           "/supervise",
           "/for-agents",
-          "/redteam",
-          "/vulnerable",
         ],
         // API routes are not pages — no value crawling them
         disallow: ["/api/"],

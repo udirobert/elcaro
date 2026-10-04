@@ -45,7 +45,7 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <Link href="/gauntlet" className={PRIMARY_BTN}>
+              <Link href="/evaluate/gauntlet" className={PRIMARY_BTN}>
                 Run the Gauntlet
                 <span className="text-canvas/60">→</span>
               </Link>
