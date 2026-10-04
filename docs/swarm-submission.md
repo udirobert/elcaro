@@ -111,6 +111,16 @@ Result on the frozen corpora: Wiki 3,952 candidates / 0 repeated in
 holdout; AI Village 113 / 16. Repetition is reported as repetition — not
 coordination.
 
+**Class G review pilot:** `python3 -m swarm.precision_review export` creates
+160 detector-blind cases under git-ignored `data/swarm/review-v1/`: 40
+rule matches and 40 non-matches from each corpus after exact-text
+deduplication. Two reviewers independently label peer-directed steering
+using the included guidance; a third adjudicates disagreements and uncertain
+cases before scoring. The answer key stays separate from reviewers. This
+tests steering phrasing, **not** maliciousness or deployment precision. The
+packet exists, but no human labels or performance result exist yet. The
+commands and sampling limitations are in `docs/swarm-findings.md`.
+
 ## Demo video script (~3 min)
 
 | Time | Beat |

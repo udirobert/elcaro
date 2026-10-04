@@ -228,6 +228,57 @@ fetches the index, then the first page only; "Show 12 more" fetches each
 successive page on demand, and the download link offers the index — the
 full report remains reproducible locally via the CLI.
 
+## Class G blinded human-review pilot
+
+A separate offline review packet tests whether Class G's rule matches reflect
+**peer-directed steering**, not whether messages are malicious or unauthorized:
+
+```bash
+python3 -m swarm.precision_review export \
+  --wiki data/swarm/out/tagged.jsonl \
+  --village data/aivillage/out/tagged.jsonl \
+  --out data/swarm/review-v1
+```
+
+The fixed rule samples 40 matches and 40 non-matches per corpus after
+exact-text deduplication of scan-eligible records (160 total). Its SHA-256
+ranking and seed are fixed in the source; the entire review text is limited
+to the first 40,000 characters, the same portion the detector scanned.
+`reviewer-a.csv` and `reviewer-b.csv` contain source/channel/actor/time/text,
+but **no detector verdict, score, matched span, or risk level**; they are in
+separate deterministic orders. Share only a reviewer CSV and
+`review-guidance.txt` with each independent reviewer. Keep `answer-key.json`
+away from reviewers. Fill only `label` (`steering`, `non_steering`, or
+`uncertain`) and `notes`; do not upload corpus text to a third-party service.
+All generated review files stay under git-ignored `data/`.
+
+After both reviews are complete, create a blinded third-reviewer packet for
+all disagreements and uncertainties, then score only after they are resolved:
+
+```bash
+python3 -m swarm.precision_review prepare-adjudication \
+  --key data/swarm/review-v1/answer-key.json \
+  --reviewer-a data/swarm/review-v1/reviewer-a.csv \
+  --reviewer-b data/swarm/review-v1/reviewer-b.csv \
+  --out data/swarm/review-v1/adjudication.csv
+python3 -m swarm.precision_review score \
+  --key data/swarm/review-v1/answer-key.json \
+  --reviewer-a data/swarm/review-v1/reviewer-a.csv \
+  --reviewer-b data/swarm/review-v1/reviewer-b.csv \
+  --adjudication data/swarm/review-v1/adjudication.csv \
+  --out data/swarm/review-v1/score.json
+```
+
+The scorer refuses incomplete, edited, or unresolved packets. Once human
+labels exist, it reports the steering fraction **among Class G matches** and
+the missed-steering fraction **among non-matches**, separately by corpus,
+with 95% Wilson intervals. There is no accuracy score from the artificially
+balanced packet and no estimate of maliciousness or deployment performance.
+The Wiki corpus inspired Class G, so it is an in-corpus review; AI Village is
+a separate incident, not a randomly sampled future deployment. The review
+packets are generated and verified, but labels and performance estimates do
+not yet exist.
+
 ## Corpus caveats
 
 - Records mirroring wiki revisions are deduped by body SHA (2,388 removed);

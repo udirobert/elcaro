@@ -38,7 +38,9 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 > stage separately screens for URLs shared by ≥3 actor labels in a UTC
 > channel-hour and replays the frozen predicate on unlabeled holdout days —
 > writing a full local `hunt.json`/`hunt-journal.jsonl`; the web UI loads a
-> small paginated index instead.
+> small paginated index instead. A separate detector-blind Class G review
+> packet samples 160 records for independent human labeling; no precision
+> estimate is claimed before those labels are adjudicated.
 > **[Live case file →](https://elcaro.trustfall.xyz/swarm)** ·
 > [findings](docs/swarm-findings.md) · [submission](docs/swarm-submission.md)
 
