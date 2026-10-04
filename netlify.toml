@@ -70,6 +70,19 @@
     # frame-ancestors 'none': belt-and-suspenders with X-Frame-Options.
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 
+# The /swarm findings dashboards are self-contained static artifacts
+# (inline CSS/SVG, no scripts, no external resources) embedded via iframe
+# by the /swarm page — the global X-Frame-Options DENY + frame-ancestors
+# 'none' would block the same-origin embed. Same-origin only, and a CSP
+# stricter than the site default since they need almost nothing.
+[[headers]]
+  for = "/swarm/*.html"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none';"
+
 # Long-lived immutable cache for hashed Next.js static assets.
 # The /_next/static/ path contains content-hashed filenames — they can be
 # cached permanently because any change produces a new filename.
