@@ -26,9 +26,10 @@
   NODE_VERSION = "22"
   # The /swarm dashboards are generated forensic artifacts that inline
   # corpus evidence — real-world strings we do not control, including
-  # hex ids that trip generic key-pattern heuristics. Scanning stays on
-  # for everything else.
-  SECRETS_SCAN_OMIT_PATHS = "swarm/dashboard.html,swarm/dashboard-aivillage.html"  # pragma: allowlist secret
+  # hex ids that trip generic key-pattern heuristics. Paths are
+  # repo-root-relative; glob covers future per-corpus dashboards.
+  # Scanning stays on for everything else.
+  SECRETS_SCAN_OMIT_PATHS = "app/web/public/swarm/*.html"  # pragma: allowlist secret
 
 # Next.js on Netlify
 [[plugins]]
