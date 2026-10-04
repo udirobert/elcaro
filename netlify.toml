@@ -24,15 +24,16 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  # Omit paths are repo-root-relative. Two exclusions:
-  #  - app/web/.next/cache — Turbopack bakes build-scoped env var values
-  #    into its incremental cache (.sst); cache is disposable build
-  #    state, never deployed to the CDN or function bundle.
+  # Omit paths are repo-root-relative. Exclusions:
+  #  - .netlify/.next/cache — the Next.js plugin stages output under a
+  #    repo-root .netlify dir; Turbopack bakes build-scoped env var
+  #    values into its incremental cache (.sst) which is then restored
+  #    between deploys. Disposable build state, never publicly served.
+  #  - app/web/.next/cache — same cache where next build writes it.
   #  - app/web/public/swarm/*.html — generated forensic dashboards that
-  #    inline corpus evidence: real-world strings we do not control,
-  #    including hex ids that trip generic key-pattern heuristics.
+  #    inline corpus evidence: real-world strings we do not control.
   # Scanning stays on for everything else.
-  SECRETS_SCAN_OMIT_PATHS = "app/web/.next/cache,app/web/public/swarm/*.html"  # pragma: allowlist secret
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache,app/web/.next/cache,app/web/public/swarm/*.html"  # pragma: allowlist secret
 
 # Next.js on Netlify
 [[plugins]]
