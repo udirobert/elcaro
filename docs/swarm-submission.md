@@ -94,6 +94,23 @@ snapshots. The panel audits what the engine observed; it does not verify
 causality independently — shared appearances and earliest observed sources
 remain observations, not proof of origin or influence.
 
+**Hunt mode (opt-in):** `python3 -m swarm hunt --data data/swarm` (or
+`--data data/aivillage`) reads only `tagged.jsonl` and screens for shared
+URLs — ≥3 distinct actor labels in one source/channel/UTC hour — then
+replays the frozen predicate on disjoint holdout days (`sha256` of the UTC
+date, first byte mod 2; the holdout is unlabeled, not a negative control).
+Duplicate record IDs are excluded entirely, exact copied discovery bodies
+can't replicate within the same URL/source/channel, extraction covers the
+first 40,000 characters (boundary-touching matches on truncated text are
+dropped), and receipts are capped at five per hour. Full outputs stay
+local: `hunt.json` + `hunt-journal.jsonl` (every candidate, unreplicated
+included). The web "Hunt candidates" view reads a small deployed index
+plus 12-candidate page files — first page on select, each next page on
+"Show 12 more"; the download link offers the index, not the full report.
+Result on the frozen corpora: Wiki 3,952 candidates / 0 repeated in
+holdout; AI Village 113 / 16. Repetition is reported as repetition — not
+coordination.
+
 ## Demo video script (~3 min)
 
 | Time | Beat |

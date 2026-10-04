@@ -186,6 +186,48 @@ entry carries normalized-input accounting — supplied normalized rows only
 (records seen, duplicates, skipped, truncated) — **not** raw
 dedup/reject counts and **not** capture coverage.
 
+An opt-in exploratory hunt stage also exists, deliberately kept out of
+`all`/`report`:
+
+```bash
+python3 -m swarm hunt --data data/swarm      # collusion.wiki corpus
+python3 -m swarm hunt --data data/aivillage  # AI Village corpus
+```
+
+It reads only `tagged.jsonl` and screens for shared HTTP(S) URLs posted by
+at least three distinct actor labels within one source/channel/UTC hour,
+then replays the frozen URL/source/channel predicate on holdout days —
+whole UTC days split by `sha256(YYYY-MM-DD)` first byte modulo 2, so the
+holdout is unlabeled, not a negative control. Records with duplicated IDs
+are excluded entirely. Exact copied discovery bodies — a full-text SHA256
+match within the same URL/source/channel — can't replicate. URL extraction
+covers only the first 40,000 characters of each record, and matches that
+end exactly at a truncated boundary are excluded so a cut-off URL can't
+form a false candidate. Timezone-offset timestamps normalize to UTC;
+naive timestamps assume UTC — every eligible AI Village record has a
+naive timestamp, so that corpus's day split follows this assumption. Receipts are
+capped at five per hour (earliest, deterministically sorted).
+
+On the frozen corpora the hunt reports:
+
+| Corpus | Candidates | Repeated in a holdout hour |
+|---|---|---|
+| Wiki (collusion) | 3,952 | 0 |
+| AI Village | 113 | 16 |
+
+Repetition in the holdout is an observation repeated under a frozen
+predicate — not confirmed coordination, a precision rate, or causality.
+
+Artifacts: `hunt.json` (full report) and `hunt-journal.jsonl` (every
+candidate, including unreplicated ones) in the corpus `out/` directory.
+For the web UI the writer deploys a small index
+`public/swarm/hunt-{corpus}.json` — the report fields plus a `pages` list,
+candidates omitted — and page files `hunt-{corpus}-NNNN.json` holding 12
+candidates each in the same stable order. The UI's "Hunt candidates" view
+fetches the index, then the first page only; "Show 12 more" fetches each
+successive page on demand, and the download link offers the index — the
+full report remains reproducible locally via the CLI.
+
 ## Corpus caveats
 
 - Records mirroring wiki revisions are deduped by body SHA (2,388 removed);

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { HuntCandidates } from "@/components/hunt-candidates";
+
 interface ClaimReceipt {
   record_id?: string;
   actor?: string;
@@ -67,12 +69,13 @@ const CORPORA: [id: string, label: string][] = [
   ["aivillage", "Corpus II — AI Village"],
 ];
 
-type View = "check" | "journal" | "accounting";
+type View = "check" | "journal" | "accounting" | "hunt";
 
 const VIEWS: [id: View, label: string][] = [
   ["check", "Observation check"],
   ["journal", "Refusal journal"],
   ["accounting", "Input accounting"],
+  ["hunt", "Hunt candidates"],
 ];
 
 const STATUS_WORDING: Record<string, string> = {
@@ -480,6 +483,8 @@ export function ClaimChecks({
           )}
         </div>
       )}
+
+      {view === "hunt" && <HuntCandidates key={corpus} corpus={corpus} />}
     </div>
   );
 }

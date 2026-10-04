@@ -96,6 +96,46 @@ def write_claim_artifacts(out_dir: str | Path, claim_ledger: dict, corpus: str) 
     return paths
 
 
+HUNT_PAGE_SIZE = 12
+
+
+def write_hunt_artifacts(out_dir: str | Path, hunt: dict, corpus: str) -> dict[str, Path]:
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
+
+    hj = out / "hunt.json"
+    hj.write_text(json.dumps(hunt, indent=2, default=str))
+    paths["hunt"] = hj
+
+    jl = out / "hunt-journal.jsonl"
+    with jl.open("w") as f:
+        for entry in hunt.get("candidates", []):
+            f.write(json.dumps(entry, default=str) + "\n")
+    paths["hunt_journal"] = jl
+
+    web_public = Path(__file__).resolve().parents[1] / "app" / "web" / "public" / "swarm"
+    if web_public.parent.parent.exists():
+        web_public.mkdir(parents=True, exist_ok=True)
+        candidates = hunt.get("candidates", [])
+        index = {k: v for k, v in hunt.items() if k != "candidates"}
+        index["candidates"] = []
+        index["pages"] = []
+        for i in range(0, len(candidates), HUNT_PAGE_SIZE):
+            n = i // HUNT_PAGE_SIZE
+            chunk = candidates[i : i + HUNT_PAGE_SIZE]
+            page_name = f"hunt-{corpus}-{n:04d}.json"
+            page = {"schema_version": 1, "corpus": corpus, "candidates": chunk}
+            (web_public / page_name).write_text(
+                json.dumps(page, default=str, separators=(",", ":")) + "\n"
+            )
+            index["pages"].append({"src": f"/swarm/{page_name}", "candidate_count": len(chunk)})
+        deployed = web_public / f"hunt-{corpus}.json"
+        deployed.write_text(json.dumps(index, default=str, separators=(",", ":")) + "\n")
+        paths["deployed_hunt"] = deployed
+    return paths
+
+
 def _render_md(
     scan: dict,
     graph: dict,

@@ -2,7 +2,7 @@
 
 Usage:
     python -m swarm all          # ingest → scan → graph → integrity → report
-    python -m swarm ingest|scan|graph|integrity|report|claims   # individual stages
+    python -m swarm ingest|scan|graph|integrity|report|claims|hunt   # individual stages
 
 Data dir defaults to data/swarm/ (the collusion.wiki dump).
 Outputs land in data/swarm/out/: tagged.jsonl, edges.jsonl, findings.{json,md}.
@@ -18,9 +18,10 @@ from pathlib import Path
 
 from swarm.claims import build_claim_ledger
 from swarm.graph import build_graph
+from swarm.hunt import build_hunt
 from swarm.ingest import detect_corpus, load_messages
 from swarm.integrity import run_all as integrity_run_all
-from swarm.report import write_claim_artifacts, write_findings
+from swarm.report import write_claim_artifacts, write_findings, write_hunt_artifacts
 from swarm.scan import scan_messages, summarize
 from swarm.schema import Edge, Finding, SwarmMessage, TaggedMessage, TechniqueHit
 
@@ -180,6 +181,21 @@ def cmd_claims(args) -> None:
         print(f"   [{c['status']:20}] {c['id']}")
 
 
+def cmd_hunt(args) -> None:
+    out = _out_dir(args.data)
+    tagged_path = out / "tagged.jsonl"
+    corpus = detect_corpus(args.data)
+    hunt = build_hunt(lambda: _iter_tagged(tagged_path), corpus)
+    paths = write_hunt_artifacts(out, hunt, corpus)
+    print(
+        f"hunt → {paths['hunt']} / {paths['hunt_journal']} "
+        f"({hunt['candidate_count']} candidates, "
+        f"{hunt['replicated_observation_count']} replicated observations)"
+    )
+    for c in hunt["candidates"]:
+        print(f"   [{c['status']:24}] {c['artifact'][:70]}")
+
+
 def main() -> None:
     # Batch pipeline: ~180k dataclass/dict objects per corpus make cyclic-GC
     # full-heap scans dominate runtime. Structures are acyclic — refcounting
@@ -188,7 +204,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="swarm", description=__doc__)
     ap.add_argument(
         "command",
-        choices=["ingest", "scan", "graph", "integrity", "report", "claims", "all"],
+        choices=["ingest", "scan", "graph", "integrity", "report", "claims", "hunt", "all"],
     )
     ap.add_argument("--data", default=DEFAULT_DATA, help="corpus directory")
     ap.add_argument("--workers", type=int, default=None, help="scan workers")
@@ -200,6 +216,7 @@ def main() -> None:
         "integrity": cmd_integrity,
         "report": cmd_report,
         "claims": cmd_claims,
+        "hunt": cmd_hunt,
         "all": cmd_all,
     }[args.command](args)
 

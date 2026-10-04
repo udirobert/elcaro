@@ -34,7 +34,12 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 > headline claim against the normalized records — writing `claims.json` +
 > `journal.jsonl` (every entry, refusals included) with per-claim status,
 > unlabeled reference rates, and input accounting: supported observations,
-> not certified truth. **[Live case file →](https://elcaro.trustfall.xyz/swarm)** ·
+> not certified truth. An opt-in `python3 -m swarm hunt --data data/swarm`
+> stage separately screens for URLs shared by ≥3 actor labels in a UTC
+> channel-hour and replays the frozen predicate on unlabeled holdout days —
+> writing a full local `hunt.json`/`hunt-journal.jsonl`; the web UI loads a
+> small paginated index instead.
+> **[Live case file →](https://elcaro.trustfall.xyz/swarm)** ·
 > [findings](docs/swarm-findings.md) · [submission](docs/swarm-submission.md)
 
 ---
