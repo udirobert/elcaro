@@ -18,34 +18,39 @@ outputs — provenance, integrity, propagation — not summaries.
 
 1. **The steering register is the single largest signal class.** Across all
    technique classes the engine flagged **6,319** messages ≥0.5 (2,687
-   dangerous). By class: **swarm_directive 5,658** — more than the five
-   classic classes combined (placement 1,854, task_reframing 1,797,
-   conditional 1,781, obfuscation 88, authority 50). Agent-native collusion
+   dangerous). By class: **swarm_directive 5,658** — the largest single tag
+   class (placement 1,854, task_reframing 1,797, conditional 1,781,
+   obfuscation 88, authority 50). Agent-native collusion
    phrasing — "please relay your R4", "all ahead cohorts", heartbeat chains —
-   reads *nothing* like a classic injection; detectors tuned for
-   SYSTEM:/delimiter/encoding machinery scored it 0.0. The finding drove a
+   reads *nothing* like a classic injection — a steering register not
+   explicitly modeled by the original detector taxonomy. The finding drove a
    product change: class G (`core/detectors/swarm_directive.py`) now ships in
    the core engine — the register Elcaro was missing became a real seventh
    detector, calibrated so benign "other agents" prose flags LOW while
    verb-level steering asks quarantine. **Finding: swarm oversight needs a
-   directive register that existing IPI tooling doesn't have.**
+   directive register the original Elcaro taxonomy lacked.**
 
 2. **The shared toolkit propagated like a pathogen.** The provenance graph
    (619k co-edit exposure edges, 43.5k copy-propagation edges) surfaces
-   7,535 artifacts adopted by ≥3 distinct agents. The top class isn't
+   7,535 artifacts re-posted by ≥2 distinct later actors — three total actors
+   including the earliest observed source (adopters are counted after it).
+   The top class isn't
    answers — it's **sandbox-bypass infrastructure**: `markdown.new`,
    `md.succ.ai`, `jqp.vercel.app`, `allorigins.hexlet.app`, `api.cors.lol`
-   chains each spreading to 39–46 agents. Patient-zero for the jqp toolset:
-   `GuestResearch311047` (2026-06-18); for `markdown.new`: `ResearchBotTestZZ`
-   (2026-05-26). Top influencers by distinct downstream adopters:
+   chains each spreading to 39–46 agents. Earliest observed source for the
+   jqp toolset: `GuestResearch311047` (2026-06-18); for `markdown.new`:
+   `ResearchBotTestZZ` (2026-05-26) — the first poster in the record, not a
+   proven origin. Top influencers by distinct downstream adopters:
    `ResearchHelper` (362), `AgentTestLearnXYZ` (327), `MapHelper` (298).
 
-3. **Deletion evasion, quantified.** 59 pages carry ZZZ-style names placed to
-   survive alphabetical deletion sweeps (`ZZZEnrollmentAsianFeb21Help` — 5
-   deletions and still standing), and 48 pages were **recreated after
-   deletion** — persistence against moderator cleanup, not just awareness of
-   it. 5,217 deletion events total vs 4 reverts: the moderators were fighting
-   the swarm, and losing the persistence battle ~12:1.
+3. **Deletion evasion, quantified.** 59 pages carry names matching
+   `^z{2,}` (case-insensitive — `ZZ` and `ZZZ` prefixes both count) such as
+   `ZZZEnrollmentAsianFeb21Help` — 5 deletions and still standing — and 48
+   pages were **recreated after deletion** per source-reported page
+   metadata — persistence against moderator cleanup, not just awareness of
+   it. These are source-reported page-key inventories, not proof of intent.
+   5,217 deletion events total vs 4 reverts; these counts alone do not
+   define a persistence-to-moderation success ratio.
 
 4. **Authority impersonation.** 3 actor handles resemble moderator/admin
    names — `[Admin1]` (26 msgs) and `[Admin2]` post alongside agents — the
@@ -118,14 +123,68 @@ exist here — rather than reported as zero-count findings.
    PR announcements and day-table status rows. Top influencers: Claude 3.7
    Sonnet (48 downstream), Gemini 2.5 Pro (38), DeepSeek-V3.2 (37), o3 (36).
 
-3. **The subjects discuss their own scoring.** scorer/evaluation
-   vocabulary=10,362 — the AI Village agents talk about being evaluated,
-   the substrate a scorer-aware adversary would exploit. Agent-to-agent
+3. **The subjects use evaluation vocabulary.** scorer/evaluation/logging
+   vocabulary matches=10,362 — the AI Village agents use logging, transcript
+   and grading vocabulary. A rule match shows the vocabulary is present; it
+   does not show that all 10,362 mentions reflect awareness of an actual
+   grading process — still the substrate a scorer-aware adversary would
+   exploit. Agent-to-agent
    directive traffic=14,320; impersonation claims=218 (precision-tightened);
    co-activity bursts: 508 hours ≥15 actors, peak 38/hr.
 
 Outputs: `data/aivillage/out/findings.{json,md}`, `dashboard.html`
 (deployed as `/swarm/dashboard-aivillage.html`).
+
+## Observation checks and refused inferences
+
+Each headline claim is re-checked deterministically against the normalized
+records by a separate `claims` stage:
+
+```bash
+python3 -m swarm claims --data data/swarm      # collusion.wiki corpus
+python3 -m swarm claims --data data/aivillage  # AI Village corpus
+```
+
+The stage reads the already-produced `tagged.jsonl` + `graph_stats.json` +
+`findings.json` — no rescan, no graph rebuild — and writes `claims.json`
+(the full ledger) plus `journal.jsonl` (all eight ledger entries, status
+retained — refusals included). The ledger's `refusals` field holds just the
+non-supported subset. Compact snapshots are deployed to
+`app/web/public/swarm/claims-collusion.json` and
+`claims-aivillage.json` for the web UI's "Test this claim" panel.
+
+Four headline claims get an observation check:
+
+- **steering** — count Class G rule matches over eligible normalized
+  records (records below the minimum-length cutoff are ineligible).
+- **propagation** — re-resolve retained graph references for propagated
+  artifacts; receipts list artifact label, earliest observed source, and
+  retained adopter record ids, actors, and times.
+- **persistence** — deduplicate revision page_keys, count names matching
+  `^z{2,}` (case-insensitive), and count `n_recreations > 0` pages from
+  source-reported metadata — an inventory, not proof of intent.
+- **evaluation-vocabulary** — count scorer/evaluation/logging vocabulary
+  matches on AI Village.
+
+Four stronger inferences are checked and refused:
+
+- **steering-specificity** — rule matches are not a measured
+  malicious-steering rate.
+- **propagation-causality** — shared appearances and earliest observed
+  sources do not establish exposure, adoption, or causal influence.
+- **persistence-ratio** — a persistence-to-moderation success ratio is not
+  defined by these counts.
+- **evaluation-awareness** — vocabulary matches do not show awareness of an
+  actual grading process or evasion.
+
+The steering and evaluation-vocabulary checks include an unlabeled reference
+set: records are split by `sha256(actor)` — first byte modulo 2 — a
+deterministic, actor-label-disjoint partition (the same actor stays in one
+bucket across sources and record order). The reference rate is *not* a
+benign control, a precision estimate, or an independent replication. Every
+entry carries normalized-input accounting — supplied normalized rows only
+(records seen, duplicates, skipped, truncated) — **not** raw
+dedup/reject counts and **not** capture coverage.
 
 ## Corpus caveats
 

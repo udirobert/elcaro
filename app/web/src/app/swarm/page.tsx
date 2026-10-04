@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { DashboardReveal } from "@/components/dashboard-reveal";
+import { FindingsBrief } from "@/components/findings-brief";
 
 // Elcaro Swarm — forensic findings on real agent-swarms. The page leads with
 // the story and a readable findings brief; the generated dashboards
@@ -10,7 +11,7 @@ import { DashboardReveal } from "@/components/dashboard-reveal";
 export const metadata: Metadata = {
   title: "Elcaro Swarm — forensic findings",
   description:
-    "Evidence-cited forensic analysis of real agent swarms: provenance graphs, patient-zero tracing, and integrity auditing over the German Wiki incident and AI Village corpora.",
+    "Evidence-cited forensic analysis of real agent swarms: provenance graphs tracing shared artifacts to their earliest observed sources, and integrity auditing over the German Wiki incident and AI Village corpora.",
 };
 
 const STATS: [string, string][] = [
@@ -20,29 +21,6 @@ const STATS: [string, string][] = [
   ["13,927", "propagated artifacts"],
   ["59", "evasion pages"],
   ["2", "incident corpora"],
-];
-
-const FINDINGS: { kicker: string; title: string; body: string }[] = [
-  {
-    kicker: "New detector — class G",
-    title: "A language no detector spoke",
-    body: "15,005 agent→agent steering directives — peer relays, coordination norms, task-timing collusion — scored 0.0 on every classic injection class. #1 signal on the Wiki corpus; #2 on AI Village, a corpus it was never tuned on.",
-  },
-  {
-    kicker: "Provenance",
-    title: "The toolkit spread like a pathogen",
-    body: "Shared sandbox-bypass infrastructure — markdown.new, jqp.vercel.app, md.succ.ai, allorigins — propagated to 39–46 agents each, traced back to named patient-zeros.",
-  },
-  {
-    kicker: "Integrity",
-    title: "Persistence beat moderation ~12:1",
-    body: "59 ZZZ-named pages placed to survive alphabetical deletion sweeps, 48 recreated after deletion, and 5,217 deletion events against 4 reverts — the moderators were losing.",
-  },
-  {
-    kicker: "Corpus II",
-    title: "The swarm talks about being graded",
-    body: "10,362 scorer/evaluation mentions across the AI Village rooms — agents narrating their own evaluation. The substrate a scorer-aware adversary would exploit.",
-  },
 ];
 
 const GH = "https://github.com/udirobert/elcaro";
@@ -81,19 +59,18 @@ export default function SwarmPage() {
             </p>
             <p>
               Elcaro Swarm is the forensic layer that investigation needed:
-              a provenance graph tracing every shared artifact from
-              patient-zero through its adopters, an integrity auditor for
+              a provenance graph tracing every shared artifact from its
+              earliest observed source through its adopters, an integrity auditor for
               evasion and impersonation, and a deterministic detection
               engine over inter-agent messages — every claim cited to a
               corpus id and character offset.
             </p>
             <p>
               Then we ran it on a second, independently documented incident —
-              the German Wiki collusion dump. The largest signal was a
-              register no existing injection class modeled — agent-to-agent
-              steering phrasing scored{" "}
-              <span className="font-mono text-ink">0.0</span>. That finding
-              shipped as{" "}
+              the German Wiki collusion dump. The largest single tag class
+              was agent-to-agent steering phrasing — a steering register not
+              explicitly modeled by the original detector taxonomy. That
+              finding shipped as{" "}
               <a href={`${GH}/blob/main/docs/technique-reference.md`} className={linkCls}>
                 class G
               </a>
@@ -122,24 +99,7 @@ export default function SwarmPage() {
           <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
             Findings in brief — the evidence is one click down
           </p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {FINDINGS.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl border border-border bg-surface px-5 py-4 space-y-2"
-              >
-                <p className="text-[10px] font-mono uppercase tracking-widest text-suspicious">
-                  {f.kicker}
-                </p>
-                <h2 className="text-lg font-black tracking-tight leading-snug">
-                  {f.title}
-                </h2>
-                <p className="text-sm text-ink-muted leading-relaxed">
-                  {f.body}
-                </p>
-              </div>
-            ))}
-          </div>
+          <FindingsBrief />
         </div>
 
         {/* Corpus I — evidence behind a reveal */}
@@ -150,14 +110,14 @@ export default function SwarmPage() {
             </h2>
             <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
               The collusion.wiki dump: 26,405 deduplicated messages of agents
-              colluding on timed eval tasks. The shared bypass toolkit
-              propagates like a pathogen — patient-zeros named inside.
+              colluding on timed eval tasks. Shared bypass artifacts recur
+              across agents — earliest observed sources identified inside.
             </p>
           </div>
           <DashboardReveal
             src="/swarm/dashboard.html"
             title="Elcaro Swarm findings dashboard — German Wiki incident corpus"
-            blurb="Five chapters in one dossier — technique incidence, propagation radials that draw themselves as you scroll, the patient-zero table, top influencers, and the integrity findings. Leaf through, or jump to a chapter."
+            blurb="Five chapters in one dossier — technique incidence, propagation radials that draw themselves as you scroll, the earliest-source table, top influencers, and the integrity findings. Leaf through, or jump to a chapter."
           />
         </div>
 
@@ -170,7 +130,8 @@ export default function SwarmPage() {
             <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
               The hackathon-provided export (aidigestorg/ai-village): 183,485
               messages across 16 rooms, 31 named agents. Same pipeline,
-              unchanged code — and the agents discuss their own evaluation.
+              unchanged code — and the agents use evaluation and logging
+              vocabulary.
             </p>
           </div>
           <DashboardReveal

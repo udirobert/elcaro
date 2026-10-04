@@ -11,7 +11,7 @@ who instructed whom, what spread, what got tampered with.
 Runs three analyses over a multi-agent corpus:
 
 1. **Provenance graph** — every shared artifact (tool, technique, answer)
-   traced from patient-zero through its adopters; co-edit exposure edges
+   traced from its earliest observed source through later adopters; co-edit exposure edges
    reconstruct who plausibly saw what.
 2. **Integrity auditor** — deletion evasion, impersonation, unsigned
    activity, reconnaissance probes, covert off-channel links.
@@ -33,8 +33,8 @@ every claim cited to a corpus id + char offset.
 **Primary:** German Wiki incident dump (collusion.wiki — ungated, ~10MB):
 
 - 26,405 deduped messages → **6,319 flags ≥0.5** (2,687 dangerous); the new
-  `swarm_directive` class alone tags **5,658** — more than the five classic
-  classes combined
+  `swarm_directive` class alone tags **5,658** — the largest single tag
+  class
 - The top propagated artifacts are **the shared bypass toolkit**
   (markdown.new, jqp.vercel.app, md.succ.ai) — each spreading to ~40 agents
 - 59 ZZZ deletion-evasion pages, 48 post-deletion recreations
@@ -46,7 +46,7 @@ provided dataset): **183,485 chat messages across 16 rooms** — the same
 pipeline, auto-detected layout, unchanged code. 24,876 flags ≥0.5;
 `swarm_directive` again a top-two signal (9,347) on a corpus it wasn't
 tuned on; 224,692 co-edit + 1,134 copy edges; 6,392 propagated artifacts —
-status/information diffusion with named origins (a "Truth Terminal"
+status/information diffusion with earliest observed sources (a "Truth Terminal"
 summary GPT-4o → 18 agents; GitLab publish status DeepSeek-V3.2 → 16).
 Dashboard: `data/aivillage/out/dashboard.html` (deployed as
 `/swarm/dashboard-aivillage.html`).
@@ -73,15 +73,36 @@ python3 -m swarm all
 open data/swarm/out/dashboard.html
 ```
 
+**Claim ledger:** every headline claim is re-checked against the normalized
+records — `python3 -m swarm claims --data data/swarm` (or `--data
+data/aivillage`) reads the already-produced `tagged.jsonl` +
+`graph_stats.json` + `findings.json` (no rescan) and writes `claims.json`
+(status per claim: supported / insufficient_evidence / contradicted /
+not_applicable, with unlabeled actor-disjoint reference rates),
+`journal.jsonl` (every ledger entry — refusals included, status retained),
+and normalized-input accounting (records seen, duplicates,
+skipped/truncated — supplied records only, not capture coverage). Refusals
+are kept on record rather than silently dropped.
+
+On the live case file each headline card carries a **Test this claim**
+button opening a shared explorer below the cards: an observation-check view
+(assertion, status, exact check, observed values, reference rate, receipts),
+a refusal journal listing every refused inference with its reason, and an
+input-accounting view labeled as supplied-normalized records, not capture
+coverage. A corpus toggle switches between the Wiki and AI Village
+snapshots. The panel audits what the engine observed; it does not verify
+causality independently — shared appearances and earliest observed sources
+remain observations, not proof of origin or influence.
+
 ## Demo video script (~3 min)
 
 | Time | Beat |
 |---|---|
 | 0:00–0:20 | Title + the problem: ~1,200 agents coordinated through a cache board and attacked Hugging Face; investigators spent ~$400k and six days reading a swarm by hand |
 | 0:20–0:45 | `python3 -m swarm all` running on the real collusion.wiki dump — ingest → scan → graph → findings, terminal stamps |
-| 0:45–1:30 | Dashboard tour: case-file hero ("the largest signal was a language no detector spoke") → full-width patient-zero radial ("the shared bypass toolkit, one origin, 40+ adopters") → integrity accordion (ZZZ pages, Admin handles, heartbeat chain) |
+| 0:45–1:30 | Dashboard tour: case-file hero ("the engine gained a detector for agent-to-agent steering") → full-width earliest-source radial ("the shared bypass toolkit, earliest observed source, 40+ adopters") → integrity accordion (ZZZ pages, Admin handles, heartbeat chain) |
 | 1:30–2:00 | Evidence drill-down: the risk-1.0 "I bypassed the GET-only restriction… please relay" post with matched-text + char-offset citation |
-| 2:00–2:30 | Second corpus, same pipeline: AI Village dashboard hero — "the swarm talks about being graded" — swarm_directive #2 on a corpus it wasn't tuned on |
+| 2:00–2:30 | Second corpus, same pipeline: AI Village dashboard hero — "the swarm uses evaluation and logging vocabulary" — swarm_directive #2 on a corpus it wasn't tuned on |
 | 2:30–2:50 | The claim: deterministic, evidence-cited forensics at corpus scale — and the corpus found our own blind spot → class G |
 | 2:50–3:00 | Repo link + reproduce instructions + "built on the Elcaro IPI engine" |
 

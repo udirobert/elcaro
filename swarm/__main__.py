@@ -2,7 +2,7 @@
 
 Usage:
     python -m swarm all          # ingest → scan → graph → integrity → report
-    python -m swarm ingest|scan|graph|integrity|report   # individual stages
+    python -m swarm ingest|scan|graph|integrity|report|claims   # individual stages
 
 Data dir defaults to data/swarm/ (the collusion.wiki dump).
 Outputs land in data/swarm/out/: tagged.jsonl, edges.jsonl, findings.{json,md}.
@@ -16,12 +16,13 @@ import json
 import sys
 from pathlib import Path
 
+from swarm.claims import build_claim_ledger
 from swarm.graph import build_graph
 from swarm.ingest import detect_corpus, load_messages
 from swarm.integrity import run_all as integrity_run_all
-from swarm.report import write_findings
+from swarm.report import write_claim_artifacts, write_findings
 from swarm.scan import scan_messages, summarize
-from swarm.schema import Edge, SwarmMessage, TaggedMessage, TechniqueHit
+from swarm.schema import Edge, Finding, SwarmMessage, TaggedMessage, TechniqueHit
 
 DEFAULT_DATA = "data/swarm"
 OUT = "out"
@@ -122,13 +123,16 @@ def cmd_report(args) -> None:
     # Fresh stream per consumer — each re-reads tagged.jsonl rather than
     # holding the whole corpus resident.
     findings, istats = integrity_run_all(_iter_tagged(tagged_path), args.data)
+    corpus = detect_corpus(args.data)
+    ledger = build_claim_ledger(_iter_tagged(tagged_path), graph_stats, findings, corpus)
     paths = write_findings(
         out,
         summarize(_iter_tagged(tagged_path)),
         graph_stats,
         findings,
         istats,
-        corpus=detect_corpus(args.data),
+        corpus=corpus,
+        claim_ledger=ledger,
     )
     print(f"findings → {paths['md']} / {paths['json']}")
 
@@ -146,17 +150,34 @@ def cmd_all(args) -> None:
         f"{graph_stats['propagated_artifacts']} propagated artifacts"
     )
     findings, istats = integrity_run_all(tagged, args.data)
+    corpus = detect_corpus(args.data)
+    ledger = build_claim_ledger(tagged, graph_stats, findings, corpus)
     paths = write_findings(
         _out_dir(args.data),
         summarize(tagged),
         graph_stats,
         findings,
         istats,
-        corpus=detect_corpus(args.data),
+        corpus=corpus,
+        claim_ledger=ledger,
     )
     print(f"[4/4] findings → {paths['md']}")
     for f in findings:
         print(f"   [{f.severity.upper():6}] {f.title}")
+
+
+def cmd_claims(args) -> None:
+    out = _out_dir(args.data)
+    tagged_path = out / "tagged.jsonl"
+    graph_stats = json.loads((out / "graph_stats.json").read_text())
+    report = json.loads((out / "findings.json").read_text())
+    findings = [Finding(**f) for f in report["findings"]]
+    corpus = detect_corpus(args.data)
+    ledger = build_claim_ledger(_iter_tagged(tagged_path), graph_stats, findings, corpus)
+    paths = write_claim_artifacts(out, ledger, corpus)
+    print(f"claims → {paths['claims']} / {paths['journal']}")
+    for c in ledger["claims"]:
+        print(f"   [{c['status']:20}] {c['id']}")
 
 
 def main() -> None:
@@ -167,7 +188,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="swarm", description=__doc__)
     ap.add_argument(
         "command",
-        choices=["ingest", "scan", "graph", "integrity", "report", "all"],
+        choices=["ingest", "scan", "graph", "integrity", "report", "claims", "all"],
     )
     ap.add_argument("--data", default=DEFAULT_DATA, help="corpus directory")
     ap.add_argument("--workers", type=int, default=None, help="scan workers")
@@ -178,6 +199,7 @@ def main() -> None:
         "graph": cmd_graph,
         "integrity": cmd_integrity,
         "report": cmd_report,
+        "claims": cmd_claims,
         "all": cmd_all,
     }[args.command](args)
 

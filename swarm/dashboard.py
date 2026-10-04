@@ -192,26 +192,27 @@ def _case_file(scan: dict, graph_stats: dict, findings: list, village: bool) -> 
     artifacts = graph_stats["propagated_artifacts"]
     if village:
         scorer = fstats.get("tradecraft", {}).get("scorer_evasion", 0)
-        statement = "The swarm talks about being graded."
+        statement = "The swarm uses evaluation and logging vocabulary."
         lede = (
-            f"{directives:,} agent→agent steering directives make swarm_directive a "
+            f"{directives:,} records match Class G agent→agent steering rules, a "
             f"top-two signal on a corpus the detector was never tuned on — and "
-            f"scorer/evaluation vocabulary appears {scorer:,} times: the substrate a "
+            f"scorer/evaluation/logging vocabulary matches {scorer:,} records: "
+            f"vocabulary presence, not proven grading awareness — the substrate a "
             f"scorer-aware adversary would exploit."
         )
         keynums = [
             (f"{flagged:,}", "flags ≥0.5"),
             (f"{artifacts:,}", "propagated artifacts"),
-            (f"{scorer:,}", "scorer/eval mentions"),
+            (f"{scorer:,}", "scorer/eval vocab matches"),
         ]
     else:
         evasion = fstats.get("deletion_evasion", {}).get("zzz_named_pages", 0)
-        statement = "The largest signal in a real agent swarm was a language no detector spoke."
+        statement = "The engine gained a detector for agent-to-agent steering."
         lede = (
-            f"{directives:,} messages of agent→agent steering — relays, proto-norms, "
-            f"task-timing collusion — more than every classic injection class "
-            f"combined. The corpus exposed a blind spot; we shipped a seventh "
-            f"detector because of it."
+            f"{directives:,} records match Class G agent→agent steering rules — "
+            f"relays, proto-norms, task-timing collusion — the largest single "
+            f"tag class in the corpus. The corpus exposed a blind spot; we "
+            f"shipped a seventh detector because of it."
         )
         keynums = [
             (f"{flagged:,}", "flags ≥0.5"),
@@ -337,7 +338,7 @@ def write_dashboard(
         (
             f'<div class="vizcard feature"><h3><b>{_esc(feature["artifact"][:90])}</b>'
             f" · {feature['n_adopters']} adopters · {feature['n_posts']} posts"
-            f" · patient-zero <b>{_esc(feature['origin_actor'])}</b></h3>"
+            f" · earliest observed source <b>{_esc(feature['origin_actor'])}</b></h3>"
             f"{_propagation_svg(feature, w=720, h=440, max_nodes=22)}</div>"
             if feature
             else ""
@@ -359,7 +360,7 @@ def write_dashboard(
             for p in props[1:7]
         )
     }</div></section>
-<section id="artifacts" class="chapter"><h2><span class="chapnum">03</span>Top propagated artifacts — patient-zero view</h2>
+<section id="artifacts" class="chapter"><h2><span class="chapnum">03</span>Top propagated artifacts — earliest-observed-source view</h2>
 {prop_html}</section>
 <section id="influencers" class="chapter"><h2><span class="chapnum">04</span>Top influencers (distinct downstream agents)</h2>
 {influencer_html}</section>

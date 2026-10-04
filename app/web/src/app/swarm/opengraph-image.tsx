@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Elcaro Swarm — the largest signal in a real agent swarm was a language no detector spoke";
+  "Elcaro Swarm — Class G steering rules matched records across two real agent-swarms";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -56,8 +56,8 @@ export default function OGImage() {
             maxWidth: 1000,
           }}
         >
-          The largest signal in a real agent swarm was a language no detector
-          spoke.
+          Class G steering rules matched records across two real agent
+          swarms — a register the classic detectors didn&apos;t model.
         </div>
 
         <div
@@ -69,9 +69,9 @@ export default function OGImage() {
             maxWidth: 960,
           }}
         >
-          15,005 agent→agent steering directives — more than every classic
-          injection class combined. The corpus exposed a blind spot; we
-          shipped a seventh detector because of it.
+          15,005 records match Class G agent→agent steering rules — the
+          largest single tag class on the Wiki corpus, #2 on AI Village, a
+          corpus it was never tuned on.
         </div>
 
         <div
