@@ -316,7 +316,10 @@ def test_serv_safe_content_overrides_quarantine_text(monkeypatch):
             safe_content_suggestion="[CONTENT REWRITTEN BY SERV — safer wording]",
         )
     )
-    engine = IpiDetectionEngine(serv_reasoner=fake)
+    # canary_registry=None keeps the exact-match assertion deterministic —
+    # the canary ref's survival through a SERV override is covered in
+    # tests/test_canary.py.
+    engine = IpiDetectionEngine(serv_reasoner=fake, canary_registry=None)
     result = engine.scan(gray_request())
     assert result.safe_content == "[CONTENT REWRITTEN BY SERV — safer wording]"
 

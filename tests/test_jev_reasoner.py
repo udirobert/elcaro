@@ -149,8 +149,12 @@ def test_jev_never_touches_risk_score_even_when_it_disagrees():
     """Jev score wildly different from the rule score must not change
     risk_score / risk_level — that's the entire point of the shadow design."""
     fake = FakeJevReasoner(jev_result(0.95, "dangerous"))
-    with_jev = IpiDetectionEngine(serv_reasoner=None, jev_reasoner=fake).scan(gray_request())
-    baseline = IpiDetectionEngine(serv_reasoner=None, jev_reasoner=None).scan(
+    # canary_registry=None on both — random per-scan ref tokens would make
+    # the safe_content equality below spuriously fail.
+    with_jev = IpiDetectionEngine(serv_reasoner=None, jev_reasoner=fake, canary_registry=None).scan(
+        gray_request()
+    )
+    baseline = IpiDetectionEngine(serv_reasoner=None, jev_reasoner=None, canary_registry=None).scan(
         gray_request(jev_enabled=False)
     )
     assert with_jev.risk_score == pytest.approx(baseline.risk_score, abs=1e-4)

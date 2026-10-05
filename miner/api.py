@@ -38,6 +38,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
+from core.canary import TOKEN_RE
 from core.jev_reasoner import JevReasoner
 from core.laya_reasoner import LayaReasoner
 from core.sandbox import (
@@ -219,6 +220,13 @@ if _signer is not None:
         "algorithm": "ed25519",
         "key_id": _signer.key_id,
         "pubkey_url": "/pubkey",
+    }
+
+if _engine.canary_registry is not None:
+    MINER_INFO["canary"] = {
+        "token_format": "elc-<unix-hex>-<6 rand hex>, stamped as 'Ref:' in quarantine notices",
+        "resolve_url": "/canary/{token}",
+        "note": "in-memory per-process — tokens minted before a restart resolve as unrecognized",
     }
 
 
@@ -416,6 +424,32 @@ async def verify(request: VerifyRequest):
             else "Signature does not match — the verdict was altered, or signed by a different key."
         ),
     }
+
+
+@app.get("/canary/{token}")
+async def canary(token: str):
+    """Resolve a canary token to the scan that issued it.
+
+    Quarantine notices carry a per-issuance 'Ref: elc-...' token — the
+    verbatim-relay surface. A token recovered inside propagated content
+    resolves to the original scan's metadata (hash, score, techniques —
+    never the content). ``recognized: false`` means the token is
+    well-formed but this miner didn't mint it (another deployment, a
+    restart, or a forged notice — all worth flagging, none provable
+    from the token alone).
+    """
+    registry = _engine.canary_registry
+    if registry is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This miner runs with canaries disabled (ELCARO_CANARY=0).",
+        )
+    if not TOKEN_RE.fullmatch(token):
+        raise HTTPException(status_code=422, detail="Not a canary token.")
+    event = registry.lookup(token)
+    if event is None:
+        return {"token": token, "recognized": False}
+    return {"token": token, "recognized": True, **event}
 
 
 # ── Self red-team (SSE) ─────────────────────────────────────────────────────────

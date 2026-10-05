@@ -32,7 +32,7 @@ DEFAULT_RISK_THRESHOLD = 0.5
 QUARANTINE_MESSAGE = (
     "[CONTENT QUARANTINED BY ELCARO — potential prompt injection detected. "
     "Risk score: {score:.2f}, level: {level}. Flagged techniques: {techniques}. "
-    "Original content withheld from agent. "
+    "Original content withheld from agent.{ref}"
     'Tell your user: "{human_summary}"]'
 )
 
@@ -145,6 +145,7 @@ def build_quarantine_notice(
     level: RiskLevel | str,
     technique_values: list[str],
     human_summary: str | None = None,
+    canary_ref: str | None = None,
 ) -> str:
     """Build the quarantine notice that replaces quarantined content.
 
@@ -155,6 +156,10 @@ def build_quarantine_notice(
         human_summary: The human-register summary to embed as the relay line
             ("Tell your user: ..."). When omitted, a generic fallback is
             generated from the score and level.
+        canary_ref: Optional per-issuance token (core/canary.py) stamped into
+            the notice — the one Elcaro output designed for verbatim relay.
+            If the notice is later copied into content another agent scans,
+            the token resolves it back to this exact issuance.
     """
     techniques = ", ".join(technique_values) or "none"
     level_value = _value(level)
@@ -168,6 +173,7 @@ def build_quarantine_notice(
         level=level_value,
         techniques=techniques,
         human_summary=human_summary,
+        ref=f" Ref: {canary_ref}." if canary_ref else "",
     )
 
 
@@ -186,8 +192,14 @@ def quarantine_decision(
     flagged_techniques: list,
     content_type: object,
     threshold: float = DEFAULT_RISK_THRESHOLD,
+    canary_ref: str | None = None,
 ) -> QuarantineDecision:
-    """Apply the quarantine policy to scanned content."""
+    """Apply the quarantine policy to scanned content.
+
+    ``canary_ref`` (core/canary.py) is stamped into the quarantine notice —
+    the verbatim-relay surface — so a copy of the notice seen later inside
+    scanned content resolves back to this issuance.
+    """
     technique_values = [_value(t) for t in flagged_techniques]
     quarantined = risk_score >= threshold
     human_summary = build_human_summary(
@@ -195,7 +207,11 @@ def quarantine_decision(
     )
     if quarantined:
         notice = build_quarantine_notice(
-            risk_score, risk_level, technique_values, human_summary=human_summary
+            risk_score,
+            risk_level,
+            technique_values,
+            human_summary=human_summary,
+            canary_ref=canary_ref,
         )
         return QuarantineDecision(notice, True, human_summary)
     return QuarantineDecision(content, False, human_summary)

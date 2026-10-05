@@ -17,6 +17,7 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
 import os
 from dataclasses import dataclass
 
@@ -202,6 +203,25 @@ class ElcaroMiddleware:
             )
             return warning + content
         else:  # "replace"
+            # When the engine already quarantined, its safe_content IS the
+            # stamped notice (canary ref included) — reuse it verbatim so
+            # the relay token survives. Single source of truth stays in
+            # core/quarantine.py via the engine.
+            if response.quarantined:
+                return response.safe_content
+            # Middleware-only trigger (local threshold below the engine's):
+            # stamp via the local engine's registry when one exists —
+            # remote-miner mode can't mint a token it could resolve.
+            canary_ref = None
+            registry = getattr(self._local_engine, "canary_registry", None)
+            if registry is not None:
+                canary_ref = registry.mint(
+                    content_sha256=hashlib.sha256(content.encode()).hexdigest(),
+                    risk_score=response.risk_score,
+                    risk_level=response.risk_level.value,
+                    techniques=[t.value for t in response.flagged_techniques],
+                    content_type=response.content_type.value,
+                )
             # Same notice the engine puts in ScanResponse.safe_content —
             # built by the shared policy module (core/quarantine.py).
             return build_quarantine_notice(
@@ -209,6 +229,7 @@ class ElcaroMiddleware:
                 response.risk_level,
                 [t.value for t in response.flagged_techniques],
                 human_summary=human_summary,
+                canary_ref=canary_ref,
             )
 
     def _build_reason(self, response: ScanResponse) -> str:

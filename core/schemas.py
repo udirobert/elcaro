@@ -421,6 +421,22 @@ class ScanResponse(BaseModel):
             "Informational only — never fed back into the quarantine decision."
         ),
     )
+    canary_hits: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Canary tokens (core/canary.py) found inside the scanned "
+            "content — per-issuance marks stamped into quarantine notices "
+            "this miner served. Each entry: token + recognized (whether "
+            "this minted it) +, when recognized, the original scan's "
+            "issuance metadata (issued_at, content_sha256, risk_score, "
+            "risk_level, techniques, content_type). A recognized hit means "
+            "the content relays a genuine Elcaro quarantine notice; a "
+            "well-formed but unrecognized token may be forged, minted "
+            "elsewhere, or aged out — informational only, never affects "
+            "the score. None means the miner runs with canaries disabled "
+            "(ELCARO_CANARY=0); [] means enabled and none found."
+        ),
+    )
     scanned_at: int | None = Field(
         default=None,
         description="Unix timestamp of the scan. Set by the miner API; part of the signed payload.",

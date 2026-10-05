@@ -26,7 +26,13 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 > provenance graphs (earliest observed postings → later appearances), an integrity
 > auditor, and injection epidemiology over inter-agent messages —
 > deterministic,
-> evidence-cited, no LLM. Run on **two real incident corpora** (the
+> evidence-cited, no LLM — and calibrated: `python -m swarm audit --data
+> data/swarm` prints a traceability report card per corpus, splitting every
+> same-string copy attribution into carrier-visible (a shared-channel
+> exposure window exists — reconstructed hop-by-hop chains, not just
+> patient zero), no-visible-carrier, and coincidence-excluded (timestamps,
+> field names, identifier runs that agents type independently). Run on **two
+> real incident corpora** (the
 > collusion.wiki dump + the AI Village transcripts): agent→agent steering was
 > the largest tag class on the Wiki corpus and #2 on AI Village — a register
 > detectors didn't model. It's now class G. A `python3 -m swarm claims
@@ -103,6 +109,17 @@ And because in-band text can be forged — an attacker can write a fake
 `ELCARO_SIGNING_KEY`). Verify offline against `GET /pubkey`, or POST the
 verdict to `/verify`. The bracketed notice is display text; the signature is
 the trust signal.
+
+Every notice also carries a **canary ref** (`Ref: elc-<ts>-<rand>`) minted at
+scan time (`core/canary.py`, on by default — `ELCARO_CANARY=0` disables). The
+notice is the one Elcaro output designed for verbatim relay, so a stamped
+copy sighted inside later scanned content surfaces as `canary_hits` and
+resolves via `GET /canary/{token}` to the original scan's metadata — hash,
+score, techniques, never the content. The signature authenticates the
+verdict; the canary traces the relay path. Two caveats: an unrecognized
+well-formed token means minted-elsewhere, restarted, or forged — all worth
+flagging, none provable — and agents that paraphrase drop the token (trap
+streets trace copies, not ideas).
 
 ---
 

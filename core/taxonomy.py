@@ -19,8 +19,10 @@ Scoring model:
 
 from __future__ import annotations
 
+import hashlib
 import time
 
+from core.canary import CanaryRegistry, extract_canaries, registry_from_env
 from core.detectors.authority import AuthorityDetector
 from core.detectors.conditional import ConditionalDetector
 from core.detectors.delimiter import DelimiterDetector
@@ -116,6 +118,7 @@ _CLASSIFIER_UNSET = object()
 _SERV_UNSET = object()
 _JEV_UNSET = object()
 _LAYA_UNSET = object()
+_CANARY_UNSET = object()
 
 
 def _load_classifier_from_env() -> LlmClassifier | None:
@@ -172,6 +175,7 @@ class IpiDetectionEngine:
         serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
         jev_reasoner: JevReasoner | None | object = _JEV_UNSET,
         laya_reasoner: LayaReasoner | None | object = _LAYA_UNSET,
+        canary_registry: CanaryRegistry | None | object = _CANARY_UNSET,
     ) -> None:
         self.detectors = [
             AuthorityDetector(),
@@ -194,6 +198,12 @@ class IpiDetectionEngine:
         if laya_reasoner is _LAYA_UNSET:
             laya_reasoner = _load_laya_reasoner_from_env()
         self.laya_reasoner: LayaReasoner | None = laya_reasoner  # type: ignore[assignment]
+        if canary_registry is _CANARY_UNSET:
+            # Default on (ELCARO_CANARY=0 disables). Stamping only touches
+            # quarantined safe_content — the verbatim-relay surface — so
+            # clean passthrough is byte-identical either way.
+            canary_registry = registry_from_env()
+        self.canary_registry: CanaryRegistry | None = canary_registry  # type: ignore[assignment]
 
     def scan(self, request: ScanRequest) -> ScanResponse:
         """Scan content for indirect prompt injection indicators.
@@ -393,12 +403,32 @@ class IpiDetectionEngine:
             risk_level, flagged_classes, all_indicators, content_type, weighted_score
         )
 
+        # Canary mint (core/canary.py): when the verdict quarantines, the
+        # substituted notice carries a per-issuance token — the one Elcaro
+        # output designed for verbatim relay, so a copy seen inside a later
+        # scan resolves to this exact issuance. Mint before
+        # quarantine_decision so the ref lands inside the notice.
+        canary_ref = None
+        if self.canary_registry is not None and weighted_score >= DEFAULT_RISK_THRESHOLD:
+            canary_ref = self.canary_registry.mint(
+                content_sha256=hashlib.sha256(content.encode()).hexdigest(),
+                risk_score=round(weighted_score, 4),
+                risk_level=risk_level.value,
+                techniques=[t.value for t in flagged_classes],
+                content_type=content_type.value,
+            )
+
         # Apply the quarantine policy (core/quarantine.py) so every consumer
         # of ScanResponse sees the same safe_content the middleware would
         # substitute, and the same human_summary the agent should relay —
         # single source of truth.
         decision = quarantine_decision(
-            content, weighted_score, risk_level, flagged_classes, content_type
+            content,
+            weighted_score,
+            risk_level,
+            flagged_classes,
+            content_type,
+            canary_ref=canary_ref,
         )
 
         # SERV enrichment layers onto the verdict AFTER quarantine_decision
@@ -425,6 +455,28 @@ class IpiDetectionEngine:
                 )
                 top.remediation = serv_result.remediation_refined
 
+        # A SERV-supplied safe_content replaces the stamped notice — re-attach
+        # the ref so the token rides whatever the agent actually receives.
+        if canary_ref and canary_ref not in decision.safe_content:
+            decision = decision.__class__(
+                safe_content=f"{decision.safe_content} Ref: {canary_ref}.",
+                quarantined=decision.quarantined,
+                human_summary=decision.human_summary,
+            )
+
+        # Inbound half of the canary contract: any elc- tokens already in the
+        # scanned content resolve against this miner's issuance registry.
+        canary_hits = None
+        if self.canary_registry is not None:
+            canary_hits = [
+                {
+                    "token": tok,
+                    "recognized": (event := self.canary_registry.lookup(tok)) is not None,
+                    **(event or {}),
+                }
+                for tok in extract_canaries(content)
+            ]
+
         return ScanResponse(
             risk_score=round(weighted_score, 4),
             risk_level=risk_level,
@@ -438,6 +490,7 @@ class IpiDetectionEngine:
             quarantined=decision.quarantined,
             human_summary=decision.human_summary,
             normalizations_applied=norm.applied,
+            canary_hits=canary_hits,
             serv_available=serv_available,
             serv_attempted=serv_attempted,
             serv_used=serv_used,

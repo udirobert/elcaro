@@ -67,7 +67,13 @@ def gray_request(laya_enabled: bool = True) -> ScanRequest:
 
 def _no_reasoners(**over):
     """Engine with every optional pass off unless overridden."""
-    defaults = dict(classifier=None, serv_reasoner=None, jev_reasoner=None, laya_reasoner=None)
+    defaults = dict(
+        classifier=None,
+        serv_reasoner=None,
+        jev_reasoner=None,
+        laya_reasoner=None,
+        canary_registry=None,  # deterministic safe_content for exact-equality asserts
+    )
     defaults.update(over)
     return IpiDetectionEngine(**defaults)
 
