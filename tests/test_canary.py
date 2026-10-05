@@ -92,6 +92,109 @@ def test_registry_from_env_default_on(monkeypatch):
     assert registry_from_env() is not None
 
 
+# ── PostgresCanaryRegistry (durable — Neon) ────────────────────────────────────
+
+
+class _FakeResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+
+class _FakeConn:
+    def __init__(self, pool):
+        self._pool = pool
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, sql, params=None):
+        if self._pool.fail:
+            raise RuntimeError("connection lost")
+        self._pool.queries.append((sql, params))
+        return _FakeResult(self._pool.rows)
+
+
+class _FakePool:
+    """Stand-in for psycopg_pool.ConnectionPool — records queries, can be
+    told to fail to exercise the fail-soft path."""
+
+    def __init__(self, rows=None, fail=False):
+        self.rows = rows or []
+        self.fail = fail
+        self.queries = []
+
+    def connection(self):
+        return _FakeConn(self)
+
+
+def test_pg_registry_constructs_and_validates():
+    from core.canary import PostgresCanaryRegistry
+
+    pool = _FakePool()
+    PostgresCanaryRegistry("postgresql://x", pool=pool)
+    sql = [q for q, _ in pool.queries]
+    assert any("SELECT 1" in q for q in sql)
+    assert any("canary_events" in q and "CREATE TABLE" in q for q in sql)
+
+
+def test_pg_mint_inserts_and_returns_token():
+    from core.canary import PostgresCanaryRegistry
+
+    pool = _FakePool()
+    reg = PostgresCanaryRegistry("postgresql://x", pool=pool)
+    token = reg.mint(kind="scan", risk_score=0.9, content_sha256="ab" * 32)
+    assert TOKEN_RE.fullmatch(token)
+    insert = [q for q, _ in pool.queries if "INSERT INTO canary_events" in q]
+    assert insert and "ON CONFLICT" in insert[0]
+
+
+def test_pg_lookup_returns_issuance_event():
+    from core.canary import PostgresCanaryRegistry
+
+    pool = _FakePool(rows=[("scan", 1759, {"risk_score": 0.9, "content_sha256": "ab" * 32})])
+    reg = PostgresCanaryRegistry("postgresql://x", pool=pool)
+    event = reg.lookup("elc-abc123-ff00aa")
+    assert event["kind"] == "scan"
+    assert event["issued_at"] == 1759
+    assert event["risk_score"] == 0.9
+
+
+def test_pg_lookup_unknown_and_outage_fail_soft():
+    from core.canary import PostgresCanaryRegistry
+
+    reg = PostgresCanaryRegistry("postgresql://x", pool=_FakePool())
+    assert reg.lookup("elc-abc123-ff00aa") is None
+    # DB unreachable mid-flight (pool healthy at boot, then lost):
+    # mint/lookup degrade, never raise — detection outranks provenance.
+    pool = _FakePool()
+    reg = PostgresCanaryRegistry("postgresql://x", pool=pool)
+    pool.fail = True
+    assert reg.mint() is None
+    assert reg.lookup("elc-abc123-ff00aa") is None
+
+
+def test_registry_from_env_picks_postgres_with_dsn(monkeypatch):
+    import core.canary as canary_mod
+
+    monkeypatch.delenv("ELCARO_CANARY", raising=False)
+    monkeypatch.setenv("ELCARO_CANARY_DSN", "postgresql://user@host/db")
+    sentinel = object()
+    monkeypatch.setattr(canary_mod, "PostgresCanaryRegistry", lambda dsn: sentinel)
+    assert canary_mod.registry_from_env() is sentinel
+
+
+def test_registry_from_env_disable_wins_over_dsn(monkeypatch):
+    monkeypatch.setenv("ELCARO_CANARY", "0")
+    monkeypatch.setenv("ELCARO_CANARY_DSN", "postgresql://user@host/db")
+    assert registry_from_env() is None
+
+
 # ── notice stamping ─────────────────────────────────────────────────────────────
 
 

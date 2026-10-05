@@ -16,6 +16,10 @@ dependencies = [
 miner = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
+    # Durable canary registry (ELCARO_CANARY_DSN → Neon/Postgres). Lazy-imported
+    # by core/canary.py only when a DSN is configured; without it the miner
+    # falls back to the in-memory registry.
+    "psycopg[binary,pool]>=3.2.0",
 ]
 app = [
     "httpx>=0.25.0",

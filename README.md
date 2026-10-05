@@ -116,10 +116,13 @@ notice is the one Elcaro output designed for verbatim relay, so a stamped
 copy sighted inside later scanned content surfaces as `canary_hits` and
 resolves via `GET /canary/{token}` to the original scan's metadata — hash,
 score, techniques, never the content. The signature authenticates the
-verdict; the canary traces the relay path. Two caveats: an unrecognized
-well-formed token means minted-elsewhere, restarted, or forged — all worth
-flagging, none provable — and agents that paraphrase drop the token (trap
-streets trace copies, not ideas).
+verdict; the canary traces the relay path. The registry is in-memory by
+default; `ELCARO_CANARY_DSN` (Neon/Postgres) makes tokens durable across
+restarts and lets the specimen kit stamp `specimen_serve` refs into the
+same namespace. Two caveats: an unrecognized well-formed token means
+minted-elsewhere, restarted, or forged — all worth flagging, none provable
+— and agents that paraphrase drop the token (trap streets trace copies,
+not ideas).
 
 ---
 

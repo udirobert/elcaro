@@ -410,7 +410,10 @@ class IpiDetectionEngine:
         # quarantine_decision so the ref lands inside the notice.
         canary_ref = None
         if self.canary_registry is not None and weighted_score >= DEFAULT_RISK_THRESHOLD:
+            # Postgres-backed registries return None on outage — an unstamped
+            # scan beats a failed one; canary_ref=None leaves the notice clean.
             canary_ref = self.canary_registry.mint(
+                kind="scan",
                 content_sha256=hashlib.sha256(content.encode()).hexdigest(),
                 risk_score=round(weighted_score, 4),
                 risk_level=risk_level.value,
