@@ -163,17 +163,52 @@ def _render_md(
         "",
         "## Provenance graph",
         "",
-        f"- Co-edit edges: {graph['coedit_edges']} · copy-propagation edges: {graph['copy_edges']}",
+        f"- Co-edit edges: {graph['coedit_edges']} · copy-propagation edges: {graph['copy_edges']}"
+        f" (carrier-visible: {graph.get('copy_exposure_edges', 0)})",
         f"- Propagated artifacts (≥2 actors): {graph['propagated_artifacts']}",
         "",
+    ]
+    cal = graph.get("calibration") or {}
+    if cal:
+        cov = cal.get("carrier_coverage")
+        lines += [
+            "### Copy-call calibration",
+            "",
+            f"- Naive same-string attributions: **{cal.get('naive_copy_calls', 0)}**",
+            f"- Carrier-visible (adopter posted in the artifact's channel between "
+            f"the earlier post and adoption): **{cal.get('carrier_visible_calls', 0)}**"
+            + (f" — coverage {cov:.1%}" if cov is not None else ""),
+            f"- No visible carrier (real copying via unlogged channels, or "
+            f"independent typing): **{cal.get('no_visible_carrier_calls', 0)}**",
+            f"- Coincidence-excluded (timestamps / field names / identifier runs "
+            f"agents type independently): **{cal.get('coincidence_excluded_calls', 0)}**"
+            + (
+                f" — {cal['coincidence_suspect_artifacts']}"
+                if cal.get("coincidence_suspect_artifacts")
+                else ""
+            ),
+            f"- Deepest reconstructed copy chain: **{graph.get('max_chain_depth', 0)}** hops",
+            f"- Median re-check fraction (adopter output ÷ post-origin corpus): "
+            f"**{graph.get('recheck_median')}**",
+            "",
+            "Carrier coverage is the observability ceiling: attributions without a",
+            "visible carrier cannot be confirmed from this log substrate.",
+            "",
+        ]
+    lines += [
         "### Top propagated artifacts (earliest-observed-source view)",
         "",
     ]
     for p in graph.get("propagations", [])[:15]:
+        extra = f", depth {p.get('chain_depth', 0)}"
+        if p.get("coincidence_suspect"):
+            extra += f" · coincidence-suspect: {p['coincidence_suspect']}"
+        if p.get("recheck_fraction") is not None:
+            extra += f" · re-check {p['recheck_fraction']:.0%}"
         lines.append(
             f"- `{p['kind']}` {p['artifact'][:80]!r} — origin "
             f"**{p['origin_actor']}** ({p['origin_time'][:10]}), "
-            f"{p['n_adopters']} adopting agents, {p['n_posts']} posts"
+            f"{p['n_adopters']} adopting agents, {p['n_posts']} posts{extra}"
         )
     lines += [
         "",

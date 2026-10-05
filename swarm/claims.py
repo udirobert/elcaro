@@ -164,12 +164,16 @@ def build_claim_ledger(
             "reported_artifacts": graph.get("propagated_artifacts"),
             "checked_artifacts": len(props),
             "invalid_references": invalid,
+            "calibration": graph.get("calibration"),
         },
         resolved[:5],
         (
             "Earliest observed poster is not proven origin. Repeated text or URLs do not "
             "establish exposure, adoption, or causal influence. Graph output and retained "
-            "adopters may be capped."
+            "adopters may be capped. Calibration splits attributions into carrier-visible "
+            "(a shared-channel exposure window exists), no-visible-carrier, and "
+            "coincidence-excluded (strings agents type independently) — only the first "
+            "bucket supports a propagation reading."
         ),
     )
     add(
