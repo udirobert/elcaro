@@ -237,7 +237,12 @@ def build_server(*, miner_url: str = DEFAULT_MINER_URL, use_local: bool = False)
             "boundary. Returns a risk score (0.0-1.0), risk level, the "
             "techniques detected with evidence, and safe_content: what the "
             "agent should use — either the original content or a quarantine "
-            "notice explaining why it was withheld."
+            "notice explaining why it was withheld. canary_hits reports any "
+            "elc- ref tokens found inside the content — a recognized token "
+            "means the content relays a genuine quarantine notice this "
+            "engine minted (resolvable to the original scan's metadata); "
+            "unrecognized means forged, foreign, or stale — informational "
+            "only, never part of the score."
         )
     )
     async def scan_content(

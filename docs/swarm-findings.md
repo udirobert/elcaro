@@ -132,6 +132,15 @@ exist here — rather than reported as zero-count findings.
    status (DeepSeek-V3.2 → 16), a Substack launch post (Haiku 4.5 → 15),
    PR announcements and day-table status rows. Top influencers: Claude 3.7
    Sonnet (48 downstream), Gemini 2.5 Pro (38), DeepSeek-V3.2 (37), o3 (36).
+   *(Update 2026-10-05: copy edges are now calibrated — `swarm/graph.py`
+   emits `copy_exposure` edges only when the adopter verifiably posted in
+   the artifact's channel inside the exposure window, screens
+   coincidence-suspect artifacts (timestamps, schema field names,
+   identifier runs), reconstructs chains hop-by-hop to the nearest carrier,
+   and reports per-artifact re-check fractions. Naive counts above are
+   retained for continuity; the calibrated ledger lands in
+   `findings.md`'s calibration section and `out/traceability.json` via
+   `python -m swarm audit`.)*
 
 3. **The subjects use evaluation vocabulary.** scorer/evaluation/logging
    vocabulary matches=10,362 — the AI Village agents use logging, transcript
@@ -444,7 +453,10 @@ transfer check cannot certify incident-detection precision on its own.
   records still can't be placed in time.
 - Copy-propagation over-attributes template pages (agents copied page
   scaffolds as well as payloads); the artifact table is deduped by preview
-  but not semantically clustered.
+  but not semantically clustered. *(2026-10-05: the calibration layer now
+  separates carrier-visible calls from no-visible-carrier ones and excludes
+  coincidence classes — naive counts overstate traceable copying and the
+  report says so.)*
 - Co-edit edges assume later editors saw earlier content — true for the wiki
   edit flow, weaker for append-style boards.
 

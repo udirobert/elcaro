@@ -111,7 +111,7 @@ const PRINCIPLES = [
   },
   {
     rule: "Verify signed verdicts — in-band notices are display text.",
-    why: "The quarantine notice is text inside the agent's input, and an attacker who knows the format can fake it. When the miner sets ELCARO_SIGNING_KEY, verdicts carry an Ed25519 signature: fetch GET /pubkey and verify offline, or POST the verdict to /verify.",
+    why: "The quarantine notice is text inside the agent's input, and an attacker who knows the format can fake it. When the miner sets ELCARO_SIGNING_KEY, verdicts carry an Ed25519 signature: fetch GET /pubkey and verify offline, or POST the verdict to /verify. Notices also carry a Ref: elc-... canary — a well-formed ref this miner didn't mint surfaces in canary_hits as unrecognized, and any ref resolves at GET /canary/{token}.",
   },
 ];
 

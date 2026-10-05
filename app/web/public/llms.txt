@@ -6,7 +6,7 @@ Every scan returns a structured verdict: risk score, risk level, the techniques 
 
 ## Scan API
 
-- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean, "serv_enabled"?: boolean, "jev_enabled"?: boolean, "laya_enabled"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, scanned_at, signature?, key_id?, serv_available?, serv_attempted?, serv_used?, serv_rule_score_before?, jev_available?, jev_attempted?, jev_used?, jev_comparison?, laya_available?, laya_attempted?, laya_used?, laya_comparison?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
+- [POST /scan](https://api.elcaro.trustfall.xyz/scan): Body `{"content": string, "content_type": "email|search_result|webpage|document|code|chat_message|system_prompt", "deep_analysis"?: boolean, "serv_enabled"?: boolean, "jev_enabled"?: boolean, "laya_enabled"?: boolean}`. Returns `{risk_score, risk_level, flagged_techniques, indicators, summary, human_summary, safe_content, quarantined, latency_ms, normalizations_applied, canary_hits?, scanned_at, signature?, key_id?, serv_available?, serv_attempted?, serv_used?, serv_rule_score_before?, jev_available?, jev_attempted?, jev_used?, jev_comparison?, laya_available?, laya_attempted?, laya_used?, laya_comparison?}`. CORS-open. Note: `content_type` is caller-declared provenance, not a trust level — privileged types are weight-floored and rescanned as untrusted, and evasion normalization (zero-width strip, confusable fold, token de-split, declared-encoding decode) runs before detection.
 
 ## SERV Reasoning (optional LLM second pass)
 
@@ -44,6 +44,11 @@ Calibration caveat: on Elcaro's 26-case labelled corpus Laya scores Brier 0.32 (
 - [GET /metrics](https://api.elcaro.trustfall.xyz/metrics): Aggregate counters and latency percentiles only. The miner is stateless — scanned content is never stored.
 - [GET /pubkey](https://api.elcaro.trustfall.xyz/pubkey): The miner's Ed25519 verdict-signing public key (404 when running unsigned).
 - [POST /verify](https://api.elcaro.trustfall.xyz/verify): Body `{content, risk_score, risk_level, quarantined, flagged_techniques, scanned_at, signature}` → `{valid: bool, key_id, detail}`. Recomputes the canonical payload (content is hashed, never stored) and checks the signature.
+- [GET /canary/{token}](https://api.elcaro.trustfall.xyz/canary/elc-deadbeef-abcdef): Resolve a canary token to the scan that minted it → `{token, recognized: bool, issued_at?, content_sha256?, risk_score?, risk_level?, techniques?, content_type?}` — metadata only, never the content. `recognized: false` = forged, minted by another deployment, or minted before a restart (the registry is in-memory). 404 when the miner runs with `ELCARO_CANARY=0`.
+
+## Canary refs (provenance tracing)
+
+Every quarantine notice carries a unique `Ref: elc-<unix-hex>-<rand>` token minted at scan time (on by default; `ELCARO_CANARY=0` disables). The notice is deliberately verbatim-relayable, so a stamped copy showing up inside later scanned content surfaces in `canary_hits` — `{token, recognized, ...original scan metadata}` — tracing the relay path deterministically where shared strings can't. The verdict signature authenticates the JSON; the canary traces the text. Caveat: canaries trace copies, not ideas — an agent that paraphrases the notice drops the token, and an unrecognized well-formed token is worth flagging but proves nothing on its own.
 
 ## Verifying verdicts
 

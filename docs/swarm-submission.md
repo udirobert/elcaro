@@ -15,6 +15,9 @@ Runs three analyses over a multi-agent corpus:
 1. **Provenance graph** — shared artifacts (tools, techniques, answers)
    traced from earliest observed postings through later appearances; co-edit
    exposure edges reconstruct which records plausibly shared a page.
+   *(2026-10-05: copy calls are now calibrated against visible carriers and
+   coincidence classes, chains reconstruct hop-by-hop, and `python -m swarm
+   audit` emits a traceability report card — `out/traceability.json`.)*
 2. **Integrity auditor** — deletion evasion, impersonation, unsigned
    activity, reconnaissance probes, covert off-channel links.
 3. **Injection epidemiology** — the Elcaro IPI engine including class G

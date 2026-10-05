@@ -65,6 +65,23 @@ export interface ScanResponse {
   scanned_at?: number;
   signature?: string;
   key_id?: string;
+  // Canary tokens (core/canary.py) — elc- refs stamped into quarantine
+  // notices this miner served, found inside the scanned content. When
+  // recognized, the entry carries the original scan's metadata (issued_at,
+  // content_sha256, risk_score, risk_level, techniques, content_type);
+  // unrecognized = forged, foreign-deployment, or stale ref — informational
+  // only, never affects the score. Absent when ELCARO_CANARY=0 or on older
+  // miners.
+  canary_hits?: Array<{
+    token: string;
+    recognized: boolean;
+    issued_at?: number;
+    content_sha256?: string;
+    risk_score?: number;
+    risk_level?: string;
+    techniques?: string[];
+    content_type?: string;
+  }> | null;
   // Evasion normalizations applied before detection (core/normalize.py).
   // Optional — responses from older miners predate the field.
   normalizations_applied?: string[];

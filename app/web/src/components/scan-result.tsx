@@ -269,6 +269,44 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </motion.p>
         )}
 
+      {/* Canary refs — elc- tokens embedded in the scanned content. A
+          recognized token means this text relays a quarantine notice this
+          miner actually minted (provenance resolved); an unrecognized one
+          means forged, foreign-deployment, or stale — flagged for the
+          reader, never fed into the score. */}
+      {result.canary_hits?.map((hit) => (
+        <motion.p
+          key={hit.token}
+          className="text-xs text-ink-muted leading-relaxed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35, duration: 0.3 }}
+        >
+          {hit.recognized ? (
+            <>
+              Relays a genuine Elcaro quarantine notice{" "}
+              <span className="font-mono text-ink-faint">{hit.token}</span>
+              {hit.risk_level != null && (
+                <>
+                  {" "}
+                  — minted against content scored{" "}
+                  <span className="font-mono">
+                    {hit.risk_score?.toFixed(2)} ({hit.risk_level})
+                  </span>
+                </>
+              )}
+              .
+            </>
+          ) : (
+            <>
+              Contains an Elcaro-format ref{" "}
+              <span className="font-mono text-ink-faint">{hit.token}</span> this
+              miner didn&apos;t issue — forged, minted elsewhere, or stale.
+            </>
+          )}
+        </motion.p>
+      ))}
+
       {/* Evidence — only shown for the safe case, where "we checked and found
           nothing" is the useful signal. When there ARE findings, each one
           already carries its own evidence snippet on expand below, so
