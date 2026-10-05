@@ -223,10 +223,17 @@ if _signer is not None:
     }
 
 if _engine.canary_registry is not None:
+    from core.canary import PostgresCanaryRegistry
+
+    _durable = isinstance(_engine.canary_registry, PostgresCanaryRegistry)
     MINER_INFO["canary"] = {
         "token_format": "elc-<unix-hex>-<6 rand hex>, stamped as 'Ref:' in quarantine notices",
         "resolve_url": "/canary/{token}",
-        "note": "in-memory per-process — tokens minted before a restart resolve as unrecognized",
+        "note": (
+            "durable — tokens resolve across restarts and deployments"
+            if _durable
+            else "in-memory per-process — tokens minted before a restart resolve as unrecognized"
+        ),
     }
 
 
