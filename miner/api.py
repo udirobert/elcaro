@@ -93,6 +93,14 @@ class Metrics:
         default_factory=lambda: {"safe": 0, "low": 0, "suspicious": 0, "dangerous": 0}
     )
     content_type_counts: dict[str, int] = field(default_factory=dict)
+    # Canary flywheel counters — the observable part of the trap-street
+    # experiment: how many notices get stamped, how often stamped text is
+    # seen again inside scanned content, and public resolver traffic.
+    canary_mints: int = 0
+    canary_hits_recognized: int = 0
+    canary_hits_unrecognized: int = 0
+    canary_resolves: int = 0
+    canary_resolved_known: int = 0
     # Rolling window of last 1000 latencies (ms) for percentile calculation
     latencies_ms: deque = field(default_factory=lambda: deque(maxlen=1000))
     started_at: float = field(default_factory=time.time)
@@ -111,6 +119,20 @@ class Metrics:
         # Track cumulative SERV spend so operators can monitor costs.
         if response.serv_cost and response.serv_cost.get("total_usdc"):
             self.serv_cost_total_usdc += float(response.serv_cost["total_usdc"])
+        # Canary counters: a stamped notice is a mint; tokens found inside
+        # scanned content split into recognized relays vs everything else.
+        if response.quarantined and response.safe_content and "Ref: elc-" in response.safe_content:
+            self.canary_mints += 1
+        for hit in response.canary_hits or []:
+            if hit.get("recognized"):
+                self.canary_hits_recognized += 1
+            else:
+                self.canary_hits_unrecognized += 1
+
+    def record_canary_resolve(self, recognized: bool) -> None:
+        self.canary_resolves += 1
+        if recognized:
+            self.canary_resolved_known += 1
 
     def record_error(self) -> None:
         self.total_errors += 1
@@ -141,6 +163,13 @@ class Metrics:
             },
             "risk_levels": dict(self.risk_level_counts),
             "content_types": dict(self.content_type_counts),
+            "canary": {
+                "mints": self.canary_mints,
+                "hits_recognized": self.canary_hits_recognized,
+                "hits_unrecognized": self.canary_hits_unrecognized,
+                "resolves": self.canary_resolves,
+                "resolved_known": self.canary_resolved_known,
+            },
         }
 
 
@@ -454,6 +483,7 @@ async def canary(token: str):
     if not TOKEN_RE.fullmatch(token):
         raise HTTPException(status_code=422, detail="Not a canary token.")
     event = registry.lookup(token)
+    _metrics.record_canary_resolve(event is not None)
     if event is None:
         return {"token": token, "recognized": False}
     return {"token": token, "recognized": True, **event}

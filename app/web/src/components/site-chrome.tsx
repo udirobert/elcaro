@@ -11,6 +11,7 @@ export type NavKey =
   | "swarm"
   | "integrate"
   | "specimen"
+  | "canary"
   | "supervise"
   | "for-agents";
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
 // on every page instead.
 const FOOTER_LINKS: { key: NavKey; href: string; label: string }[] = [
   { key: "specimen", href: "/specimen", label: "Specimen kit" },
+  { key: "canary", href: "/canary", label: "Canary lookup" },
   { key: "supervise", href: "/supervise", label: "Session watch" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },
 ];

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { LeadForm } from "@/components/lead-form";
 import { SessionWatch } from "@/components/session-watch";
 import { PageHeader } from "@/components/page-header";
 
@@ -24,6 +25,19 @@ export default function SupervisePage() {
         </PageHeader>
 
         <SessionWatch />
+
+        {/* E4 — the fleet probe. Session watch covers one browser; the
+            paid shape is one watch across every agent you run, with
+            canary-traced propagation and incident reconstruction on top.
+            The waitlist is the demand signal. */}
+        <div className="border-t border-border pt-8">
+          <LeadForm
+            formName="fleet-waitlist"
+            heading="Running more than one agent?"
+            body="Session watch covers this browser. Fleet watch is the same calm surface across every agent you operate — quarantine rate per agent, canary-traced propagation between them, and incident reconstruction when something gets through. Join the list; we'll reach out when fleet mode opens."
+            ctaLabel="Join waitlist"
+          />
+        </div>
       </div>
 
       <SiteFooter />

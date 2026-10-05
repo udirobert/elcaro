@@ -111,6 +111,23 @@ export function PricingTiers({ elevatedServ = false }: PricingTiersProps) {
         </TierCard>
       </div>
 
+      {/* E3 — the metered rail. Telegraph Protocol routes paid scans at
+          0.01 USDC each via x402; provenance lookups stay free so the
+          canary graph keeps growing. */}
+      <p className="text-[11px] text-ink-faint leading-relaxed">
+        Metered rail: Telegraph Protocol routes{" "}
+        <code className="font-mono bg-surface border border-border px-1.5 py-0.5 rounded text-xs">
+          POST /scan
+        </code>{" "}
+        at 0.01 USDC per call via x402 — programmatic callers pay per scan.
+        Canary resolution at{" "}
+        <code className="font-mono bg-surface border border-border px-1.5 py-0.5 rounded text-xs">
+          GET /canary/&#123;token&#125;
+        </code>{" "}
+        is free and public — provenance is the network&apos;s shared surface,
+        not a metered one.
+      </p>
+
       {/* When SERV is configured but not yet enabled — a contextual nudge */}
       <p className="text-[11px] text-ink-faint leading-relaxed">
         Your deployment already supports SERV. To enable: set{" "}

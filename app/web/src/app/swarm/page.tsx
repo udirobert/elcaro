@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { DashboardReveal } from "@/components/dashboard-reveal";
 import { FindingsBrief } from "@/components/findings-brief";
+import { LeadForm } from "@/components/lead-form";
 import { SwarmCaseWalkthrough } from "@/components/swarm-case-walkthrough";
 
 // Elcaro Swarm — forensic findings on real agent-swarms. The page leads with
@@ -192,6 +193,24 @@ export default function SwarmPage() {
                 Hackathon submission
               </a>
             </p>
+          </div>
+
+          {/* E1 — the audit offer. The swarm pipeline already produces
+              traceability report cards (`python -m swarm audit`); this form
+              is the demand probe — does anyone have a corpus worth auditing? */}
+          <div className="border-t border-border pt-10">
+            <LeadForm
+              formName="swarm-audit"
+              heading="Get a traceability audit of your own corpus"
+              body="We run this same pipeline — calibrated provenance graph, copy-call calibration, chain reconstruction, re-check fractions — over agent message logs and return a report card: how much of the copying in your swarm is actually traceable, and where the observability gaps are. Tell us about the corpus and we'll send the audit."
+              ctaLabel="Request audit"
+              extraField={{
+                name: "corpus",
+                label: "The corpus",
+                placeholder:
+                  "What corpus is it? (format, rough size, where it lives — e.g. Slack export, agent room logs, inter-agent message dump)",
+              }}
+            />
           </div>
         </div>
       </div>
