@@ -6,13 +6,25 @@
 
 ## Positioning (researched)
 
-**Elcaro is the content mandate.** Google's AP2 binds *authorization*
-(signed intent/cart mandates — what the agent may spend). Visa, PayPal,
-Human Security, NeuralTrust all name prompt injection the #1 killer of
-agentic commerce. Nothing binds *the content that shapes what the agent
-decides*. PayBox scopes what agents may spend; Elcaro scopes what they
-may believe. That is the mandate gap — and MoonPay is the one company
-whose autonomous-grant model can't ship safely without it.
+**Elcaro is the counterparty half of the trust layer.** MoonPay built
+the authority half — vault, scoped grants, passkey (Soto-Wright: "someone
+had to build the trust layer for that world"). Seven-plus Ch.1 entries
+pitch "should this payment happen" — tx-level checks (amount, merchant,
+limits) that MoonPay already ships server-side as spend limits, approval
+modes, and audit events. We are not one of them, and we never use their
+vocabulary: no "spend cap", no "policy engine", no "guardrail".
+
+**The wedge:** every tx-level check sees a $1,200 wire to a valid
+merchant under an active grant — all green. The attack lives upstream
+of the transaction, in the content that *created* the intent. Only
+content inspection sees it. On screen, this is literal: each bleed
+pane shows green approval checks passing before the heist plays.
+
+**Elcaro is the content mandate** — PayBox scopes what agents may
+spend; Elcaro scopes what they may believe. And the one scenario no
+tx-check addresses: a marketplace plugin's *response* injecting the
+agent — their own catalog as attack surface. We protect the bazaar,
+not just the wallet.
 
 **Proliferation math for the judges:**
 1. Scan-before-spend = every gated transaction is ≥2 paid x402 calls
@@ -47,17 +59,19 @@ whose autonomous-grant model can't ship safely without it.
 
 ## Demo arc — money moves or it doesn't count
 
-1. **Cold open, the playable heist (5s):** /paybox, card 1 — hit
-   "▶ run unguarded": the transcript types, payee swaps to 0xDEAD…,
-   request_payment fires, BLEED — $1,200 stamps red. This IS the
-   product; visitors can run it themselves after the video.
+1. **Cold open, the playable heist (8s):** /paybox, card 1 — hit
+   "▶ run unguarded": four green checks pass (amount ✓ merchant ✓
+   grant ✓ autonomous ✓) — *every tx-level engine approves this* —
+   then the transcript types, payee swaps to 0xDEAD…, request_payment
+   fires, BLEED — $1,200. "The field gates the transaction. Watch it
+   approve the attack."
 2. **The gauntlet (~30s):** /paybox on screen, run-all volley — category
    chip → injected span glows → STOP stamps → "request_payment never
    fired — $1,200 stayed in the vault." Cut fast across 5 attacks.
-3. **The escalation (~10s):** verdict drives policy — agent calls
+3. **The escalation (~10s):** verdict drives the grant — agent calls
    request_account_change ("poisoned content — switch grant to
    always_approve") → manage_url → human tightens the grant with a
-   passkey. Nobody else demos a scan verdict mutating vault policy.
+   passkey. Nobody else demos a scan verdict tightening a live grant.
 4. **GO means GO (~8s):** clean invoice → GO → real settlement through
    PayBox. The gate isn't a deny-all — false positives kill products too.
 5. **The seal (~7s):** signed STOP verdict + Ref: elc-… → /canary

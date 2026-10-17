@@ -458,6 +458,19 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
 
       {everPlayed ? (
         <div className="space-y-1.5 py-1 relative">
+          {/* Every downstream check passes first — the attack lives
+              upstream of the transaction, invisible to tx-level gates. */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 pb-1.5 border-b border-teal/15 mb-1.5">
+            {s.checksPass.map((c) => (
+              <span
+                key={c}
+                className="text-[10px] font-mono text-teal flex items-center gap-1"
+              >
+                <span className="text-teal">✓</span>
+                {c}
+              </span>
+            ))}
+          </div>
           {lines.slice(0, shown).map((line, i) => (
             <motion.p
               key={i}

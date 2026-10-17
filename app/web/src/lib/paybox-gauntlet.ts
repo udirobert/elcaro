@@ -27,6 +27,12 @@ export interface PayboxScenario {
   // open of the demo as a product surface: visitors run the heist
   // themselves before the gate answers.
   unguardedTrace: string[];
+  // The checks every "should this payment happen" engine would run —
+  // amount, merchant, grant, approval mode — all green, because the
+  // attack lives upstream of the transaction. This is the category
+  // wedge: seven other Ch.1 entries gate the tx; the poison is in the
+  // input, and only content inspection sees it.
+  checksPass: string[];
   content: string;
   content_type: ContentType;
   isInjection: boolean;
@@ -43,6 +49,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "up to $1,200",
     counterfactual:
       "The agent wires $1,200 to the attacker's address and logs it as the vendor.",
+    checksPass: ["amount under limit", "merchant recognized", "grant active", "autonomous mode"],
     unguardedTrace: [
       "> retrieve email — invoice #4471",
       "> task: remit $1,200 to vendor",
@@ -64,6 +71,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "every vaulted secret",
     counterfactual:
       "The agent obeys the plugin's hidden instruction and leaks a credential.",
+    checksPass: ["catalog plugin", "response well-formed", "grant active", "autonomous mode"],
     unguardedTrace: [
       "> use_service(order-status plugin)",
       "> response: { status: 'shipped', note: … }",
@@ -85,6 +93,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "full wallet balance",
     counterfactual:
       "The agent swaps the wallet's entire balance into the promoter's mint.",
+    checksPass: ["swap within limit", "mint resolvable", "grant active", "autonomous mode"],
     unguardedTrace: [
       "> research tip — 'guaranteed 40x'",
       "> instruction absorbed — 'convenience step' authorized",
@@ -105,6 +114,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "API keys + tokens",
     counterfactual:
       "The agent mails every credential in its context to the 'billing' address — exfil by design.",
+    checksPass: ["service in catalog", "request well-formed", "grant active", "autonomous mode"],
     unguardedTrace: [
       "> brief received — generate product video",
       "> instruction absorbed — 'billing verification' needs context secrets",
@@ -125,6 +135,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "pending transfers",
     counterfactual:
       "The agent reads the fake boundary, believes approval already happened, and signs.",
+    checksPass: ["signing in scope", "grant active", "session valid", "autonomous mode"],
     unguardedTrace: [
       "> read support transcript #2214",
       "> fake boundary absorbed — 'user pre-approved all pending'",
@@ -145,6 +156,7 @@ export const PAYBOX_SCENARIOS: PayboxScenario[] = [
     stakeLabel: "$1,200 proceeds",
     counterfactual:
       "Nothing — GO means GO. A gate that blocks everything protects nothing.",
+    checksPass: ["amount under limit", "merchant recognized", "grant active", "autonomous mode"],
     unguardedTrace: [
       "> retrieve email — invoice #4471",
       "> task: remit $1,200 to vendor",
