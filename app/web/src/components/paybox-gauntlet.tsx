@@ -23,6 +23,87 @@ const STAGGER_MS = 350;
 const LINE_MS = 380; // transcript line reveal
 const SETTLE_MS = 500; // beat between last transcript line and the scan
 
+// ── Codrops-grade type effects ─────────────────────────────────────────────
+// Scramble-decode: glyphs cycle then resolve into the real text — used on
+// the hero title and on each heist transcript's money line, where the
+// compromise literally decrypts onto the screen.
+const GLYPHS = "!<>-_/[]{}—=+*^?#";
+
+function useScramble(text: string, active: boolean): string {
+  // SSR paints the real text; the decode runs once on mount, so the
+  // title "re-encrypts" once on load rather than arriving blank.
+  const [out, setOut] = useState(text);
+  useEffect(() => {
+    if (!active) {
+      setOut(text);
+      return;
+    }
+    setOut("");
+    let frame = 0;
+    const id = setInterval(() => {
+      frame += 1;
+      const reveal = Math.floor((frame / 1.6 / text.length) * text.length);
+      if (reveal >= text.length) {
+        setOut(text);
+        clearInterval(id);
+        return;
+      }
+      setOut(
+        text.slice(0, reveal) +
+          text
+            .slice(reveal)
+            .split("")
+            .map((c) =>
+              c === " " ? " " : GLYPHS[(Math.random() * GLYPHS.length) | 0]
+            )
+            .join("")
+      );
+    }, 28);
+    return () => clearInterval(id);
+  }, [text, active]);
+  return out;
+}
+
+function ScrambleText({ text, className }: { text: string; className?: string }) {
+  const decoded = useScramble(text, true);
+  return <span className={className}>{decoded}</span>;
+}
+
+// Threat ticker — the Codrops kinetic-type band, reusing the app's
+// CSS-only marquee loop (prefers-reduced-motion respected upstream).
+const TICKER = [
+  "request_payment ← doctored invoice",
+  "request_secret ← poisoned plugin",
+  "request_swap ← guaranteed alpha",
+  "request_wallet_sign ← forged pre-approval",
+  "use_service ← the marketplace bites back",
+  "scan before spend",
+  "every gate = a paid call through the vault",
+];
+
+function ThreatTicker() {
+  return (
+    <div
+      className="border-y border-border bg-canvas overflow-hidden py-3 select-none -mx-6"
+      aria-hidden="true"
+    >
+      <div className="animate-marquee flex gap-10 whitespace-nowrap will-change-transform w-max">
+        {[...TICKER, ...TICKER].map((s, i) => (
+          <span
+            key={i}
+            className="font-mono text-[11px] text-ink-faint flex items-center gap-10"
+          >
+            {s}
+            <span className={i % 3 === 2 ? "text-violet/50" : "text-dangerous/50"}>
+              ·
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type Phase = "idle" | "running" | "done" | "error";
 
 interface Entry {
@@ -94,7 +175,7 @@ export function PayboxGauntlet() {
           MoonPay Hackathons · Chapter 1
         </p>
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-          The PayBox Gauntlet
+          <ScrambleText text="The PayBox Gauntlet" />
         </h1>
         <p className="text-base text-ink-muted leading-relaxed max-w-2xl">
           PayBox scopes what an agent may <span className="text-ink font-semibold">spend</span>.
@@ -108,6 +189,8 @@ export function PayboxGauntlet() {
           This page runs the same verdict on the free path.
         </p>
       </div>
+
+      <ThreatTicker />
 
       {/* Scoreboard */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl border border-border bg-border overflow-hidden">
@@ -124,7 +207,10 @@ export function PayboxGauntlet() {
           },
         ].map((stat) => (
           <div key={stat.label} className="bg-surface px-4 py-3">
-            <div className="text-xl font-black tracking-tight tabular-nums">
+            <div
+              key={stat.value}
+              className="text-xl font-black tracking-tight tabular-nums animate-count-in"
+            >
               {stat.value}
             </div>
             <div className="text-[10px] uppercase tracking-widest text-ink-faint">
@@ -342,8 +428,21 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
   }, [playing, shown, lines.length]);
 
   return (
-    <div className="rounded-xl border border-dangerous/25 bg-dangerous/5 px-4 py-3 relative">
-      <div className="flex items-center justify-between gap-2 mb-1">
+    <motion.div
+      animate={done && s.isInjection ? { x: [0, -5, 4, -3, 2, 0] } : { x: 0 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+      className="rounded-xl border border-dangerous/25 bg-dangerous/5 px-4 py-3 relative overflow-hidden"
+    >
+      {/* CRT scanlines — heist-monitor texture, decorative */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(229,83,61,0.045) 3px, rgba(229,83,61,0.045) 4px)",
+        }}
+      />
+      <div className="flex items-center justify-between gap-2 mb-1 relative">
         <p className="text-[10px] uppercase tracking-widest text-dangerous font-mono">
           without the gate{everPlayed ? " — simulated agent" : ""}
         </p>
@@ -358,7 +457,7 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
       </div>
 
       {everPlayed ? (
-        <div className="space-y-1.5 py-1">
+        <div className="space-y-1.5 py-1 relative">
           {lines.slice(0, shown).map((line, i) => (
             <motion.p
               key={i}
@@ -373,7 +472,11 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
                   : "text-ink-muted"
               }`}
             >
-              {line}
+              {i === lines.length - 1 ? (
+                <ScrambleText text={line} />
+              ) : (
+                line
+              )}
             </motion.p>
           ))}
           {playing && (
@@ -413,6 +516,6 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
           {s.counterfactual}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }
