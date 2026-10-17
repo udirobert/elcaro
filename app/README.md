@@ -92,3 +92,13 @@ framework:
 - **OpenAI Assistants**: Scan tool outputs before passing to the assistant
 - **Custom agents**: Call `middleware.scan()` on any retrieved content before
   passing it to the LLM prompt
+
+## Paid lane (x402 / PayBox)
+
+`POST /api/x402/scan` on the web app serves the same verdict behind a spec
+HTTP 402 challenge (`PAYMENT-REQUIRED`, "exact" scheme, Base + Base
+Sepolia USDC). Agents pay per-request from a PayBox wallet grant
+(`use_service` / `pay_x402`) — the signed EIP-3009 authorization is
+verified locally before the verdict is served. Free `/scan` is
+unchanged. Env: `X402_PAYTO`, `X402_SCAN_AMOUNT`, `X402_FACILITATOR_URL`
+(see `.env.example`).

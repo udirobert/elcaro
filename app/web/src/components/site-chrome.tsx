@@ -13,6 +13,7 @@ export type NavKey =
   | "specimen"
   | "canary"
   | "supervise"
+  | "paybox"
   | "for-agents";
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
@@ -30,6 +31,7 @@ const FOOTER_LINKS: { key: NavKey; href: string; label: string }[] = [
   { key: "specimen", href: "/specimen", label: "Specimen kit" },
   { key: "canary", href: "/canary", label: "Canary lookup" },
   { key: "supervise", href: "/supervise", label: "Session watch" },
+  { key: "paybox", href: "/paybox", label: "PayBox gauntlet" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },
 ];
 

@@ -20,6 +20,12 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 
 ---
 
+> **PayBox Ch.1:** see [`docs/paybox-ch1.md`](docs/paybox-ch1.md) — the content
+> mandate for agentic commerce: `POST /api/x402/scan` (paid scan lane, x402
+> "exact" on Base + Base Sepolia) and the **PayBox Gauntlet** at
+> `/paybox` — six scenarios, one per rubric category, each injection
+> steering a real PayBox tool toward the vault.
+>
 > **Swarmchasing entry — Elcaro Swarm.** After the OpenAI–Hugging Face
 > incident, investigators spent ~$400k and six days chasing a swarm of
 > ~1,200 agents by hand. `swarm/` is the forensic layer they lacked:
@@ -174,6 +180,9 @@ second opinions: SERV Reasoning (a blended judge), plus Jev and Laya
 (comparison-only rails). The rule engine decides; the other two are shown for
 calibration and transparency, never folded into the score. Jev and Laya are
 independent toggles — either, both, or neither may run on a given scan.
+
+## Pocket hackathon — submit scan API (AI tool)
+Deadline Oct 12 midnight EST: testnet service ID + endpoint + test tx + repo. The scan endpoint is the entry — sub-10ms, JSON in/out, single purpose. Ensure a keyless/free path judges can curl (inputs in body, no header dependence), then register + supply via RelayMiner on Beta TestNet.
 
 ---
 
