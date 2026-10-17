@@ -38,12 +38,19 @@ whose autonomous-grant model can't ship safely without it.
   (request_payment, use_service→request_secret, request_swap,
   request_secret, request_wallet_sign). Live verdicts + x-ray spans +
   scoreboard: attacks stopped, $ protected, false positives, paid calls.
+- **The cold open is a product surface:** every card's "without the
+  gate" panel is playable — click "▶ run unguarded" and a simulated
+  agent transcript types out the heist (instruction absorbed → tool
+  fired → BLEED stamp with the dollar stake). Run-all volleys heist →
+  gate → heist → gate across all six. The video's first act is a screen
+  recording of the product, not an edit.
 
 ## Demo arc — money moves or it doesn't count
 
-1. **Cold open, the counterfactual (5s):** invoice email lands, agent
-   calls request_payment, $1,200 wires to 0xDEAD… — red "BLEED" stamp.
-   "This is the video MoonPay doesn't want."
+1. **Cold open, the playable heist (5s):** /paybox, card 1 — hit
+   "▶ run unguarded": the transcript types, payee swaps to 0xDEAD…,
+   request_payment fires, BLEED — $1,200 stamps red. This IS the
+   product; visitors can run it themselves after the video.
 2. **The gauntlet (~30s):** /paybox on screen, run-all volley — category
    chip → injected span glows → STOP stamps → "request_payment never
    fired — $1,200 stayed in the vault." Cut fast across 5 attacks.

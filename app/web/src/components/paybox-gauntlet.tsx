@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { scanContent, isError } from "@/lib/api";
 import type { ScanResponse } from "@/lib/types";
@@ -17,9 +17,11 @@ const LEVEL_COLORS: Record<string, string> = {
   dangerous: "#E5533D",
 };
 
-// Volley pacing — same feel as /evaluate/gauntlet: each verdict lands
-// before the next scenario fires, so a recording reads as a montage.
+// Volley pacing — each card first plays its "unguarded" transcript
+// (the heist), then the real scan lands the gate verdict.
 const STAGGER_MS = 350;
+const LINE_MS = 380; // transcript line reveal
+const SETTLE_MS = 500; // beat between last transcript line and the scan
 
 type Phase = "idle" | "running" | "done" | "error";
 
@@ -60,6 +62,11 @@ export function PayboxGauntlet() {
     for (let i = 0; i < PAYBOX_SCENARIOS.length; i++) {
       const s = PAYBOX_SCENARIOS[i];
       setRunningIndex(i);
+      // The heist plays before the gate answers — visitors watch the
+      // simulated agent get robbed, then the verdict stamps STOP.
+      await new Promise((r) =>
+        setTimeout(r, s.unguardedTrace.length * LINE_MS + SETTLE_MS)
+      );
       const response = await scanContent({
         content: s.content,
         content_type: s.content_type,
@@ -251,16 +258,9 @@ function ScenarioCard({
           </div>
         </div>
 
-        {/* Right — counterfactual vs what the gate did */}
+        {/* Right — the playable heist vs what the gate did */}
         <div className="space-y-3 min-w-0">
-          <div className="rounded-xl border border-dangerous/25 bg-dangerous/5 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-dangerous font-mono mb-1">
-              without the gate
-            </p>
-            <p className="text-sm text-ink-muted leading-relaxed">
-              {s.counterfactual}
-            </p>
-          </div>
+          <BleedPane scenario={s} play={isRunning} />
           <AnimatePresence>
             {entry && (
               <motion.div
@@ -294,5 +294,125 @@ function ScenarioCard({
         </div>
       </div>
     </motion.section>
+  );
+}
+
+/**
+ * The playable heist — the cold open as a product surface.
+ *
+ * Every scenario's "without the gate" panel can run the simulated agent
+ * transcript: the injected instruction gets absorbed, the PayBox tool
+ * fires, and the bleed stamp lands. Clickable standalone (visitors run
+ * the heist themselves) and driven by run-all (`play` prop) so the
+ * recording shows heist → gate → heist → gate as a volley.
+ *
+ * Honestly labeled: the transcript is a simulation — the REAL verdict
+ * beside it is live from the engine.
+ */
+function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: boolean }) {
+  const [shown, setShown] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [everPlayed, setEverPlayed] = useState(false);
+  const lines = s.unguardedTrace;
+  const done = everPlayed && !playing && shown >= lines.length;
+
+  // External trigger (run-all volley) and manual trigger both start a
+  // fresh run: reset to zero, then step one line per tick.
+  const start = () => {
+    setShown(0);
+    setEverPlayed(true);
+    setPlaying(true);
+  };
+  const playedRef = useRef(false);
+  useEffect(() => {
+    if (play && !playedRef.current) {
+      playedRef.current = true;
+      start();
+    }
+    if (!play) playedRef.current = false;
+  }, [play]);
+
+  useEffect(() => {
+    if (!playing || shown >= lines.length) {
+      if (shown >= lines.length) setPlaying(false);
+      return;
+    }
+    const t = setTimeout(() => setShown(shown + 1), LINE_MS);
+    return () => clearTimeout(t);
+  }, [playing, shown, lines.length]);
+
+  return (
+    <div className="rounded-xl border border-dangerous/25 bg-dangerous/5 px-4 py-3 relative">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-[10px] uppercase tracking-widest text-dangerous font-mono">
+          without the gate{everPlayed ? " — simulated agent" : ""}
+        </p>
+        {!playing && (
+          <button
+            onClick={start}
+            className="text-[10px] font-mono text-dangerous/80 hover:text-dangerous transition-colors"
+          >
+            {everPlayed ? "↻ replay" : "▶ run unguarded"}
+          </button>
+        )}
+      </div>
+
+      {everPlayed ? (
+        <div className="space-y-1.5 py-1">
+          {lines.slice(0, shown).map((line, i) => (
+            <motion.p
+              key={i}
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.18 }}
+              className={`text-[11px] font-mono leading-relaxed ${
+                i === lines.length - 1
+                  ? s.isInjection
+                    ? "text-dangerous font-semibold"
+                    : "text-teal font-semibold"
+                  : "text-ink-muted"
+              }`}
+            >
+              {line}
+            </motion.p>
+          ))}
+          {playing && (
+            <motion.span
+              className="inline-block w-1.5 h-3 bg-dangerous/60"
+              animate={{ opacity: [1, 0] }}
+              transition={{ duration: 0.5, repeat: Infinity }}
+            />
+          )}
+          {done && s.isInjection && (
+            <motion.div
+              initial={{ opacity: 0, scale: 1.3, rotate: -12 }}
+              animate={{ opacity: 1, scale: 1, rotate: -6 }}
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              className="absolute -right-1 -bottom-2 px-3 py-1 border-2 border-dangerous text-dangerous font-black text-sm tracking-widest bg-canvas/90"
+            >
+              BLEED{s.stakeUsd ? ` — $${s.stakeUsd.toLocaleString()}` : ""}
+            </motion.div>
+          )}
+          {done && !s.isInjection && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-[11px] font-mono text-teal pt-1"
+            >
+              settled clean — the gate never slept either way
+            </motion.p>
+          )}
+          {done && (
+            <p className="text-[11px] text-ink-faint italic pt-2">
+              {s.counterfactual}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-ink-muted leading-relaxed">
+          {s.counterfactual}
+        </p>
+      )}
+    </div>
   );
 }
