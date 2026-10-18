@@ -20,11 +20,13 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 
 ---
 
-> **PayBox Ch.1:** see [`docs/paybox-ch1.md`](docs/paybox-ch1.md) — the content
-> mandate for agentic commerce: `POST /api/x402/scan` (paid scan lane, x402
-> "exact" on Base + Base Sepolia) and the **PayBox Gauntlet** at
-> `/paybox` — six scenarios, one per rubric category, each injection
-> steering a real PayBox tool toward the vault.
+> **PayBox Ch.1 — submitted.** See [`docs/paybox-ch1.md`](docs/paybox-ch1.md)
+> — the content mandate for agentic commerce: `POST /api/x402/scan` (paid
+> scan lane, x402 "exact" on Base + Base Sepolia), the **PayBox Gauntlet**
+> at `/paybox` — six scenarios, one per rubric category, each injection
+> steering a real PayBox tool toward the vault — and the submitted
+> marketplace plugin in [`paybox-plugin/`](paybox-plugin) (`elcaro_scan`
+> x402 proposal + `elcaro_quick_scan` free verdict).
 >
 > **Swarmchasing entry — Elcaro Swarm.** After the OpenAI–Hugging Face
 > incident, investigators spent ~$400k and six days chasing a swarm of

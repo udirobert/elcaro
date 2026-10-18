@@ -83,3 +83,4 @@ uv.lock
 # redteam run journals (generated, not source)
 redteam/runs/
 data/
+demo-serv/clips/

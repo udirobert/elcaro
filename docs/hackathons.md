@@ -1,7 +1,25 @@
 # Hackathon Participation
 
-Elcaro is competing in four hackathons. The product is the same; this page
+Elcaro is competing in five hackathons. The product is the same; this page
 records the submission details for each.
+
+## MoonPay Hackathons — PayBox Chapter 1 — Oct 16–17, 2026
+
+- **Host:** Launchpad / MoonPay · online · ~$80k USDC pool (1st/2nd/3rd + 10
+  honorable mentions)
+- **Mission:** build a plugin for the PayBox marketplace — the agent-facing
+  app catalog over PayBox's non-custodial credential vault
+- **Window:** Fri Oct 16 8am → Sat Oct 17 8pm ET
+- **Positioning & plan:** [paybox-ch1.md](paybox-ch1.md) — "the content
+  mandate": PayBox scopes what agents may spend; Elcaro scopes what they
+  may believe. Wedge = content-level injection, upstream of every tx check.
+- **Submitted:** `paybox-plugin/dist/plugin.mjs` (MCP bundle, starter
+  v1.0.2) — 2 tools: `elcaro_scan` (x402 proposal → $0.01 USDC Base paid
+  scan) and `elcaro_quick_scan` (free HTTPS verdict). Portal checks passed;
+  entry submitted; privately installable under Unofficial plugins.
+- **Demo video:** `demo-video/paybox/final-60s.mp4` — X post outstanding.
+- **Surfaces:** `/api/x402/scan` paid lane (live, settled real payment);
+  `/paybox` gauntlet page (6 scenarios, one per rubric category).
 
 ## AI Swarm Dynamics Hackathon ("swarmchasing") — Oct 3–4, 2026
 

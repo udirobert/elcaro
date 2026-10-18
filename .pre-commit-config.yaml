@@ -12,6 +12,7 @@ repos:
           (?x)^(
             \.secrets\.baseline|
             eval/Cargo\.lock|
+            paybox-plugin/pnpm-lock\.yaml|
             videos/.*hyperframes\.lock\.json|
             \.venv/.*
           )$

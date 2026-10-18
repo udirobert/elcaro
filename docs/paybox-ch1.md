@@ -96,8 +96,30 @@ not just the wallet.
 
 - [x] /api/x402/scan paid lane (challenge, verify, proxy, receipt)
 - [x] /paybox gauntlet page (6 scenarios, live verdicts, scoreboard)
-- [ ] Deploy + set X402_PAYTO on Netlify (TELEGRAPH_X402_KEY fallback ok)
-- [ ] PayBox rehearsal: use_service poisoned → STOP →
-      request_account_change; clean → GO — confirm rail + passkey beats
-- [ ] Film + post 60s video to X
-- [ ] Submit plugin
+- [x] Deploy + set X402_PAYTO on Netlify — live-verified: real $0.01 USDC
+      payment on eip155:8453 settled, signed verdict returned
+- [x] PayBox rehearsal: `paybox use-service` → poisoned invoice →
+      dangerous/quarantined (risk 0.73, authority_framing); rail = Base exact
+- [ ] Film + post 60s video to X — filmed (`demo-video/paybox/final-60s.mp4`,
+      `final-hd.mp4` 68s); X post outstanding
+- [x] Submit plugin — `paybox-plugin/dist/plugin.mjs` uploaded + submitted
+      in dev portal ("Elcaro — content firewall for agents"), checks passed,
+      2 tools, host `api.elcaro.trustfall.xyz` configured
+
+## Submitted artifact (portal, 2026-10-17/18)
+
+`paybox-plugin/` — starter v1.0.2, Node 24 + pnpm 11.11.0, esbuild bundle
+`dist/plugin.mjs` (386 KB, sha256
+9dc0b6c26b11e02662edff2fae93730a544f36e45b86a0d845df725f50966023).
+Two MCP tools:
+
+- `elcaro_scan` — x402 transaction proposal: POST to
+  `elcaro.trustfall.xyz/api/x402/scan`, maxAmount 10000 atomic (0.01 USDC),
+  asset 0x833589fc…2913 on eip155:8453. PayBox validates the 402 challenge,
+  pays, returns the signed verdict.
+- `elcaro_quick_scan` — free HTTPS POST to `api.elcaro.trustfall.xyz/scan`
+  (4s timeout), structured verdict {risk_score, risk_level, quarantined,
+  flagged_techniques, summary, human_summary}.
+
+Portal state after submit: "Submitted — hackathon entry complete", privately
+installable under Unofficial plugins while under review.
