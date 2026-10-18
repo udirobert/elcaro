@@ -17,7 +17,8 @@ records the submission details for each.
   v1.0.2) — 2 tools: `elcaro_scan` (x402 proposal → $0.01 USDC Base paid
   scan) and `elcaro_quick_scan` (free HTTPS verdict). Portal checks passed;
   entry submitted; privately installable under Unofficial plugins.
-- **Demo video:** `demo-video/paybox/final-60s.mp4` — X post outstanding.
+- **Demo video:** `demo-video/paybox/final-60s.mp4` — posted:
+  https://x.com/papajimjams/status/2111607015940272471
 - **Surfaces:** `/api/x402/scan` paid lane (live, settled real payment);
   `/paybox` gauntlet page (6 scenarios, one per rubric category).
 

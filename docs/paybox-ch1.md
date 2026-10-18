@@ -100,8 +100,8 @@ not just the wallet.
       payment on eip155:8453 settled, signed verdict returned
 - [x] PayBox rehearsal: `paybox use-service` → poisoned invoice →
       dangerous/quarantined (risk 0.73, authority_framing); rail = Base exact
-- [ ] Film + post 60s video to X — filmed (`demo-video/paybox/final-60s.mp4`,
-      `final-hd.mp4` 68s); X post outstanding
+- [x] Film + post 60s video to X —
+      https://x.com/papajimjams/status/2111607015940272471
 - [x] Submit plugin — `paybox-plugin/dist/plugin.mjs` uploaded + submitted
       in dev portal ("Elcaro — content firewall for agents"), checks passed,
       2 tools, host `api.elcaro.trustfall.xyz` configured
