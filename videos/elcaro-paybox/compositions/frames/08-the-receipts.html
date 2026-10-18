@@ -1,0 +1,610 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+  </style>
+
+  <style>
+    /* ============================================================================
+       08-the-receipts — Code editorial · dataviz-countup (Reproduce, Problem variant)
+       Three data instruments traversed by ONE camera: the 5/5 counter is pushed
+       THROUGH into the $24,600 hero, which re-seats centre in a three-up row as the
+       two control stats flank it. Single-focus layout blueprint held throughout.
+
+       The figures are the real completed-run numbers from assets/paybox-stats.png;
+       the capture itself rides low as a blurred, dimmed evidence band (never a
+       legible second copy of the same numbers, never the whole page).
+
+       world (camera at scale 1 = final row seat is 0.92):
+         instr 1  5/5        centre x 960, numeral y 430, bars 560, label 700
+         hero     $24,600    centre x 960, numeral y 470, bar 556, label 612
+         cell 0   centre x 380 · cell 6  centre x 1540 · dividers x 640 / 1280
+         ghost band  y 690 .. 880 (source rows 545..735 at 1:1)
+       keep-out: nothing below y=900. Coral (#E5523D) is this frame's one voltage:
+       the hero fill + the last bar of the 5/5.
+       ========================================================================== */
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: satoshi, serif;
+      color: #fafaf8;
+    }
+    #root > .clip {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    /* ---------------- GROUND (track 0) -------------------------------------- */
+    [id="08-the-receipts-field"] {
+      position: absolute;
+      inset: 0;
+      background-color: #181515;
+      background-image: radial-gradient(
+        1500px 900px at 50% 38%,
+        #252120 0%,
+        #1f1c1b 46%,
+        #181515 100%
+      );
+    }
+    /* the real stat band, blurred + dimmed: texture, not a second readout */
+    [id="08-the-receipts-ghost"] {
+      position: absolute;
+      left: 0;
+      top: 690px;
+      width: 1920px;
+      height: 190px;
+      background-image: url("assets/paybox-stats.png");
+      background-repeat: no-repeat;
+      background-size: 1920px 1080px;
+      background-position: 0px -545px;
+      filter: blur(9px) grayscale(0.45) contrast(0.85);
+      opacity: 0;
+    }
+    [id="08-the-receipts-ghost-fade"] {
+      position: absolute;
+      left: 0;
+      top: 660px;
+      width: 1920px;
+      height: 240px;
+      background-image: linear-gradient(
+        to bottom,
+        rgba(24, 21, 21, 0.96) 0%,
+        rgba(24, 21, 21, 0.42) 42%,
+        rgba(24, 21, 21, 0.86) 100%
+      );
+    }
+
+    /* ---------------- CONTENT (track 1) ------------------------------------- */
+    [id="08-the-receipts-content"] {
+      z-index: 1;
+    }
+
+    /* chrome */
+    [id="08-the-receipts-kicker"],
+    [id="08-the-receipts-index"] {
+      position: absolute;
+      top: 70px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.15cqw;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(250, 250, 248, 0.5);
+      opacity: 0;
+    }
+    [id="08-the-receipts-kicker"] {
+      left: 81px;
+    }
+    [id="08-the-receipts-index"] {
+      right: 81px;
+      color: rgba(250, 250, 248, 0.3);
+    }
+    [id="08-the-receipts-spike"] {
+      display: block;
+      flex: none;
+    }
+
+    /* the camera: one wrapper, every phase is a scale on this box */
+    [id="08-the-receipts-cam"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 50% 44%;
+      will-change: transform;
+    }
+
+    /* shared stat typography */
+    [id$="-num"] {
+      display: block;
+      font-family: satoshi, serif;
+      font-weight: 900;
+      line-height: 0.86;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+      transform-origin: 50% 50%;
+    }
+    [id$="-lab"] {
+      position: absolute;
+      width: 640px;
+      margin-left: -320px;
+      top: 612px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.35cqw;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(250, 250, 248, 0.52);
+      text-align: center;
+      opacity: 0;
+    }
+
+    /* instrument 1 — 5/5 */
+    [id="08-the-receipts-i1"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      will-change: transform, opacity;
+    }
+    [id="08-the-receipts-i1-num"] {
+      position: absolute;
+      left: 0;
+      top: 330px;
+      width: 1920px;
+      text-align: center;
+      font-size: 9.5cqw;
+      color: #fafaf8;
+    }
+    [id="08-the-receipts-i1-num"] [id="08-the-receipts-i1-den"] {
+      color: rgba(250, 250, 248, 0.34);
+    }
+    [id="08-the-receipts-i1-lab"] {
+      left: 960px;
+      top: 700px;
+    }
+    /* growth bars — the paired graphic, landing on the count's ease */
+    [id="08-the-receipts-bars"] {
+      position: absolute;
+      left: 700px;
+      top: 560px;
+      width: 520px;
+      height: 96px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 22px;
+    }
+    [id^="08-the-receipts-bar-"] {
+      width: 46px;
+      height: 96px;
+      background-color: rgba(250, 250, 248, 0.5);
+      border-radius: 3px;
+      transform: scaleY(0);
+      transform-origin: bottom center;
+    }
+    [id="08-the-receipts-bar-5"] {
+      background-color: #e5523d;
+    }
+
+    /* hero — $24,600 */
+    [id="08-the-receipts-hero"] {
+      position: absolute;
+      left: 640px;
+      top: 0;
+      width: 640px;
+      height: 1080px;
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+    [id="08-the-receipts-hero-num"] {
+      position: absolute;
+      left: 0;
+      top: 384px;
+      width: 640px;
+      text-align: center;
+      font-size: 6.8cqw;
+    }
+    [id="08-the-receipts-hero-cur"] {
+      color: rgba(250, 250, 248, 0.44);
+    }
+    [id="08-the-receipts-hero-track"] {
+      position: absolute;
+      left: 10px;
+      top: 556px;
+      width: 620px;
+      height: 6px;
+      border-radius: 3px;
+      background-color: rgba(250, 250, 248, 0.12);
+      overflow: hidden;
+    }
+    [id="08-the-receipts-hero-fill"] {
+      width: 100%;
+      height: 100%;
+      background-color: #e5523d;
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+    [id="08-the-receipts-hero-lab"] {
+      left: 320px;
+    }
+
+    /* flanking cells */
+    [id="08-the-receipts-cell0"],
+    [id="08-the-receipts-cell6"] {
+      position: absolute;
+      top: 0;
+      width: 560px;
+      height: 1080px;
+    }
+    [id="08-the-receipts-cell0"] {
+      left: 100px;
+    }
+    [id="08-the-receipts-cell6"] {
+      left: 1260px;
+    }
+    [id="08-the-receipts-cell0-num"],
+    [id="08-the-receipts-cell6-num"] {
+      position: absolute;
+      left: 0;
+      top: 428px;
+      width: 560px;
+      text-align: center;
+      font-size: 4.6cqw;
+      color: rgba(250, 250, 248, 0.78);
+      opacity: 0;
+    }
+    [id="08-the-receipts-cell0-lab"] {
+      left: 280px;
+      width: 560px;
+      margin-left: -280px;
+    }
+    [id="08-the-receipts-cell6-lab"] {
+      left: 280px;
+      width: 560px;
+      margin-left: -280px;
+    }
+
+    /* row dividers */
+    [id="08-the-receipts-div-l"],
+    [id="08-the-receipts-div-r"] {
+      position: absolute;
+      top: 400px;
+      width: 1px;
+      height: 232px;
+      background-color: rgba(250, 250, 248, 0.14);
+      transform-origin: 50% 50%;
+      opacity: 0;
+    }
+    [id="08-the-receipts-div-l"] {
+      left: 640px;
+    }
+    [id="08-the-receipts-div-r"] {
+      left: 1280px;
+    }
+  </style>
+
+  <div data-hf-id="hf-qpjm"
+    id="root"
+    data-composition-id="08-the-receipts"
+    data-width="1920"
+    data-height="1080" data-duration="9.224"
+  >
+    <!-- ============ GROUND: navy plate + the blurred evidence band ============ -->
+    <div data-hf-id="hf-2k8r"
+      id="08-the-receipts-ground"
+      class="clip"
+      data-start="0"
+      data-duration="9.224"
+      data-track-index="0"
+    >
+      <div data-hf-id="hf-fd4k" id="08-the-receipts-field"></div>
+      <div data-hf-id="hf-tmmd" id="08-the-receipts-ghost"></div>
+      <div data-hf-id="hf-q9d4" id="08-the-receipts-ghost-fade"></div>
+    </div>
+
+    <!-- ============ CONTENT: the instrument tour ============ -->
+    <div data-hf-id="hf-2d2u"
+      id="08-the-receipts-content"
+      class="clip"
+      data-start="0"
+      data-duration="9.224"
+      data-track-index="1"
+    >
+      <div data-hf-id="hf-5pyb" id="08-the-receipts-kicker">
+        <svg data-hf-id="hf-gt2m"
+          id="08-the-receipts-spike"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <g data-hf-id="hf-4wfp" stroke="#e5523d" stroke-width="2.4" stroke-linecap="round">
+            <line data-hf-id="hf-ro96" x1="12" y1="3" x2="12" y2="21" />
+            <line data-hf-id="hf-pmta" x1="4.4" y1="7.6" x2="19.6" y2="16.4" />
+            <line data-hf-id="hf-5xn8" x1="19.6" y1="7.6" x2="4.4" y2="16.4" />
+          </g>
+        </svg>
+        <span data-hf-id="hf-dstx">the receipts</span>
+      </div>
+      <div data-hf-id="hf-r1y1" id="08-the-receipts-index">gauntlet run &middot; eip155:8453</div>
+
+      <div data-hf-id="hf-emc5" id="08-the-receipts-cam">
+        <!-- Scene 1 — 5/5 -->
+        <div data-hf-id="hf-hf4i" id="08-the-receipts-i1">
+          <div data-hf-id="hf-ga3x" id="08-the-receipts-i1-num">
+            <span data-hf-id="hf-ybv1" id="08-the-receipts-i1-val">0</span
+            ><span data-hf-id="hf-qe3j" id="08-the-receipts-i1-den">/5</span>
+          </div>
+          <div data-hf-id="hf-m48m" id="08-the-receipts-bars">
+            <div data-hf-id="hf-0rsx" id="08-the-receipts-bar-1"></div>
+            <div data-hf-id="hf-4pwy" id="08-the-receipts-bar-2"></div>
+            <div data-hf-id="hf-8o0z" id="08-the-receipts-bar-3"></div>
+            <div data-hf-id="hf-l6jg" id="08-the-receipts-bar-4"></div>
+            <div data-hf-id="hf-ly79" id="08-the-receipts-bar-5"></div>
+          </div>
+          <div data-hf-id="hf-ana4" id="08-the-receipts-i1-lab">attacks stopped</div>
+        </div>
+
+        <!-- Scene 2 — the hero metric, pushed THROUGH the 5/5 -->
+        <div data-hf-id="hf-51ps" id="08-the-receipts-hero">
+          <div data-hf-id="hf-qpaf" id="08-the-receipts-hero-num">
+            <span data-hf-id="hf-nwui" id="08-the-receipts-hero-cur">$</span
+            ><span data-hf-id="hf-v1qj" id="08-the-receipts-hero-val">0</span>
+          </div>
+          <div data-hf-id="hf-krqi" id="08-the-receipts-hero-track">
+            <div data-hf-id="hf-7blm" id="08-the-receipts-hero-fill"></div>
+          </div>
+          <div data-hf-id="hf-tedc" id="08-the-receipts-hero-lab">protected</div>
+        </div>
+
+        <div data-hf-id="hf-zzti" id="08-the-receipts-div-l"></div>
+        <div data-hf-id="hf-xl8w" id="08-the-receipts-div-r"></div>
+
+        <!-- Scene 3 — the control -->
+        <div data-hf-id="hf-5dro" id="08-the-receipts-cell0">
+          <div data-hf-id="hf-hfap" id="08-the-receipts-cell0-num">0</div>
+          <div data-hf-id="hf-i8pl" id="08-the-receipts-cell0-lab">false positives</div>
+        </div>
+
+        <!-- Scene 4 — the last cell lands on the final cue -->
+        <div data-hf-id="hf-ox56" id="08-the-receipts-cell6">
+          <div data-hf-id="hf-zm7z" id="08-the-receipts-cell6-num">0</div>
+          <div data-hf-id="hf-3fez" id="08-the-receipts-cell6-lab">paid calls via vault</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FRAME_ID = "08-the-receipts";
+      var sel = function (name) {
+        return document.getElementById(FRAME_ID + "-" + name);
+      };
+
+      var tl = gsap.timeline({ paused: true });
+
+      var cam = sel("cam");
+
+      /* ============ SCENE 1 (0.0-1.7) — "Five for five" @0.10-1.35,
+         the second "five" @1.00: the counter is the whole frame. ============ */
+      tl.fromTo(
+        sel("kicker"),
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        0.05,
+      );
+      tl.fromTo(
+        sel("index"),
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        0.14,
+      );
+      tl.fromTo(
+        sel("ghost"),
+        { opacity: 0 },
+        { opacity: 0.22, duration: 1.1, ease: "power1.out" },
+        0.3,
+      );
+
+      /* counting-dynamic-scale: proxy value + scale on the SAME ease/duration.
+         COUNT_DUR 0.85s — the eye has to read the digits going past. */
+      var C1 = { v: 0 };
+      var C1_DUR = 0.85;
+      tl.fromTo(
+        sel("i1-num"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.2, ease: "none" },
+        0.16,
+      );
+      tl.to(
+        C1,
+        {
+          v: 5,
+          duration: C1_DUR,
+          ease: "power3.out",
+          onUpdate: function () {
+            sel("i1-val").textContent = String(Math.round(C1.v));
+          },
+        },
+        0.2,
+      );
+      tl.fromTo(
+        sel("i1-num"),
+        { scale: 0.58 },
+        { scale: 1, duration: C1_DUR, ease: "power3.out" },
+        0.2,
+      );
+      /* the paired graphic lands with the count, not after it */
+      tl.to(
+        [sel("bar-1"), sel("bar-2"), sel("bar-3"), sel("bar-4"), sel("bar-5")],
+        { scaleY: 1, duration: 0.45, ease: "power3.out", stagger: 0.08 },
+        0.22,
+      );
+      tl.fromTo(
+        sel("i1-lab"),
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        0.42,
+      );
+      /* the denominator is punctuation — it arrives once the number has landed */
+      tl.fromTo(
+        sel("i1-den"),
+        { opacity: 0, y: 22 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "back.out(1.6)" },
+        1.05,
+      );
+
+      /* ============ SCENE 2 (1.7-4.3) — "$24,600 protected" @1.71-3.90.
+         multi-phase-camera phase 1: PUSH THROUGH the centre of the 5/5. The
+         instrument flies past the frame on its own scale while the camera leans in,
+         and the hero resolves out of the push at the same centre. ============ */
+      tl.to(
+        cam,
+        { scale: 1.45, duration: 0.9, ease: "power2.inOut" },
+        1.7,
+      );
+      tl.to(
+        sel("i1"),
+        { scale: 1.75, duration: 0.9, ease: "power2.in" },
+        1.7,
+      );
+      tl.to(sel("i1"), { opacity: 0, duration: 0.42, ease: "power1.in" }, 1.78);
+
+      tl.fromTo(
+        sel("hero"),
+        { opacity: 0, scale: 1.3 },
+        { opacity: 1, scale: 1, duration: 0.9, ease: "power3.out" },
+        2.05,
+      );
+
+      var H = { v: 0 };
+      var H_START = 2.1;
+      var H_DUR = 1.25;
+      tl.to(
+        H,
+        {
+          v: 24600,
+          duration: H_DUR,
+          ease: "power3.out",
+          onUpdate: function () {
+            sel("hero-val").textContent = Math.round(H.v).toLocaleString("en-US");
+          },
+        },
+        H_START,
+      );
+      tl.fromTo(
+        sel("hero-num"),
+        { scale: 0.74 },
+        { scale: 1, duration: H_DUR, ease: "power3.out" },
+        H_START,
+      );
+      tl.fromTo(
+        sel("hero-cur"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power1.out" },
+        H_START,
+      );
+      tl.fromTo(
+        sel("hero-lab"),
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        3.44,
+      );
+      /* stat-bars-and-fills (bar form): the fill runs AFTER the number lands —
+         the count gets its own beat, the wipe closes it. */
+      tl.fromTo(
+        sel("hero-track"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "none" },
+        3.40,
+      );
+      tl.to(sel("hero-fill"), { scaleX: 1, duration: 0.7, ease: "power2.out" }, 3.5);
+
+      /* ============ SCENE 3 (4.3-6.3) — "zero false positives" @4.54-5.80.
+         Bookend-pull: the camera eases back OUT to the wider seat, which is where
+         the three-up row lives. The control stat is muted on purpose — a
+         false-positive counter that glowed would sell the wrong thing. ============ */
+      tl.to(cam, { scale: 0.92, duration: 0.85, ease: "power2.inOut" }, 4.3);
+      tl.fromTo(
+        [sel("div-l"), sel("div-r")],
+        { opacity: 0, scaleY: 0.2 },
+        { opacity: 1, scaleY: 1, duration: 0.6, ease: "power2.inOut" },
+        4.42,
+      );
+      tl.fromTo(
+        sel("cell0-num"),
+        { opacity: 0, y: 16, scale: 0.88 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: "power3.out" },
+        4.54,
+      );
+      tl.fromTo(
+        sel("cell0-lab"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+        5.0,
+      );
+
+      /* ============ SCENE 4 (6.3-8.824) — "six gates" @6.31-7.10,
+         "paid through the vault" @7.60-8.50: the last cell completes the row. ==== */
+      var S = { v: 0 };
+      tl.to(
+        S,
+        {
+          v: 6,
+          duration: 0.7,
+          ease: "power2.out",
+          onUpdate: function () {
+            sel("cell6-num").textContent = String(Math.round(S.v));
+          },
+        },
+        6.55,
+      );
+      tl.fromTo(
+        sel("cell6-num"),
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 0.7, ease: "power2.out" },
+        6.55,
+      );
+      tl.fromTo(
+        sel("cell6-lab"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.28, ease: "power2.out" },
+        8.38,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

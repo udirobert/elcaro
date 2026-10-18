@@ -1,0 +1,425 @@
+<template>
+  <style>
+    /* Fonts ship as local woff2 files (assets/fonts/) — frame.md's sanctioned
+       @font-face block, plus un-ranged latin faces so the mono chips resolve
+       the shipped subset instead of a generic fallback. */
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+    }
+
+    /* ── [bg] flat warm-dark field, its own clip layer ── */
+    .f02-ground {
+      position: absolute;
+      inset: 0;
+      background-color: #181515;
+      background-image: radial-gradient(
+        1400px 860px at 50% 30%,
+        #1f1c1b 0%,
+        #181515 62%,
+        #181515 100%
+      );
+    }
+
+    /* ── stage ── */
+    .f02-stage {
+      position: absolute;
+      inset: 0;
+    }
+
+    .f02-line {
+      display: block;
+      white-space: nowrap;
+    }
+    .f02-w {
+      display: inline-block;
+    }
+
+    /* ── the pinned anchor: enters once, never moves again ── */
+    .f02-anchor {
+      position: absolute;
+      top: 100px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: satoshi, serif;
+      font-weight: 400;
+      font-size: 5.2cqw;
+      line-height: 1.06;
+      letter-spacing: -0.022em;
+      color: rgba(250, 250, 248, 0.88);
+    }
+    .f02-accent {
+      color: #e5523d;
+    }
+    /* discrete-sequence states are written by the driver, never by a tween */
+    .f02-tail {
+      opacity: 0;
+    }
+
+    /* ── section rule: the boundary of the cycling region ── */
+    .f02-rail {
+      position: absolute;
+      top: 452px;
+      left: 384px;
+      width: 1152px;
+      height: 1px;
+      background: rgba(250, 250, 248, 0.14);
+      transform-origin: 50% 50%;
+      opacity: 0;
+    }
+
+    /* ── the cycling object slot (fixed, bounded, never touches the anchor) ── */
+    .f02-cycle {
+      position: absolute;
+      top: 500px;
+      left: 0;
+      right: 0;
+      height: 98px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+    }
+    .f02-slot {
+      width: 560px;
+      min-width: 560px;
+      height: 98px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid rgba(250, 250, 248, 0.14);
+      border-right: 1px solid rgba(250, 250, 248, 0.14);
+    }
+    .f02-slot-word {
+      font-family: satoshi, serif;
+      font-weight: 400;
+      font-style: italic;
+      font-size: 3.5cqw;
+      line-height: 1;
+      letter-spacing: -0.012em;
+      white-space: nowrap;
+      color: #fafaf8;
+    }
+
+    /* ── accumulating mono chip row (cleared nouns) ── */
+    .f02-chips {
+      position: absolute;
+      top: 636px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+    }
+    .f02-chip {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      padding: 11px 20px 12px;
+      border: 1px solid rgba(250, 250, 248, 0.14);
+      border-radius: 9999px;
+      background: rgba(250, 250, 248, 0.05);
+      color: rgba(250, 250, 248, 0.72);
+      transform-origin: 50% 50%;
+    }
+
+    /* ── ambient bloom behind the resolving line — ink/cream, never a new hue,
+          and bounded so it never reaches the anchor or the caption band ── */
+    .f02-bloom {
+      position: absolute;
+      top: 450px;
+      left: 235px;
+      width: 1450px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(
+        closest-side,
+        rgba(250, 250, 248, 0.085) 0%,
+        rgba(250, 250, 248, 0.035) 52%,
+        rgba(250, 250, 248, 0) 78%
+      );
+      opacity: 0;
+    }
+
+    /* ── the resolving dominant line ── */
+    .f02-resolve {
+      position: absolute;
+      top: 486px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: satoshi, serif;
+      font-weight: 400;
+      font-size: 6.6cqw;
+      line-height: 1.04;
+      letter-spacing: -0.018em;
+      color: #fafaf8;
+    }
+    .f02-resolve .f02-em {
+      font-style: italic;
+    }
+  </style>
+
+  <div data-hf-id="hf-r0qk" id="root" data-composition-id="02-reads-what-it-reads" data-width="1920" data-height="1080" data-duration="9.881">
+    <!-- [bg] full-bleed ground on its own clip layer, never on #root -->
+    <div data-hf-id="hf-8xjk"
+      class="clip f02-ground"
+      data-start="0"
+      data-duration="9.881"
+      data-track-index="0"
+    ></div>
+
+    <div data-hf-id="hf-lxqc"
+      class="clip f02-stage"
+      data-start="0"
+      data-duration="9.881"
+      data-track-index="1"
+    >
+      <!-- Scene 1 + 2 — the pinned anchor line. All words are laid out from t=0
+           (revealed by opacity), so the block can never reflow or drift. -->
+      <div data-hf-id="hf-q6um" class="f02-anchor">
+        <span data-hf-id="hf-271m" class="f02-line"
+          ><span data-hf-id="hf-qp5k" class="f02-w" id="f02-a1">Elcaro</span>
+          <span data-hf-id="hf-v60y" class="f02-w" id="f02-a2">reads</span></span
+        >
+        <span data-hf-id="hf-0smm" class="f02-line"
+          ><span data-hf-id="hf-aawe" class="f02-w" id="f02-a3">what</span>
+          <span data-hf-id="hf-ey9s" class="f02-w" id="f02-a4">your</span>
+          <span data-hf-id="hf-xpaf" class="f02-w" id="f02-a5">agent</span>
+          <span data-hf-id="hf-mtau" class="f02-w" id="f02-a6">reads</span></span
+        >
+        <span data-hf-id="hf-16xn" class="f02-line"
+          ><span data-hf-id="hf-xypq" class="f02-w f02-tail">—</span>
+          <span data-hf-id="hf-okxl" class="f02-w f02-tail">before</span>
+          <span data-hf-id="hf-3dtf" class="f02-w f02-tail">it</span>
+          <span data-hf-id="hf-io5w" class="f02-w f02-tail f02-accent">acts</span></span
+        >
+      </div>
+
+      <div data-hf-id="hf-9k5y" class="f02-rail" id="f02-rail"></div>
+
+      <!-- Scene 3 — in-place token cycle in a bounded slot beneath the rail -->
+      <div data-hf-id="hf-2f8g" class="f02-cycle" id="f02-cycle">
+        <div data-hf-id="hf-2kf1" class="f02-slot">
+          <span data-hf-id="hf-q8sf" class="f02-slot-word" id="f02-slot-word"></span>
+        </div>
+      </div>
+
+      <!-- Scene 3 — cleared nouns accumulate as mono chips -->
+      <div data-hf-id="hf-sz42" class="f02-chips" id="f02-chips">
+        <div data-hf-id="hf-uaug" class="f02-chip" id="f02-chip-0">emails</div>
+        <div data-hf-id="hf-9fco" class="f02-chip" id="f02-chip-1">pages</div>
+        <div data-hf-id="hf-lozd" class="f02-chip" id="f02-chip-2">plugins</div>
+        <div data-hf-id="hf-nt3l" class="f02-chip" id="f02-chip-3">transcripts</div>
+      </div>
+
+      <!-- Scene 4 — soft radial bloom + the dominant resolving line -->
+      <div data-hf-id="hf-kwqy" class="f02-bloom" id="f02-bloom"></div>
+      <div data-hf-id="hf-iw5b" class="f02-resolve">
+        <span data-hf-id="hf-1l8o" class="f02-line"
+          ><span data-hf-id="hf-5c1y" class="f02-w" id="f02-r1">the</span>
+          <span data-hf-id="hf-tjsh" class="f02-w" id="f02-r2">words</span>
+          <span data-hf-id="hf-rsfc" class="f02-w" id="f02-r3">that</span>
+          <span data-hf-id="hf-fd4t" class="f02-w" id="f02-r4">turn</span></span
+        >
+        <span data-hf-id="hf-yt3h" class="f02-line"
+          ><span data-hf-id="hf-m250" class="f02-w" id="f02-r5">an</span>
+          <span data-hf-id="hf-q42d" class="f02-w" id="f02-r6">agent</span>
+          <span data-hf-id="hf-t4bn" class="f02-w" id="f02-r7">into</span>
+          <span data-hf-id="hf-wodd" class="f02-w" id="f02-r8">a</span>
+          <span data-hf-id="hf-olci" class="f02-w f02-em" id="f02-r9">thief</span></span
+        >
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FRAME_ID = "02-reads-what-it-reads";
+      var DURATION = 9.381;
+
+      var tl = gsap.timeline({ paused: true });
+
+      // ─────────────────────────────────────────────────────────────
+      // Scene 1 (0.0–2.2) — anchor builds word-by-word on its spoken
+      // cues (dynamic-content-sequencing: per-item cue times, pre-placed
+      // so the pinned line never re-lays-out).
+      // ─────────────────────────────────────────────────────────────
+      var ANCHOR_CUES = [
+        ["#f02-a1", 0.07],
+        ["#f02-a2", 1.16],
+        ["#f02-a3", 1.37],
+        ["#f02-a4", 1.53],
+        ["#f02-a5", 1.69],
+        ["#f02-a6", 2.14],
+      ];
+      ANCHOR_CUES.forEach(function (cue) {
+        tl.fromTo(
+          cue[0],
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" },
+          cue[1],
+        );
+      });
+
+      // ─────────────────────────────────────────────────────────────
+      // discrete-text-sequence driver — one linear proxy on the timeline;
+      // every HARD-CUT state (the appended tail rail, the cycling object
+      // slot) is a reverse-search over a sparse state array. No tweening
+      // between states: the jumps are instant.
+      // ─────────────────────────────────────────────────────────────
+      // Scene 2 (2.2–3.4) — "— before it acts" appends on the same rail;
+      // the accent lands on "acts" at 2.87.
+      var TAIL_STATES = [
+        { t: 0.0, n: 0 },
+        { t: 2.23, n: 2 }, // "—" + "before"
+        { t: 2.69, n: 3 }, // + "it"
+        { t: 2.87, n: 4 }, // + "acts" (coral)
+      ];
+      // Scene 3 (3.4–5.9) — one swap per spoken noun; the block clears at 5.99.
+      var SLOT_STATES = [
+        { t: 0.0, text: "" },
+        { t: 3.42, text: "emails" },
+        { t: 3.96, text: "pages" },
+        { t: 4.44, text: "plugins" },
+        { t: 4.88, text: "transcripts" },
+        { t: 5.99, text: "" },
+      ];
+
+      function stateAt(states, time) {
+        for (var i = states.length - 1; i >= 0; i--) {
+          if (time >= states[i].t) return states[i];
+        }
+        return states[0];
+      }
+
+      var tailEls = Array.prototype.slice.call(document.querySelectorAll(".f02-tail"));
+      var slotEl = document.getElementById("f02-slot-word");
+      var lastTailN = -1;
+      var lastSlotText = null;
+
+      function syncDiscrete(time) {
+        var tailN = stateAt(TAIL_STATES, time).n;
+        if (tailN !== lastTailN) {
+          for (var i = 0; i < tailEls.length; i++) {
+            tailEls[i].style.opacity = i < tailN ? "1" : "0";
+          }
+          lastTailN = tailN;
+        }
+        var text = stateAt(SLOT_STATES, time).text;
+        if (text !== lastSlotText) {
+          slotEl.textContent = text;
+          lastSlotText = text;
+        }
+      }
+
+      var driver = { t: 0 };
+      syncDiscrete(0); // deterministic initial state, before the first seek
+      tl.to(
+        driver,
+        {
+          t: DURATION,
+          duration: DURATION,
+          ease: "none",
+          onUpdate: function () {
+            syncDiscrete(driver.t);
+          },
+        },
+        0,
+      );
+
+      // Scene 2 — the hairline rule draws on as the tail lands (marks the
+      // boundary the cycling slot stays behind).
+      tl.fromTo(
+        "#f02-rail",
+        { opacity: 0, scaleX: 0 },
+        { opacity: 1, scaleX: 1, duration: 0.62, ease: "power3.out" },
+        2.23,
+      );
+
+      // Scene 3 — the slot opens, then rolls the call.
+      tl.fromTo(
+        "#f02-cycle",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.28, ease: "power2.out" },
+        3.3,
+      );
+
+      // Each cleared noun spring-pops into the chip row (restrained, no bounce).
+      var CHIP_CUES = [
+        ["#f02-chip-0", 3.96],
+        ["#f02-chip-1", 4.44],
+        ["#f02-chip-2", 4.88],
+        ["#f02-chip-3", 5.6],
+      ];
+      CHIP_CUES.forEach(function (cue) {
+        tl.fromTo(
+          cue[0],
+          { opacity: 0, scale: 0.72, y: 8 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.34, ease: "power3.out" },
+          cue[1],
+        );
+      });
+
+      // Scene 4 (5.9–9.381) — the cycle + chip row clear; the anchor stays pinned.
+      tl.to(
+        "#f02-cycle",
+        { opacity: 0, duration: 0.18, ease: "power1.in" },
+        5.99,
+      );
+      tl.to(
+        "#f02-chips",
+        { opacity: 0, duration: 0.18, ease: "power1.in" },
+        5.99,
+      );
+
+      // Ambient bloom — soft radial, un-triggered, long-tail settle into the hold.
+      tl.fromTo(
+        "#f02-bloom",
+        { opacity: 0, scale: 1.06 },
+        { opacity: 1, scale: 1, duration: 2.3, ease: "power2.out" },
+        6.85,
+      );
+
+      // The resolving dominant line — each word on its spoken cue, then holds still.
+      var RESOLVE_CUES = [
+        ["#f02-r1", 6.93, 0.3],
+        ["#f02-r2", 7.1, 0.3],
+        ["#f02-r3", 7.47, 0.3],
+        ["#f02-r4", 7.66, 0.3],
+        ["#f02-r5", 7.92, 0.28],
+        ["#f02-r6", 8.05, 0.3],
+        ["#f02-r7", 8.38, 0.28],
+        ["#f02-r8", 8.63, 0.26],
+        ["#f02-r9", 8.69, 0.46],
+      ];
+      RESOLVE_CUES.forEach(function (cue) {
+        tl.fromTo(
+          cue[0],
+          { opacity: 0, y: 22 },
+          { opacity: 1, y: 0, duration: cue[2], ease: "power3.out" },
+          cue[1],
+        );
+      });
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+      tl.seek(0);
+    })();
+  </script>
+</template>

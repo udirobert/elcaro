@@ -1,0 +1,383 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+
+    /* ---- root: sizing box only, NO background here (ground rides on its own clip) ---- */
+    #root{
+      position:absolute; inset:0;
+      width:1920px; height:1080px; overflow:hidden;
+      font-family:satoshi, serif;
+      color:#FAFAF8;
+    }
+
+    /* full-bleed ground = its own clip layer, never on #root */
+    .ac-bg{
+      position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(250,250,248,0.030) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(250,250,248,0.030) 1px, transparent 1px),
+        radial-gradient(1240px 860px at 38% 42%, #1F1C1B 0%, #181515 64%);
+      background-size:64px 64px, 64px 64px, 100% 100%;
+    }
+
+    /* the camera scene: overflow hidden, world lives inside */
+    .ac-stage{ position:absolute; inset:0; overflow:hidden; }
+    .ac-world{
+      position:absolute; inset:0;
+      transform-origin:50% 50%;
+      will-change:transform;
+    }
+
+    /* ---- kicker / spike ---- */
+    .ac-kicker{
+      position:absolute; left:100px; top:88px;
+      display:flex; align-items:center; gap:14px;
+      font-family:"JetBrains Mono", monospace;
+      font-size:25px; font-weight:500;
+      letter-spacing:0.16em; text-transform:uppercase;
+      color:#FAFAF8;
+    }
+    .ac-kicker .ac-spike{ display:block; }
+    .ac-kicker .ac-kick-dim{ color:rgba(250,250,248,0.42); }
+
+    /* ---- Scene 1: struck negation pill (exits fast) ---- */
+    .ac-reject{
+      position:absolute; left:100px; top:162px;
+      display:flex; align-items:center; gap:16px;
+      padding:16px 30px;
+      border-radius:9999px;
+      background:rgba(37,33,32,0.82);
+      border:1px solid rgba(250,250,248,0.14);
+      will-change:transform, filter, opacity;
+    }
+    .ac-reject .ac-x{ font-family:"JetBrains Mono", monospace; font-size:26px; color:rgba(250,250,248,0.5); line-height:1; }
+    .ac-reject .ac-rej-text{
+      font-family:satoshi, serif; font-size:27px; font-weight:400;
+      color:rgba(250,250,248,0.62);
+      text-decoration:line-through; text-decoration-thickness:2px;
+      text-decoration-color:rgba(250,250,248,0.5);
+    }
+
+    /* ---- Scene 2: terminal code-surface ---- */
+    .ac-term{
+      position:absolute; left:100px; top:286px;
+      width:1150px; height:450px;
+      display:flex; flex-direction:column;
+      background:#181515;
+      border:1px solid rgba(250,250,248,0.14);
+      border-radius:8px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.5), 0 10px 28px rgba(0,0,0,0.32);
+      overflow:hidden;
+      will-change:transform, opacity;
+    }
+    .ac-term-bar{
+      display:flex; align-items:center; gap:12px;
+      height:60px; padding:0 30px;
+      background:#252120;
+      border-bottom:1px solid rgba(250,250,248,0.10);
+      font-family:"JetBrains Mono", monospace; font-size:22px; font-weight:500;
+      letter-spacing:0.04em; color:rgba(250,250,248,0.62);
+    }
+    .ac-term-bar .ac-dots{ display:flex; gap:8px; margin-right:8px; }
+    .ac-term-bar .ac-dots i{ width:11px; height:11px; border-radius:9999px; background:rgba(250,250,248,0.18); }
+    .ac-term-bar .ac-file{ color:#FAFAF8; }
+    .ac-term-bar .ac-where{ color:rgba(250,250,248,0.4); margin-left:auto; }
+    .ac-term-body{ padding:28px 34px 0 34px; flex:1; }
+
+    .ac-cmd{
+      font-family:"JetBrains Mono", monospace;
+      font-size:30px; font-weight:400; line-height:1.5;
+      color:#FAFAF8; white-space:pre-wrap; letter-spacing:0.005em;
+    }
+    .ac-prompt{ color:#5DB872; margin-right:14px; }
+    .ac-typed{ }
+    .ac-caret{
+      display:inline-block; width:12px; height:34px;
+      margin-left:4px; vertical-align:-6px;
+      background:#FAFAF8;
+    }
+
+    .ac-output{
+      margin-top:34px; padding-top:22px;
+      border-top:1px solid rgba(250,250,248,0.10);
+      min-height:70px;
+      font-family:"JetBrains Mono", monospace;
+      font-size:30px; font-weight:500; line-height:1.4; letter-spacing:0.01em;
+      white-space:nowrap;
+    }
+    .ac-word{ display:inline-block; will-change:transform, opacity; }
+    .ac-w-pay{ color:rgba(250,250,248,0.72); }
+    .ac-w-ok{ color:#5DB872; }
+    .ac-w-dot{ color:rgba(250,250,248,0.30); }
+    .ac-w-chain{ color:#5DB8A6; }
+    .ac-w-amt{ color:#E8A55A; }
+    .ac-w-via{ color:rgba(250,250,248,0.72); }
+    .ac-kw{ --kw-glow:0; color:#FAFAF8; white-space:nowrap;
+      text-shadow:0 0 calc(28px * var(--kw-glow)) rgba(229,82,61,0.9),
+                  0 0 calc(10px * var(--kw-glow)) rgba(229,82,61,0.75);
+    }
+
+    /* ---- Scene 3: settlement chip beside the vault ---- */
+    .ac-chip{
+      position:absolute; left:1290px; top:320px;
+      width:530px; height:320px;
+      padding:30px 40px;
+      display:flex; flex-direction:column; justify-content:space-between;
+      background:#252120;
+      border:1px solid rgba(250,250,248,0.14);
+      border-radius:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.5), 0 10px 28px rgba(0,0,0,0.32);
+      will-change:transform, opacity;
+    }
+    .ac-chip-kick{
+      font-family:"JetBrains Mono", monospace;
+      font-size:22px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase;
+      color:rgba(250,250,248,0.55);
+    }
+    .ac-chip-num{
+      align-self:flex-start;
+      width:450px;                 /* fixed-width container — no reflow as digits change */
+      font-family:satoshi, serif; font-weight:400;
+      font-size:150px; line-height:0.9; letter-spacing:-0.025em;
+      font-variant-numeric:tabular-nums;
+      color:#FAFAF8;
+      transform-origin:left center;
+      will-change:transform;
+    }
+    .ac-chip-rule{ height:1px; background:rgba(250,250,248,0.14); }
+    .ac-chip-vault{ display:flex; align-items:baseline; gap:14px; }
+    .ac-chip-vault .ac-vlab{
+      font-family:"JetBrains Mono", monospace; font-size:20px; font-weight:500;
+      letter-spacing:0.16em; text-transform:uppercase; color:rgba(250,250,248,0.45);
+    }
+    .ac-chip-vault .ac-vaddr{
+      font-family:"JetBrains Mono", monospace; font-size:26px; font-weight:400;
+      letter-spacing:0.02em; color:#5DB8A6;
+    }
+
+    /* ---- footer chrome (mono, above keep-out) ---- */
+    .ac-foot{
+      position:absolute; left:100px; top:816px;
+      width:1720px;
+      display:flex; align-items:center; gap:22px;
+      padding-top:16px;
+      border-top:1px solid rgba(250,250,248,0.12);
+      font-family:"JetBrains Mono", monospace;
+      font-size:23px; font-weight:400; letter-spacing:0.08em;
+      color:rgba(250,250,248,0.42);
+    }
+    .ac-foot .ac-f-sep{ color:rgba(250,250,248,0.22); }
+  </style>
+
+  <div data-hf-id="hf-50sl" id="root" data-composition-id="03-a-cent-through-the-vault" data-width="1920" data-height="1080" data-duration="7.598">
+    <div data-hf-id="hf-69qd" class="ac-bg clip" data-start="0" data-duration="7.598" data-track-index="0"></div>
+
+    <div data-hf-id="hf-v6rb" class="ac-stage clip" data-start="0" data-duration="7.598" data-track-index="1">
+      <div data-hf-id="hf-u8au" class="ac-world" id="ac-world">
+
+        <!-- eyebrow: kicker-spike, opens the frame -->
+        <div data-hf-id="hf-qlk2" class="ac-kicker" id="ac-kicker">
+          <svg data-hf-id="hf-1b2v" class="ac-spike" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <g data-hf-id="hf-iprp" stroke="#E5523D" stroke-width="2.4" stroke-linecap="round">
+              <line data-hf-id="hf-ro96" x1="12" y1="3" x2="12" y2="21"/>
+              <line data-hf-id="hf-pmta" x1="4.4" y1="7.6" x2="19.6" y2="16.4"/>
+              <line data-hf-id="hf-5xn8" x1="19.6" y1="7.6" x2="4.4" y2="16.4"/>
+            </g>
+          </svg>
+          <span data-hf-id="hf-a8gv">x402&nbsp;<span data-hf-id="hf-utr1" class="ac-kick-dim">paid call</span></span>
+        </div>
+
+        <!-- Scene 1: negation pill -->
+        <div data-hf-id="hf-18y2" class="ac-reject" id="ac-reject">
+          <span data-hf-id="hf-xhzh" class="ac-x">&#10005;</span>
+          <span data-hf-id="hf-boy0" class="ac-rej-text">bolt-on filter</span>
+        </div>
+
+        <!-- Scene 2 + 3: terminal -->
+        <div data-hf-id="hf-vpqc" class="ac-term" id="ac-term">
+          <div data-hf-id="hf-pj9z" class="ac-term-bar">
+            <span data-hf-id="hf-8csa" class="ac-dots"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i><i data-hf-id="hf-y7e5"></i></span>
+            <span data-hf-id="hf-j8n3" class="ac-file">paybox</span>
+            <span data-hf-id="hf-9g4m" class="ac-where">eip155:8453</span>
+          </div>
+          <div data-hf-id="hf-dcys" class="ac-term-body">
+            <div data-hf-id="hf-tar3" class="ac-cmd"><span data-hf-id="hf-tpic" class="ac-prompt">$</span><span data-hf-id="hf-46gv" class="ac-typed" id="ac-typed"></span><span data-hf-id="hf-wbpn" class="ac-caret" id="ac-caret"></span></div>
+
+            <div data-hf-id="hf-c94q" class="ac-output" id="ac-output">
+              <span data-hf-id="hf-wr15" class="ac-word ac-w-pay">pay&nbsp;:</span>
+              <span data-hf-id="hf-xvoq" class="ac-word ac-w-ok">succeeded</span>
+              <span data-hf-id="hf-57jp" class="ac-word ac-w-dot">&middot;</span>
+              <span data-hf-id="hf-hhz5" class="ac-word ac-w-chain">eip155:8453</span>
+              <span data-hf-id="hf-b99l" class="ac-word ac-w-dot">&middot;</span>
+              <span data-hf-id="hf-prgs" class="ac-word ac-w-amt">$0.01</span>
+              <span data-hf-id="hf-cw4n" class="ac-word ac-w-via">via</span>
+              <span data-hf-id="hf-nma6" class="ac-word ac-kw" id="ac-kw">vault</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scene 3: settlement chip beside the vault -->
+        <div data-hf-id="hf-ay18" class="ac-chip" id="ac-chip">
+          <div data-hf-id="hf-9hxn" class="ac-chip-kick">settled</div>
+          <div data-hf-id="hf-jduj" class="ac-chip-num" id="ac-chipnum">$0.00</div>
+          <div data-hf-id="hf-9lhm" class="ac-chip-rule"></div>
+          <div data-hf-id="hf-cygc" class="ac-chip-vault">
+            <span data-hf-id="hf-9orf" class="ac-vlab">vault</span>
+            <span data-hf-id="hf-ngir" class="ac-vaddr">$EVM</span>
+          </div>
+        </div>
+
+      </div>
+
+        <!-- footer chrome: fixed HUD, lives OUTSIDE the camera world so the
+             focus-lock zoom never pushes it under the caption keep-out -->
+        <div data-hf-id="hf-djdo" class="ac-foot" id="ac-foot">
+          <span data-hf-id="hf-ohxm">paybox</span>
+          <span data-hf-id="hf-5mb4" class="ac-f-sep">/</span>
+          <span data-hf-id="hf-84bj">x402</span>
+          <span data-hf-id="hf-f760" class="ac-f-sep">/</span>
+          <span data-hf-id="hf-9dhg">1&nbsp;call&nbsp;&middot;&nbsp;1&nbsp;cent</span>
+        </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var tl = gsap.timeline({ paused: true });
+
+      var world   = document.getElementById("ac-world");
+      var typed   = document.getElementById("ac-typed");
+      var caret   = document.getElementById("ac-caret");
+      var chipnum = document.getElementById("ac-chipnum");
+      var kw      = document.getElementById("ac-kw");
+
+      /* ---------------------------------------------------------------
+         Camera (viewport-change): single .world wrapper, single cam obj,
+         ONE writer. Focus-lock target = settlement chip center.
+         chip left:1290 top:320 w:530 h:320 -> center (1555, 480)
+         viewport center (960, 540) -> offset (595, -60)
+         single-wrapper counter-translate: T = -offset * S
+      --------------------------------------------------------------- */
+      var TARGET_SCALE = 1.14;
+      var CHIP_OFFX = 1555 - 960;   // 595
+      var CHIP_OFFY = 480 - 540;    // -60
+      var cam = { scale: 1, x: 0, y: 0 };
+      function applyCamera() {
+        world.style.transform =
+          "translate(" + cam.x + "px, " + cam.y + "px) scale(" + cam.scale + ")";
+      }
+      applyCamera(); // seed frame 0 = neutral
+
+      /* ---------------------------------------------------------------
+         Scene 1 (0.0-1.95): dark ground holds; negation pill enters
+         fast and EXITS on a short directional x-tween with a brief
+         blur on the leaving element only (realised motion-blur streak).
+      --------------------------------------------------------------- */
+      tl.fromTo("#ac-kicker", { opacity: 0, y: -14 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.15);
+
+      tl.fromTo("#ac-reject", { opacity: 0, x: -26 },
+        { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 0.15);
+      // negation lands as VO finishes ("...bolted to the side") @1.92
+      tl.to("#ac-reject", {
+        x: 940, opacity: 0, filter: "blur(16px)",
+        duration: 0.5, ease: "power2.in"
+      }, 1.35);
+
+      /* ---------------------------------------------------------------
+         Scene 2 (1.95-3.0): terminal pill spring-pops centre-left and
+         types the real x402 command, line-broken at flag boundaries
+         (full-width legibility, no shrinking), behind a caret-tracking
+         frontier.
+      --------------------------------------------------------------- */
+      tl.fromTo("#ac-term",
+        { opacity: 0, scale: 0.93, y: 22 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: "back.out(1.2)" }, 1.95);
+
+      var CMD = "paybox use-service\n" +
+                "  --credential $EVM\n" +
+                "  --url https://elcaro.trustfall.xyz/api/x402/scan\n" +
+                "  --method POST";
+      var TY_AT = 2.05, TY_DUR = 1.30;
+      var ty = { i: 0 };
+      tl.to(ty, {
+        i: CMD.length, duration: TY_DUR, ease: "none",
+        onUpdate: function () { typed.textContent = CMD.slice(0, Math.floor(ty.i)); }
+      }, TY_AT);
+      // sanctioned residual motion: a few discrete caret blinks (no repeat/yoyo)
+      var blinkAt = 3.40;
+      for (var b = 0; b < 5; b++) {
+        tl.set(caret, { opacity: 0 }, blinkAt + b * 0.30);
+        tl.set(caret, { opacity: 1 }, blinkAt + b * 0.30 + 0.15);
+      }
+
+      /* ---------------------------------------------------------------
+         Scene 3 (3.0-5.2): settlement chip stamps in beside the vault;
+         value-scaled counter to $0.01 fires on the spoken "cent" @3.00,
+         then the receipt streams word by word as the vault is named
+         (per-word staggered reveal).
+      --------------------------------------------------------------- */
+      tl.fromTo("#ac-chip", { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power3.out" }, 2.55);
+
+      // counting-dynamic-scale: proxy value + transform scale share timing/ease
+      var CNT_AT = 3.00, CNT_DUR = 0.80;   // fires exactly on "cent", never t=0
+      var START_SCALE = 0.55;              // START_SIZE / END_SIZE (~55%)
+      var cv = { v: 0 };
+      tl.to(cv, {
+        v: 1, duration: CNT_DUR, ease: "power3.out",
+        onUpdate: function () { chipnum.textContent = "$0.0" + String(Math.round(cv.v)); }
+      }, CNT_AT);
+      tl.fromTo(chipnum, { scale: START_SCALE },
+        { scale: 1, duration: CNT_DUR, ease: "power3.out" }, CNT_AT);
+      // vault address lands as VO names it ("through your own PayBox vault")
+      tl.fromTo(".ac-chip-vault", { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 3.45);
+
+      // receipt streams word by word as VO names the vault @3.47-4.60
+      tl.fromTo("#ac-output .ac-word",
+        { opacity: 0, x: -12 },
+        { opacity: 1, x: 0, duration: 0.34, ease: "power2.out", stagger: 0.13 }, 3.47);
+
+      tl.fromTo("#ac-foot", { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 3.4);
+
+      /* ---------------------------------------------------------------
+         Scene 4 (5.2-7.198): pan / focus-lock (viewport-change) onto the
+         chip, single keyword glow on "vault" @6.04, then stillness.
+         No exit; no back-half push.
+      --------------------------------------------------------------- */
+      var ZM_AT = 5.20, ZM_DUR = 1.30;
+      tl.to(cam, {
+        scale: TARGET_SCALE,
+        x: -CHIP_OFFX * TARGET_SCALE,
+        y: -CHIP_OFFY * TARGET_SCALE,
+        duration: ZM_DUR, ease: "power3.inOut", onUpdate: applyCamera
+      }, ZM_AT);
+
+      // asr-keyword-glow (static-timeline variant): coral bloom on the key word
+      tl.fromTo(kw, { "--kw-glow": 0 },
+        { "--kw-glow": 1, duration: 0.6, ease: "power2.out" }, 6.04);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["03-a-cent-through-the-vault"] = tl;
+      tl.seek(0);
+    })();
+  </script>
+</template>

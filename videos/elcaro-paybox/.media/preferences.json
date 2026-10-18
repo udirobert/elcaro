@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "preferences": {
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:46.856Z"
+    },
+    "storyboard": {
+      "value": "no",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:46.905Z"
+    },
+    "aspect": {
+      "value": "1920x1080",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:46.953Z"
+    },
+    "language": {
+      "value": "en",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:47.003Z"
+    },
+    "destination": {
+      "value": "web-embed",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:47.052Z"
+    },
+    "voice": {
+      "value": "SAz9YHcvj6GT2YYXdXww",
+      "confirmed_in": [
+        "elcaro-paybox"
+      ],
+      "updated_at": "2026-10-17T22:05:47.098Z"
+    }
+  },
+  "sightings": {}
+}

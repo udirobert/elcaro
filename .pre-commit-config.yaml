@@ -12,6 +12,7 @@ repos:
           (?x)^(
             \.secrets\.baseline|
             eval/Cargo\.lock|
+            videos/.*hyperframes\.lock\.json|
             \.venv/.*
           )$
 
@@ -37,6 +38,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]          # catch accidentally staged WASM binaries
+        exclude: ^videos/            # rendered films are deliverables, not accidents
 
   # ── Supply chain scanning (Ossprey) — runs on push, not commit ──────────────
   - repo: local

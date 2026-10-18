@@ -1,0 +1,407 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+  </style>
+
+  <style>
+    /* 06-five-ways — Code editorial · breadth beat.
+       Ground = the gauntlet plate (paybox-running) dimmed + cropped to its card band.
+       Five real scenario rows self-assemble centre→slot; each takes a red STOP verdict.
+       The STOP red is this frame's verdict language (as in frame 04); everything else is
+       cream / ink / hairline. */
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      container-type: size;
+      overflow: hidden;
+      --cream: #fafaf8;
+      --ink: #1a1a18;
+      --coral: #e5523d;
+      --card: rgba(250, 250, 248, 0.9);
+      --hair: rgba(26, 26, 24, 0.14);
+      --hair-strong: rgba(26, 26, 24, 0.22);
+      --ink-74: rgba(26, 26, 24, 0.74);
+      --ink-58: rgba(26, 26, 24, 0.58);
+      --ink-40: rgba(26, 26, 24, 0.4);
+      --mono: "JetBrains Mono", monospace;
+      --sans: "satoshi", serif;
+    }
+
+    /* ---------------- GROUND — full-bleed plate, cropped clear of the badge ---------------- */
+    [id="06-five-ways-ground"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+      background-color: var(--cream);
+    }
+    [id="06-five-ways-plate"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      /* zoom into the upper card band so the bottom-right Netlify badge is never in frame */
+      object-position: 50% 55%;
+      transform: scale(2.15);
+      transform-origin: 50% 55%;
+      opacity: 0;
+    }
+    [id="06-five-ways-scrim"] {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(
+        1400px 900px at 50% 44%,
+        rgba(250, 250, 248, 0.5) 0%,
+        rgba(250, 250, 248, 0.82) 62%,
+        rgba(250, 250, 248, 0.95) 100%
+      );
+    }
+
+    /* ---------------- CONTENT ---------------- */
+    [id="06-five-ways-content"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      box-sizing: border-box;
+    }
+
+    /* Scene 1 — mono header, top-left, per-word staggered reveal */
+    [id="06-five-ways-header"] {
+      position: absolute;
+      left: 96px;
+      top: 74px;
+      display: flex;
+      align-items: baseline;
+      gap: 0.62cqw;
+      font-family: var(--mono);
+      font-size: 2.34cqw;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    [id^="06-five-ways-hw"] {
+      display: inline-block;
+      opacity: 0;
+    }
+    [id="06-five-ways-hw-spike"] {
+      color: var(--coral);
+    }
+    [id="06-five-ways-hw-dot"] {
+      color: var(--ink-40);
+    }
+
+    /* The five-row stack — each row expands centre→slot */
+    [id="06-five-ways-stack"] {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+    }
+    [id^="06-five-ways-row-"] {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      /* xPercent/yPercent -50 baked by GSAP; x/y tween the centre→slot offset */
+      width: 1520px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      padding: 26px 34px;
+      border: 1px solid var(--hair);
+      border-radius: 12px;
+      background-color: var(--card);
+      box-shadow: 0 1px 3px rgba(26, 26, 24, 0.08), 0 4px 16px rgba(26, 26, 24, 0.04);
+      opacity: 0;
+      will-change: transform;
+    }
+    [id^="06-five-ways-idx-"] {
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 1.42cqw;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--ink-40);
+      font-variant-numeric: tabular-nums;
+    }
+    [id^="06-five-ways-tool-"] {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--mono);
+      font-size: 1.98cqw;
+      font-weight: 500;
+      letter-spacing: 0.005em;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    [id^="06-five-ways-sep-"] {
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 1.98cqw;
+      color: var(--ink-40);
+    }
+    [id^="06-five-ways-exp-"] {
+      flex: 1 1 auto;
+      font-family: var(--sans);
+      font-size: 2.16cqw;
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: -0.005em;
+      color: var(--ink-74);
+      white-space: nowrap;
+    }
+    [id="06-five-ways-arrow"] {
+      display: inline-block;
+      width: 1.9cqw;
+      height: 1.9cqw;
+      overflow: visible;
+    }
+    [id="06-five-ways-arrow"] path {
+      fill: none;
+      stroke: var(--ink);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* STOP verdict — the one mechanical, non-smooth hit (restrained slam, no bounce) */
+    [id^="06-five-ways-stop-"] {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      padding: 0 20px;
+      box-sizing: border-box;
+      border: 2px solid var(--coral);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 2.28cqw;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--coral);
+      background-color: rgba(229, 82, 61, 0.07);
+      transform-origin: 50% 50%;
+      opacity: 0;
+      will-change: transform;
+    }
+  </style>
+
+  <div data-hf-id="hf-e7k2"
+    id="root"
+    data-composition-id="06-five-ways"
+    data-width="1920"
+    data-height="1080" data-duration="12.574"
+  >
+    <!-- GROUND: the gauntlet plate, dimmed + cropped clear of the badge -->
+    <div data-hf-id="hf-km3t"
+      id="06-five-ways-ground"
+      class="clip"
+      data-start="0"
+      data-duration="12.574"
+      data-track-index="0"
+    >
+      <img data-hf-id="hf-3uwd" id="06-five-ways-plate" src="assets/paybox-running.png" alt="" />
+      <div data-hf-id="hf-5f7k" id="06-five-ways-scrim"></div>
+    </div>
+
+    <!-- CONTENT: header + the five-row gauntlet stack -->
+    <div data-hf-id="hf-li2i"
+      id="06-five-ways-content"
+      class="clip"
+      data-start="0"
+      data-duration="12.574"
+      data-track-index="1"
+    >
+      <div data-hf-id="hf-g495" id="06-five-ways-header">
+        <span data-hf-id="hf-m31c" id="06-five-ways-hw-spike">✱</span
+        ><span data-hf-id="hf-hp00" id="06-five-ways-hw-1">Same</span
+        ><span data-hf-id="hf-59bm" id="06-five-ways-hw-2">gate</span
+        ><span data-hf-id="hf-55nf" id="06-five-ways-hw-dot">·</span
+        ><span data-hf-id="hf-jtqc" id="06-five-ways-hw-3">Five</span
+        ><span data-hf-id="hf-p7ug" id="06-five-ways-hw-4">attacks</span>
+      </div>
+
+      <div data-hf-id="hf-yenq" id="06-five-ways-stack">
+        <!-- Row 1 — request_payment · up to $1,200 -->
+        <div data-hf-id="hf-g2mp" id="06-five-ways-row-1" data-target-y="-272">
+          <span data-hf-id="hf-jd49" id="06-five-ways-idx-1">01</span>
+          <span data-hf-id="hf-2ym9" id="06-five-ways-tool-1">request_payment</span>
+          <span data-hf-id="hf-wdso" id="06-five-ways-sep-1">·</span>
+          <span data-hf-id="hf-vdk1" id="06-five-ways-exp-1">up to $1,200</span>
+          <span data-hf-id="hf-fydl" id="06-five-ways-stop-1">STOP</span>
+        </div>
+        <!-- Row 2 — request_secret · API keys + tokens -->
+        <div data-hf-id="hf-ly6r" id="06-five-ways-row-2" data-target-y="-134">
+          <span data-hf-id="hf-jj9z" id="06-five-ways-idx-2">02</span>
+          <span data-hf-id="hf-9c52" id="06-five-ways-tool-2">request_secret</span>
+          <span data-hf-id="hf-fh95" id="06-five-ways-sep-2">·</span>
+          <span data-hf-id="hf-ls4u" id="06-five-ways-exp-2">API keys + tokens</span>
+          <span data-hf-id="hf-2ple" id="06-five-ways-stop-2">STOP</span>
+        </div>
+        <!-- Row 3 — request_swap · full wallet balance -->
+        <div data-hf-id="hf-p495" id="06-five-ways-row-3" data-target-y="4">
+          <span data-hf-id="hf-d3tx" id="06-five-ways-idx-3">03</span>
+          <span data-hf-id="hf-ghj4" id="06-five-ways-tool-3">request_swap</span>
+          <span data-hf-id="hf-tq1q" id="06-five-ways-sep-3">·</span>
+          <span data-hf-id="hf-t86e" id="06-five-ways-exp-3">full wallet balance</span>
+          <span data-hf-id="hf-4bzn" id="06-five-ways-stop-3">STOP</span>
+        </div>
+        <!-- Row 4 — request_wallet_sign · pending transfers -->
+        <div data-hf-id="hf-2mhh" id="06-five-ways-row-4" data-target-y="142">
+          <span data-hf-id="hf-ldvb" id="06-five-ways-idx-4">04</span>
+          <span data-hf-id="hf-349n" id="06-five-ways-tool-4">request_wallet_sign</span>
+          <span data-hf-id="hf-bfmv" id="06-five-ways-sep-4">·</span>
+          <span data-hf-id="hf-4r1m" id="06-five-ways-exp-4">pending transfers</span>
+          <span data-hf-id="hf-rgv0" id="06-five-ways-stop-4">STOP</span>
+        </div>
+        <!-- Row 5 — use_service → request_secret · every vaulted secret -->
+        <div data-hf-id="hf-zchx" id="06-five-ways-row-5" data-target-y="280">
+          <span data-hf-id="hf-dfg9" id="06-five-ways-idx-5">05</span>
+          <span data-hf-id="hf-ljck" id="06-five-ways-tool-5"
+            >use_service<svg data-hf-id="hf-7h31"
+              id="06-five-ways-arrow"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path data-hf-id="hf-qztv" d="M 3 12 L 19 12 M 13 6 L 19 12 L 13 18" /></svg
+            >request_secret</span
+          >
+          <span data-hf-id="hf-2e4k" id="06-five-ways-sep-5">·</span>
+          <span data-hf-id="hf-3fw8" id="06-five-ways-exp-5">every vaulted secret</span>
+          <span data-hf-id="hf-53cd" id="06-five-ways-stop-5">STOP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FRAME_ID = "06-five-ways";
+      var sel = function (name) {
+        return document.getElementById(FRAME_ID + "-" + name);
+      };
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ---------- Scene 1 (0.0–2.0) — plate + mono header, per-word stagger ---------- */
+      tl.fromTo(
+        sel("plate"),
+        { opacity: 0 },
+        { opacity: 0.35, duration: 0.7, ease: "power1.out" },
+        0,
+      );
+
+      var HEADER_WORDS = ["hw-spike", "hw-1", "hw-2", "hw-dot", "hw-3", "hw-4"];
+      HEADER_WORDS.forEach(function (id, i) {
+        tl.fromTo(
+          sel(id),
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+          0.16 + i * 0.13,
+        );
+      });
+
+      /* ---------- Rows: centre→slot expansion (center-outward-expansion) ----------
+         Each row shares the stage centre as origin (top/left 50% + xPercent/yPercent -50
+         baked), then radiates out to its slot on its spoken cue. Out-ease only. */
+      var EXPAND_DUR = 0.72;
+      var EXPAND_EASE = "power3.out";
+
+      function expandRow(n, at) {
+        var row = sel("row-" + n);
+        var targetY = Number(row.getAttribute("data-target-y"));
+        tl.fromTo(
+          row,
+          { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0.62, opacity: 0 },
+          { x: 0, y: targetY, scale: 1, opacity: 1, duration: EXPAND_DUR, ease: EXPAND_EASE },
+          at,
+        );
+      }
+
+      /* STOP verdict: a restrained mechanical slam — scale-down into place, no overshoot. */
+      function stamp(n, at) {
+        tl.fromTo(
+          sel("stop-" + n),
+          { scale: 1.8, rotation: -9, opacity: 0 },
+          { scale: 1, rotation: -2, opacity: 1, duration: 0.17, ease: "power4.out" },
+          at,
+        );
+      }
+
+      /* ---------- Scene 2 (2.0–3.4) — "a doctored invoice" @2.08 ---------- */
+      expandRow(1, 2.08);
+      stamp(1, 2.74);
+
+      /* ---------- Scene 3 (3.4–5.9) — "reaching for your API keys" @3.44 ---------- */
+      expandRow(2, 3.44);
+      stamp(2, 5.5);
+
+      /* ---------- Scene 4 (5.9–8.3) — "swaps the whole balance" @5.92 ---------- */
+      expandRow(3, 5.92);
+      stamp(3, 7.97);
+
+      /* ---------- Scene 5 (8.3–9.9) — "a forged pre-approval" @8.36 ---------- */
+      expandRow(4, 8.36);
+      stamp(4, 8.92);
+
+      /* ---------- Scene 6 (9.9–12.074) — "a marketplace that bites back" @10.06 ---------- */
+      expandRow(5, 10.06);
+      stamp(5, 11.76);
+
+      /* held read — subtle jitter on the stack only, no camera move (sine-wave-loop low end) */
+      var stack = sel("stack");
+      var JITTER_AT = 11.85;
+      var JITTER_DUR = 12.074 - JITTER_AT;
+      var jit = { p: 0 };
+      tl.to(
+        jit,
+        {
+          p: Math.PI * 2 * 1.1,
+          duration: JITTER_DUR,
+          ease: "none",
+          onUpdate: function () {
+            var y = Math.sin(jit.p) * 1.1 + Math.sin(jit.p * 2.7) * 0.4;
+            var x = Math.sin(jit.p * 0.6 + 1.2) * 0.6;
+            stack.style.transform =
+              "translate3d(" + x.toFixed(2) + "px, " + y.toFixed(2) + "px, 0)";
+          },
+        },
+        JITTER_AT,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

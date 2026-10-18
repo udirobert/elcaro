@@ -1,0 +1,471 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+  </style>
+
+  <style>
+    /* ============================================================================
+       09-content-mandate — Code editorial · end card (prompt-type-submit-generate,
+       install-command form): brand beat -> category line -> the command that runs it.
+
+       The wordmark is drawn here (the site's own lockup is 57px wide in the capture,
+       far too small to magnify), and the capture supports it only as a blurred,
+       dimmed band behind — the eyebrow + title strip of the real hero, nothing else.
+       The typed line is the endpoint the film has used since frame 03, verbatim.
+
+       vertical map (keep-out y > 900):
+         mark          y 128 .. 184   (centre x 960)
+         wordmark      y 208 .. 448
+         tagline       y 498 .. 546
+         pairing       y 606 .. 640   (halves meet at a hairline on x 960)
+         terminal pill y 736 .. 810
+       ========================================================================== */
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: satoshi, serif;
+      color: #fafaf8;
+    }
+    #root > .clip {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    /* ---------------- GROUND (track 0) -------------------------------------- */
+    [id="09-content-mandate-field"] {
+      position: absolute;
+      inset: 0;
+      background-color: #181515;
+      background-image: radial-gradient(
+        1360px 820px at 50% 34%,
+        #252120 0%,
+        #1f1c1b 52%,
+        #181515 100%
+      );
+    }
+    /* the real hero band (eyebrow + title), blurred past reading */
+    [id="09-content-mandate-ghost"] {
+      position: absolute;
+      left: 0;
+      top: 190px;
+      width: 1920px;
+      height: 264px;
+      background-image: url("assets/paybox-hero.png");
+      background-repeat: no-repeat;
+      background-size: 1920px 1080px;
+      background-position: 0px -116px;
+      filter: blur(11px) grayscale(0.5) contrast(0.8);
+      opacity: 0;
+    }
+    [id="09-content-mandate-ghost-fade"] {
+      position: absolute;
+      left: 0;
+      top: 170px;
+      width: 1920px;
+      height: 304px;
+      background-image: linear-gradient(
+        to bottom,
+        rgba(24, 21, 21, 0.99) 0%,
+        rgba(24, 21, 21, 0.72) 46%,
+        rgba(24, 21, 21, 0.99) 100%
+      );
+    }
+
+    /* ---------------- CONTENT (track 1) ------------------------------------- */
+    [id="09-content-mandate-content"] {
+      z-index: 1;
+    }
+
+    /* Scene 1 — the mark, self-drawn */
+    [id="09-content-mandate-mark"] {
+      position: absolute;
+      left: 932px;
+      top: 96px;
+      width: 56px;
+      height: 56px;
+      overflow: visible;
+    }
+    [id^="09-content-mandate-stroke-"] {
+      stroke: #e5523d;
+      stroke-width: 5;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    /* the wordmark — per-letter, on the two spoken syllables */
+    [id="09-content-mandate-word"] {
+      position: absolute;
+      left: 0;
+      top: 170px;
+      width: 1920px;
+      height: 290px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      font-size: 15cqw;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      color: #fafaf8;
+    }
+    [id^="09-content-mandate-l-"] {
+      display: inline-block;
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+
+    /* Scene 2 — the category line, then the pairing */
+    [id="09-content-mandate-tag"] {
+      position: absolute;
+      left: 0;
+      top: 496px;
+      width: 1920px;
+      display: flex;
+      justify-content: center;
+      gap: 0.34em;
+      font-size: 2.08cqw;
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: -0.005em;
+      color: rgba(250, 250, 248, 0.78);
+    }
+    [id^="09-content-mandate-t-"] {
+      display: inline-block;
+      opacity: 0;
+    }
+    [id="09-content-mandate-pair-l"],
+    [id="09-content-mandate-pair-r"] {
+      position: absolute;
+      top: 596px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.35cqw;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.01em;
+      color: rgba(250, 250, 248, 0.5);
+      opacity: 0;
+    }
+    [id="09-content-mandate-pair-l"] {
+      right: 990px;
+      justify-content: flex-end;
+    }
+    [id="09-content-mandate-pair-r"] {
+      left: 990px;
+    }
+    [id="09-content-mandate-pair-l"] em,
+    [id="09-content-mandate-pair-r"] em {
+      font-style: normal;
+      color: rgba(250, 250, 248, 0.86);
+    }
+    [id="09-content-mandate-pair-rule"] {
+      position: absolute;
+      left: 959px;
+      top: 594px;
+      width: 1px;
+      height: 38px;
+      background-color: rgba(250, 250, 248, 0.18);
+      transform-origin: 50% 50%;
+      opacity: 0;
+    }
+
+    /* Scene 3 — the command pill */
+    [id="09-content-mandate-pill"] {
+      position: absolute;
+      left: 290px;
+      top: 720px;
+      width: 1340px;
+      height: 74px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      padding: 0 34px;
+      background-color: #252120;
+      border: 1px solid rgba(250, 250, 248, 0.14);
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+    [id="09-content-mandate-prompt"] {
+      flex: none;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.52cqw;
+      font-weight: 500;
+      line-height: 1;
+      color: #e5523d;
+      margin-right: 16px;
+    }
+    [id="09-content-mandate-line"] {
+      white-space: pre;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.52cqw;
+      font-weight: 400;
+      line-height: 1;
+      color: rgba(250, 250, 248, 0.9);
+    }
+    [id="09-content-mandate-line"] [id="09-content-mandate-seg-cmd"] {
+      color: rgba(250, 250, 248, 0.9);
+    }
+    [id="09-content-mandate-line"] [id="09-content-mandate-seg-flag"] {
+      color: rgba(250, 250, 248, 0.45);
+    }
+    [id="09-content-mandate-line"] [id="09-content-mandate-seg-url"] {
+      color: #5db8a6;
+    }
+    [id="09-content-mandate-caret"] {
+      display: inline-block;
+      width: 15px;
+      height: 29px;
+      margin-left: 3px;
+      vertical-align: -4px;
+      background-color: #fafaf8;
+      opacity: 0;
+    }
+  </style>
+
+  <div data-hf-id="hf-mlcd"
+    id="root"
+    data-composition-id="09-content-mandate"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- ============ GROUND: navy plate + the blurred hero band ============ -->
+    <div data-hf-id="hf-txc9"
+      id="09-content-mandate-ground"
+      class="clip"
+      data-start="0"
+      data-duration="6.409"
+      data-track-index="0"
+    >
+      <div data-hf-id="hf-shzc" id="09-content-mandate-field"></div>
+      <div data-hf-id="hf-ahs1" id="09-content-mandate-ghost"></div>
+      <div data-hf-id="hf-uu8s" id="09-content-mandate-ghost-fade"></div>
+    </div>
+
+    <!-- ============ CONTENT: lockup -> category line -> command ============ -->
+    <div data-hf-id="hf-os3e"
+      id="09-content-mandate-content"
+      class="clip"
+      data-start="0"
+      data-duration="6.409"
+      data-track-index="1"
+    >
+      <svg data-hf-id="hf-sw56" id="09-content-mandate-mark" viewBox="0 0 56 56" aria-hidden="true">
+        <line data-hf-id="hf-b61q" id="09-content-mandate-stroke-1" x1="28" y1="4" x2="28" y2="52" />
+        <line data-hf-id="hf-cttl" id="09-content-mandate-stroke-2" x1="8" y1="15" x2="48" y2="41" />
+        <line data-hf-id="hf-y3to" id="09-content-mandate-stroke-3" x1="48" y1="15" x2="8" y2="41" />
+      </svg>
+
+      <div data-hf-id="hf-5okl" id="09-content-mandate-word" aria-label="elcaro">
+        <span data-hf-id="hf-jbo8" id="09-content-mandate-l-1">e</span
+        ><span data-hf-id="hf-1rhy" id="09-content-mandate-l-2">l</span
+        ><span data-hf-id="hf-7c04" id="09-content-mandate-l-3">c</span
+        ><span data-hf-id="hf-au2b" id="09-content-mandate-l-4">a</span
+        ><span data-hf-id="hf-cpsx" id="09-content-mandate-l-5">r</span
+        ><span data-hf-id="hf-zaxb" id="09-content-mandate-l-6">o</span>
+      </div>
+
+      <div data-hf-id="hf-etn0" id="09-content-mandate-tag">
+        <span data-hf-id="hf-mgcs" id="09-content-mandate-t-1">the</span
+        ><span data-hf-id="hf-wow7" id="09-content-mandate-t-2">content</span
+        ><span data-hf-id="hf-37ph" id="09-content-mandate-t-3">mandate</span
+        ><span data-hf-id="hf-3313" id="09-content-mandate-t-4">for</span
+        ><span data-hf-id="hf-cjze" id="09-content-mandate-t-5">agent</span
+        ><span data-hf-id="hf-g5i9" id="09-content-mandate-t-6">payments</span>
+      </div>
+
+      <div data-hf-id="hf-zsj7" id="09-content-mandate-pair-l">
+        <em data-hf-id="hf-3t8w">PayBox</em>&nbsp;scopes what an agent may spend
+      </div>
+      <div data-hf-id="hf-wyc3" id="09-content-mandate-pair-rule"></div>
+      <div data-hf-id="hf-qd26" id="09-content-mandate-pair-r">
+        <em data-hf-id="hf-qbot">Elcaro</em>&nbsp;scopes what it may believe
+      </div>
+
+      <div data-hf-id="hf-09a5" id="09-content-mandate-pill">
+        <span data-hf-id="hf-q26h" id="09-content-mandate-prompt">$</span
+        ><span data-hf-id="hf-k6jj" id="09-content-mandate-line"></span
+        ><span data-hf-id="hf-ge4q" id="09-content-mandate-caret"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FRAME_ID = "09-content-mandate";
+      var DURATION = 6.409;
+      var sel = function (name) {
+        return document.getElementById(FRAME_ID + "-" + name);
+      };
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ============ SCENE 1 (0.0-1.15) — "Elcaro" @0.03-1.16 ============ */
+      tl.fromTo(
+        sel("ghost"),
+        { opacity: 0 },
+        { opacity: 0.13, duration: 1.3, ease: "power1.out" },
+        0.05,
+      );
+
+      /* svg-path-draw: measure each stroke, empty it, sweep dashoffset to 0.
+         Three lines, one after another — the mark assembles, it does not fade in. */
+      [1, 2, 3].forEach(function (i) {
+        var node = sel("stroke-" + i);
+        var len = node.getTotalLength();
+        node.style.strokeDasharray = len;
+        node.style.strokeDashoffset = len;
+        tl.to(
+          node,
+          { strokeDashoffset: 0, duration: 0.34, ease: "power2.inOut" },
+          0.12 + (i - 1) * 0.16,
+        );
+      });
+
+      /* the wordmark on the two spoken syllables: "El" @0.03, "Caro" @0.33 */
+      var LETTER_AT = [0.06, 0.2, 0.36, 0.5, 0.63, 0.75];
+      LETTER_AT.forEach(function (at, i) {
+        tl.fromTo(
+          sel("l-" + (i + 1)),
+          { opacity: 0, y: 34, scale: 0.92 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.52, ease: "power3.out" },
+          at,
+        );
+      });
+
+      /* ============ SCENE 2 (1.15-3.3) — the category line, word for word,
+         then the pairing as two mono halves meeting on the centre rule. ======== */
+      var TAG_AT = [1.16, 1.33, 1.72, 2.1, 2.27, 2.55];
+      TAG_AT.forEach(function (at, i) {
+        tl.fromTo(
+          sel("t-" + (i + 1)),
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+          at,
+        );
+      });
+
+      tl.fromTo(
+        sel("pair-rule"),
+        { opacity: 0, scaleY: 0 },
+        { opacity: 1, scaleY: 1, duration: 0.36, ease: "power2.out" },
+        2.56,
+      );
+      tl.fromTo(
+        sel("pair-l"),
+        { opacity: 0, x: -18 },
+        { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" },
+        2.6,
+      );
+      tl.fromTo(
+        sel("pair-r"),
+        { opacity: 0, x: 18 },
+        { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" },
+        2.9,
+      );
+
+      /* ============ SCENE 3 (3.3-6.409) — the endpoint, typed.
+         spring-pop-entrance on the pill, then a discrete-text-sequence type of the
+         real command; the caret is solid while typing and takes one blink at the
+         end, resolving ON — this is the last frame, so it may rest. ============ */
+      tl.fromTo(
+        sel("pill"),
+        { opacity: 0, scale: 0.86, y: 26 },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.62,
+          ease: "back.out(1.7)",
+          transformOrigin: "50% 100%",
+        },
+        3.31,
+      );
+      tl.fromTo(sel("caret"), { opacity: 0 }, { opacity: 1, duration: 0.01 }, 3.9);
+
+      /* context-sensitive-cursor: the caret colour follows the segment being typed */
+      var SEGMENTS = [
+        { t: 0, text: "paybox", color: "#fafaf8" },
+        { t: 6, text: " use-service", color: "#fafaf8" },
+        { t: 18, text: " --url ", color: "rgba(250,250,248,0.45)" },
+        { t: 25, text: "https://elcaro.trustfall.xyz/api/x402/scan", color: "#5db8a6" },
+      ];
+      var FULL = SEGMENTS.map(function (s) {
+        return s.text;
+      }).join("");
+      var TYPE_START = 3.95;
+      var TYPE_END = 5.85;
+      var TYPE_DUR = TYPE_END - TYPE_START;
+      var line = sel("line");
+      var caret = sel("caret");
+      var typer = { i: 0 };
+
+      function colorAt(n) {
+        var c = SEGMENTS[0].color;
+        for (var i = 0; i < SEGMENTS.length; i++) {
+          if (n >= SEGMENTS[i].t) c = SEGMENTS[i].color;
+        }
+        return c;
+      }
+
+      tl.to(
+        typer,
+        {
+          i: FULL.length,
+          duration: TYPE_DUR,
+          ease: "none",
+          onUpdate: function () {
+            var n = Math.round(typer.i);
+            line.textContent = FULL.slice(0, n);
+            caret.style.backgroundColor = colorAt(n);
+          },
+        },
+        TYPE_START,
+      );
+
+      /* one blink, resolving ON for the hold */
+      var blink = { p: 0 };
+      tl.to(
+        blink,
+        {
+          p: Math.PI * 2 * 1.4,
+          duration: DURATION - 5.9,
+          ease: "none",
+          onUpdate: function () {
+            var phase = blink.p % (Math.PI * 2);
+            caret.style.opacity = phase < Math.PI ? "1" : "0";
+          },
+        },
+        5.9,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

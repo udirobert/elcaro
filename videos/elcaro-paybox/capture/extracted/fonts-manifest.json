@@ -1,0 +1,185 @@
+{
+  "files": [
+    {
+      "file": "04c5164763c40239-s.1kd-r_s9smv5m.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "051742360c26797e-s.p.1bkzbscqrt8rl.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "26f284dcc38c84c0-s.3hlisc-pwq13z.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "fa39153a3fc630ba-s.36fqqi66-3tjb.woff2",
+      "family": "JetBrains Mono",
+      "rawFamily": "JetBrains Mono",
+      "subfamily": "Regular",
+      "postscript": "JetBrainsMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "satoshi_400-s.p.0dvfn5g0xv8bu.woff2",
+      "family": "false",
+      "rawFamily": "false",
+      "subfamily": "Normal",
+      "postscript": "false",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "satoshi_500-s.p.1jgchyhj64537.woff2",
+      "family": "Satoshi",
+      "rawFamily": "Satoshi Medium",
+      "subfamily": "Regular",
+      "postscript": "false",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "satoshi_700-s.p.2_-zzs2una4mm.woff2",
+      "family": "false",
+      "rawFamily": "false",
+      "subfamily": "Semi-bold",
+      "postscript": "false",
+      "weight": 700,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "satoshi_900-s.p.1_bicwjk2v12h.woff2",
+      "family": "Satoshi",
+      "rawFamily": "Satoshi Black",
+      "subfamily": "Regular",
+      "postscript": "false",
+      "weight": 900,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    }
+  ],
+  "families": [
+    {
+      "family": "false",
+      "weights": [
+        400,
+        700
+      ],
+      "variable": false,
+      "fileCount": 2,
+      "files": [
+        "satoshi_400-s.p.0dvfn5g0xv8bu.woff2",
+        "satoshi_700-s.p.2_-zzs2una4mm.woff2"
+      ]
+    },
+    {
+      "family": "JetBrains Mono",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 6,
+      "files": [
+        "04c5164763c40239-s.1kd-r_s9smv5m.woff2",
+        "051742360c26797e-s.p.1bkzbscqrt8rl.woff2",
+        "26f284dcc38c84c0-s.3hlisc-pwq13z.woff2",
+        "6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2",
+        "7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2",
+        "fa39153a3fc630ba-s.36fqqi66-3tjb.woff2"
+      ]
+    },
+    {
+      "family": "Satoshi",
+      "weights": [
+        500,
+        900
+      ],
+      "variable": false,
+      "fileCount": 2,
+      "files": [
+        "satoshi_500-s.p.1jgchyhj64537.woff2",
+        "satoshi_900-s.p.1_bicwjk2v12h.woff2"
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-10-17T22:06:12.601Z",
+    "tool": "fontkit"
+  }
+}

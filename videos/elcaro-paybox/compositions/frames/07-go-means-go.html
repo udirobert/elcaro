@@ -1,0 +1,632 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+  </style>
+
+  <style>
+    /* ============================================================================
+       07-go-means-go — Code editorial · comparison-split (Reproduce)
+       Two REAL captures, side by side on mirrored book-open tilts: poisoned invoice
+       quarantined left, the identical clean invoice released right.
+
+       The captures are evidence — they are cropped and presented, never restyled.
+       Every visible panel below is a measured 1:1 window into the staged PNGs
+       (bg-size = the source's own 1920x1080, bg-position = the measured window),
+       so no site UI is redrawn and the Netlify badge (source y >= 965) is never in
+       a window. The one magnified band is the header row (1.15x), which carries the
+       GO / STOP verdict the bloom lands on.
+
+       world map (card NATURAL space, 870 x 716; the zoom wrapper renders it at 0.95
+       => 826 x 680 on canvas):
+         band 1  header strip   y   0 ..  74   src (1090, 56,  756, 64) @1.15x
+         hairline               y  74 ..  75
+         band 2  mail panel     y  75 .. 525   src (  86,244,  870,450) @1x
+         hairline               y 525 .. 526
+         band 3  WITH ELCARO    y 526 .. 716   src ( 976,656/686, 870,190) @1x
+       canvas: left card 107,144 · right card 987,144 · axis x=960 · readouts y=842
+       keep-out: nothing below y=878 (captions own the bottom ~17% => 900).
+       ========================================================================== */
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: satoshi, serif;
+      color: #1a1a18;
+    }
+    #root > .clip {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    /* ---------------- GROUND (track 0) — cream field, faint grid, dual side glow -- */
+    [id="07-go-means-go-field"] {
+      position: absolute;
+      inset: 0;
+      background-color: #fafaf8;
+      background-image:
+        linear-gradient(rgba(26, 26, 24, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26, 26, 24, 0.035) 1px, transparent 1px);
+      background-size: 96px 96px;
+    }
+    [id="07-go-means-go-glow-left"],
+    [id="07-go-means-go-glow-right"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+    [id="07-go-means-go-glow-left"] {
+      background-image: radial-gradient(
+        760px 620px at 30% 44%,
+        rgba(229, 82, 61, 0.075) 0%,
+        rgba(229, 82, 61, 0) 68%
+      );
+    }
+    [id="07-go-means-go-glow-right"] {
+      background-image: radial-gradient(
+        820px 660px at 70% 44%,
+        rgba(26, 138, 122, 0.1) 0%,
+        rgba(26, 138, 122, 0) 68%
+      );
+    }
+
+    /* ---------------- CONTENT (track 1) ------------------------------------- */
+    [id="07-go-means-go-content"] {
+      z-index: 1;
+    }
+
+    /* chrome — kicker-spike left, mono index right */
+    [id="07-go-means-go-kicker"],
+    [id="07-go-means-go-index"] {
+      position: absolute;
+      top: 70px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.15cqw;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(26, 26, 24, 0.56);
+      opacity: 0;
+    }
+    [id="07-go-means-go-kicker"] {
+      left: 107px;
+    }
+    [id="07-go-means-go-index"] {
+      right: 107px;
+      color: rgba(26, 26, 24, 0.34);
+    }
+    [id="07-go-means-go-spike"] {
+      display: block;
+      flex: none;
+    }
+
+    /* the 50% symmetry axis — the only separator the split gets */
+    [id="07-go-means-go-axis"] {
+      position: absolute;
+      left: 959px;
+      top: 144px;
+      width: 1px;
+      height: 680px;
+      background-color: rgba(26, 26, 24, 0.12);
+      transform-origin: 50% 0%;
+      opacity: 0;
+    }
+
+    /* Scene 3 — the bloom BEHIND the paper: light escaping the GO badge */
+    [id="07-go-means-go-halo"] {
+      position: absolute;
+      left: 1554px;
+      top: -30px;
+      width: 420px;
+      height: 420px;
+      border-radius: 9999px;
+      background-image: radial-gradient(
+        closest-side,
+        rgba(26, 138, 122, 0.34) 0%,
+        rgba(26, 138, 122, 0.14) 46%,
+        rgba(26, 138, 122, 0) 74%
+      );
+      opacity: 0;
+      z-index: 1;
+    }
+
+    /* ---------------- the split pair (split-tilt-cards) --------------------- */
+    [id="07-go-means-go-stage"] {
+      position: absolute;
+      inset: 0;
+      perspective: 1900px; /* REQUIRED — without it rotateY flattens to a 2D layout */
+      transform-style: preserve-3d;
+      z-index: 2;
+    }
+    [id="07-go-means-go-card-left"],
+    [id="07-go-means-go-card-right"] {
+      position: absolute;
+      top: 144px;
+      width: 826px;
+      height: 680px;
+      box-sizing: border-box;
+      background-color: #ffffff;
+      border: 1px solid rgba(26, 26, 24, 0.12);
+      border-radius: 12px;
+      overflow: hidden; /* clips the crop windows to the card, in the card's own plane */
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+    [id="07-go-means-go-card-left"] {
+      left: 107px;
+      /* shadow falls OUTWARD from the tilt: the left card faces right */
+      box-shadow: -16px 8px 28px rgba(26, 26, 24, 0.09), 0 1px 3px rgba(26, 26, 24, 0.08);
+    }
+    [id="07-go-means-go-card-right"] {
+      left: 987px;
+      box-shadow: 16px 8px 28px rgba(26, 26, 24, 0.09), 0 1px 3px rgba(26, 26, 24, 0.08);
+    }
+    /* static render scale — GSAP never touches this element's transform */
+    [id="07-go-means-go-zoom-left"],
+    [id="07-go-means-go-zoom-right"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 870px;
+      height: 716px;
+      transform: scale(0.95);
+      transform-origin: 0 0;
+    }
+    /* the counter-phase idle / closing jitter is written here, and only here */
+    [id="07-go-means-go-jit-left"],
+    [id="07-go-means-go-jit-right"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 870px;
+      height: 716px;
+      will-change: transform;
+    }
+
+    /* ---------------- the measured crops ----------------------------------- */
+    [id$="-band-strip"],
+    [id$="-band-mail"],
+    [id$="-band-verdict"] {
+      position: absolute;
+      left: 0;
+      width: 870px;
+      background-repeat: no-repeat;
+    }
+    [id^="07-go-means-go-l-band"] {
+      background-image: url("assets/paybox-verdict-stop.png");
+    }
+    [id^="07-go-means-go-r-band"] {
+      background-image: url("assets/paybox-verdict-go.png");
+    }
+    [id$="-band-strip"] {
+      top: 0;
+      height: 74px;
+      background-size: 2210px 1243px; /* 1.15x — the header row, magnified to fill the card */
+      background-position: -1254px -64px;
+    }
+    [id$="-band-mail"] {
+      top: 75px;
+      height: 450px;
+      background-size: 1920px 1080px; /* 1:1 — the mail panel, untouched */
+      background-position: -86px -244px;
+    }
+    [id$="-band-verdict"] {
+      top: 526px;
+      height: 190px;
+      background-size: 1920px 1080px; /* 1:1 — the WITH ELCARO card, untouched */
+      background-position: -976px -686px;
+    }
+    [id="07-go-means-go-r-band-verdict"] {
+      background-position: -976px -656px;
+    }
+    [id*="-hairline-"] {
+      position: absolute;
+      left: 0;
+      width: 870px;
+      height: 1px;
+      background-color: rgba(26, 26, 24, 0.12);
+    }
+    [id="07-go-means-go-l-hairline-1"],
+    [id="07-go-means-go-r-hairline-1"] {
+      top: 74px;
+    }
+    [id="07-go-means-go-l-hairline-2"],
+    [id="07-go-means-go-r-hairline-2"] {
+      top: 525px;
+    }
+
+    /* Scene 4 — the highlight sweep over the payoff clause ALREADY PRINTED in the
+       capture ("a gate that blocks everything protects nothing"). Marker-highlight
+       mechanics: a bar behind/ahead of the ink, scaleX 0 -> 1 from the left edge.
+       multiply so the artefact's own ink stays legible through it. */
+    [id="07-go-means-go-hl-1"],
+    [id="07-go-means-go-hl-2"] {
+      position: absolute;
+      height: 40px;
+      border-radius: 3px;
+      background-color: rgba(26, 138, 122, 0.42);
+      mix-blend-mode: multiply;
+      transform-origin: left center;
+      opacity: 0;
+      z-index: 3;
+    }
+    [id="07-go-means-go-hl-1"] {
+      left: 381px;
+      top: 596px;
+      width: 349px;
+    }
+    [id="07-go-means-go-hl-2"] {
+      left: 20px;
+      top: 639px;
+      width: 212px;
+    }
+
+    /* Scene 3 — the bloom ON the paper: a green wash around the badge, multiply so
+       the badge itself deepens instead of washing out */
+    [id="07-go-means-go-core"] {
+      position: absolute;
+      left: 1634px;
+      top: 49px;
+      width: 260px;
+      height: 260px;
+      border-radius: 9999px;
+      background-image: radial-gradient(
+        closest-side,
+        rgba(26, 138, 122, 0.3) 0%,
+        rgba(26, 138, 122, 0.13) 48%,
+        rgba(26, 138, 122, 0) 72%
+      );
+      mix-blend-mode: multiply;
+      opacity: 0;
+      z-index: 3;
+    }
+
+    /* ---------------- Scene 2 — the mono readouts under each card ----------- */
+    [id="07-go-means-go-read-left"],
+    [id="07-go-means-go-read-right"] {
+      position: absolute;
+      top: 842px;
+      width: 826px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.35cqw;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      z-index: 2;
+    }
+    [id="07-go-means-go-read-left"] {
+      left: 107px;
+      color: rgba(26, 26, 24, 0.46);
+    }
+    [id="07-go-means-go-read-right"] {
+      left: 987px;
+      color: rgba(26, 26, 24, 0.62);
+    }
+    [id*="-lw-"],
+    [id*="-rw-"] {
+      display: inline-block;
+      opacity: 0;
+    }
+    [id="07-go-means-go-rw-2"],
+    [id="07-go-means-go-rw-4"] {
+      color: #1a8a7a;
+    }
+  </style>
+
+  <div data-hf-id="hf-bueu"
+    id="root"
+    data-composition-id="07-go-means-go"
+    data-width="1920"
+    data-height="1080" data-duration="9.145"
+  >
+    <!-- ============ GROUND: cream field + the blueprint's dual side glow ============ -->
+    <div data-hf-id="hf-67ab"
+      id="07-go-means-go-ground"
+      class="clip"
+      data-start="0"
+      data-duration="9.145"
+      data-track-index="0"
+    >
+      <div data-hf-id="hf-rjuk" id="07-go-means-go-field"></div>
+      <div data-hf-id="hf-qrin" id="07-go-means-go-glow-left"></div>
+      <div data-hf-id="hf-l7uq" id="07-go-means-go-glow-right"></div>
+    </div>
+
+    <!-- ============ CONTENT: the comparison split ============ -->
+    <div data-hf-id="hf-pme4"
+      id="07-go-means-go-content"
+      class="clip"
+      data-start="0"
+      data-duration="9.145"
+      data-track-index="1"
+    >
+      <div data-hf-id="hf-oxez" id="07-go-means-go-kicker">
+        <svg data-hf-id="hf-ixbu"
+          id="07-go-means-go-spike"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <g data-hf-id="hf-4wfp" stroke="#e5523d" stroke-width="2.4" stroke-linecap="round">
+            <line data-hf-id="hf-ro96" x1="12" y1="3" x2="12" y2="21" />
+            <line data-hf-id="hf-pmta" x1="4.4" y1="7.6" x2="19.6" y2="16.4" />
+            <line data-hf-id="hf-5xn8" x1="19.6" y1="7.6" x2="4.4" y2="16.4" />
+          </g>
+        </svg>
+        <span data-hf-id="hf-tf98">paybox gauntlet</span>
+      </div>
+      <div data-hf-id="hf-5pug" id="07-go-means-go-index">invoice #4471 &middot; two reads</div>
+      <div data-hf-id="hf-15h7" id="07-go-means-go-axis"></div>
+
+      <!-- Scene 3: the bloom behind the paper, centred on the GO badge (987+777, 144+35) -->
+      <div data-hf-id="hf-z4ze" id="07-go-means-go-halo"></div>
+
+      <div data-hf-id="hf-1xei" id="07-go-means-go-stage">
+        <!-- LEFT — the doctored invoice, quarantined -->
+        <div data-hf-id="hf-ka90" id="07-go-means-go-card-left">
+          <div data-hf-id="hf-829h" id="07-go-means-go-zoom-left">
+            <div data-hf-id="hf-g96d" id="07-go-means-go-jit-left">
+              <div data-hf-id="hf-iue1" id="07-go-means-go-l-band-strip"></div>
+              <div data-hf-id="hf-f36t" id="07-go-means-go-l-hairline-1"></div>
+              <div data-hf-id="hf-yses" id="07-go-means-go-l-band-mail"></div>
+              <div data-hf-id="hf-j1au" id="07-go-means-go-l-hairline-2"></div>
+              <div data-hf-id="hf-1kqc" id="07-go-means-go-l-band-verdict"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT — the identical invoice, nothing hidden: the focal -->
+        <div data-hf-id="hf-4tzv" id="07-go-means-go-card-right">
+          <div data-hf-id="hf-jh3s" id="07-go-means-go-zoom-right">
+            <div data-hf-id="hf-kcwo" id="07-go-means-go-jit-right">
+              <div data-hf-id="hf-hmi3" id="07-go-means-go-r-band-strip"></div>
+              <div data-hf-id="hf-27yn" id="07-go-means-go-r-hairline-1"></div>
+              <div data-hf-id="hf-t18a" id="07-go-means-go-r-band-mail"></div>
+              <div data-hf-id="hf-rch0" id="07-go-means-go-r-hairline-2"></div>
+              <div data-hf-id="hf-92ve" id="07-go-means-go-r-band-verdict"></div>
+              <!-- Scene 4: the sweep lands on the printed clause, not on new type -->
+              <div data-hf-id="hf-8kde" id="07-go-means-go-hl-1"></div>
+              <div data-hf-id="hf-4m9d" id="07-go-means-go-hl-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 3: the bloom on the paper -->
+      <div data-hf-id="hf-0sul" id="07-go-means-go-core"></div>
+
+      <!-- Scene 2: one mono readout per card, on its spoken number -->
+      <div data-hf-id="hf-i7q6" id="07-go-means-go-read-left">
+        <span data-hf-id="hf-ycq7" id="07-go-means-go-lw-1">risk</span><span data-hf-id="hf-iihv" id="07-go-means-go-lw-2">0.73</span
+        ><span data-hf-id="hf-j09f" id="07-go-means-go-lw-3">&middot;</span><span data-hf-id="hf-nzhv" id="07-go-means-go-lw-4">quarantined</span>
+      </div>
+      <div data-hf-id="hf-b45x" id="07-go-means-go-read-right">
+        <span data-hf-id="hf-6czp" id="07-go-means-go-rw-1">risk</span><span data-hf-id="hf-ekir" id="07-go-means-go-rw-2">0.00</span
+        ><span data-hf-id="hf-e1pl" id="07-go-means-go-rw-3">&middot;</span><span data-hf-id="hf-v19y" id="07-go-means-go-rw-4">safe</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FRAME_ID = "07-go-means-go";
+      var DURATION = 8.545;
+      var sel = function (name) {
+        return document.getElementById(FRAME_ID + "-" + name);
+      };
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ---- split-tilt-cards tokens (12deg sits low in the 10-18deg range: the two
+         verdict cards have to stay readable, and legibility outranks drama here) ---- */
+      var TILT = 12;
+      var TILT_OVERSHOOT = 6;
+      var ENTRY_SLIDE_DIST = 360;
+      var ENTRY_DUR = 0.95;
+      var LEFT_AT = 0.08;
+      var RIGHT_AT = 0.2; /* zero feels mechanical; this reads as ONE arrival */
+
+      var cardL = sel("card-left");
+      var cardR = sel("card-right");
+      var jitL = sel("jit-left");
+      var jitR = sel("jit-right");
+
+      /* ============ SCENE 1 (0.0-2.5) — "Now the same invoice, with nothing
+         hidden" @0.04-2.10: the pair opens from opposite wings ============ */
+      tl.fromTo(
+        [sel("glow-left"), sel("glow-right")],
+        { opacity: 0 },
+        { opacity: 1, duration: 1.1, ease: "power1.out" },
+        0,
+      );
+      tl.fromTo(
+        sel("kicker"),
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        0.05,
+      );
+      tl.fromTo(
+        sel("index"),
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        0.16,
+      );
+
+      /* the symmetry axis draws down between the two wings */
+      tl.fromTo(
+        sel("axis"),
+        { opacity: 0, scaleY: 0 },
+        { opacity: 1, scaleY: 1, duration: 0.95, ease: "power2.inOut" },
+        0.18,
+      );
+
+      /* mirrored book-open: left +TILT faces right, right -TILT faces left */
+      tl.fromTo(
+        cardL,
+        { x: -ENTRY_SLIDE_DIST, rotateY: TILT + TILT_OVERSHOOT, scale: 0.85, opacity: 0 },
+        {
+          x: 0,
+          rotateY: TILT,
+          scale: 1,
+          opacity: 1,
+          duration: ENTRY_DUR,
+          ease: "power3.out",
+        },
+        LEFT_AT,
+      );
+      tl.fromTo(
+        cardR,
+        { x: ENTRY_SLIDE_DIST, rotateY: -TILT - TILT_OVERSHOOT, scale: 0.85, opacity: 0 },
+        {
+          x: 0,
+          rotateY: -TILT,
+          scale: 1,
+          opacity: 1,
+          duration: ENTRY_DUR,
+          ease: "power3.out",
+        },
+        RIGHT_AT,
+      );
+
+      /* ============ SCENE 2 (2.5-4.3) — "Risk zero" @2.58-3.10, "Safe" @3.54 ====
+         dynamic-content-sequencing: each readout's word grid is reduced ONCE from
+         the spoken anchor + a per-char term, so the stagger is content-driven. ==== */
+      var SEC_PER_CHAR = 0.0825;
+      var MIN_GAP = 0.08;
+      function spread(anchor, words) {
+        var t = anchor;
+        return words.map(function (w) {
+          var at = t;
+          t += Math.max(MIN_GAP, w.textContent.length * SEC_PER_CHAR);
+          return { el: w, at: at };
+        });
+      }
+      var WORD_CUES = [
+        /* left — already at rest, muted: one quiet cadence off "Risk" */
+        spread(2.58, [sel("lw-1"), sel("lw-2"), sel("lw-3"), sel("lw-4")]),
+        /* right — "risk" on "Risk", "0.00" on "zero" @2.95, "safe" on "Safe" @3.54 */
+        spread(2.62, [sel("rw-1"), sel("rw-2")]),
+        spread(3.46, [sel("rw-3"), sel("rw-4")]),
+      ];
+      WORD_CUES.forEach(function (group, gi) {
+        group.forEach(function (w) {
+          tl.fromTo(
+            w.el,
+            { opacity: 0, y: gi === 0 ? 5 : 9 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: gi === 0 ? 0.34 : 0.26,
+              ease: "power2.out",
+            },
+            w.at,
+          );
+        });
+      });
+
+      /* ============ SCENE 3 (4.3-5.6) — "Go means go" @4.39-5.20 ============ */
+      /* the poisoned side steps back: card and its readout together to ~45% */
+      tl.to(cardL, { opacity: 0.45, duration: 0.7, ease: "power1.inOut" }, 4.39);
+      tl.to(sel("read-left"), { opacity: 0.45, duration: 0.7, ease: "power1.inOut" }, 4.39);
+
+      /* ambient bloom on the GO badge — soft radial opacity, no new hue, no violet */
+      tl.fromTo(
+        sel("halo"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.62, ease: "power2.out" },
+        4.46,
+      );
+      tl.fromTo(
+        sel("core"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: "power2.out" },
+        4.62,
+      );
+
+      /* button press settle on "go" @4.89 — the card takes the press, the bloom releases */
+      tl.to(cardR, { scale: 0.985, duration: 0.11, ease: "power2.in" }, 4.89);
+      tl.to(cardR, { scale: 1, duration: 0.36, ease: "power2.out" }, 5.0);
+      tl.fromTo(
+        sel("halo"),
+        { scale: 0.94 },
+        { scale: 1.02, duration: 0.5, ease: "power2.out" },
+        4.94,
+      );
+
+      /* ============ SCENE 4 (5.6-8.545) — "a gate that blocks everything protects
+         nothing" @5.89-8.50: both cards hold; the payoff line is ALREADY printed
+         inside the right capture, so it takes the sweep instead of new type. ==== */
+      tl.fromTo(
+        sel("hl-1"),
+        { opacity: 1, scaleX: 0 },
+        { opacity: 1, scaleX: 1, duration: 1.06, ease: "power2.out" },
+        5.89,
+      );
+      tl.fromTo(
+        sel("hl-2"),
+        { opacity: 1, scaleX: 0 },
+        { opacity: 1, scaleX: 1, duration: 0.62, ease: "power2.out" },
+        7.55,
+      );
+
+      /* counter-phase idle float, registered as the closing subtle jitter:
+         left sin(t), right sin(t+PI) — never synchronized, never a conveyor belt */
+      var JITTER_AT = 2.4;
+      var JITTER_DUR = DURATION - JITTER_AT;
+      var JITTER_CYCLES = JITTER_DUR / 2.6;
+      var jit = { p: 0 };
+      tl.to(
+        jit,
+        {
+          p: Math.PI * 2 * JITTER_CYCLES,
+          duration: JITTER_DUR,
+          ease: "none",
+          onUpdate: function () {
+            var amp = jit.p > Math.PI * 2 * 1.3 ? 1.7 : 1.2;
+            var y = Math.sin(jit.p) * amp;
+            var x = Math.sin(jit.p * 0.5 + 0.8) * 0.6;
+            jitL.style.transform =
+              "translate3d(" + x.toFixed(2) + "px, " + y.toFixed(2) + "px, 0)";
+            jitR.style.transform =
+              "translate3d(" + (-x).toFixed(2) + "px, " + (-y).toFixed(2) + "px, 0)";
+          },
+        },
+        JITTER_AT,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

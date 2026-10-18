@@ -1,0 +1,477 @@
+<template>
+  <style>
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_400-s.p.0dvfn5g0xv8bu.woff2")format("woff2");font-display:swap;font-weight:400;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_500-s.p.1jgchyhj64537.woff2")format("woff2");font-display:swap;font-weight:500;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_700-s.p.2_-zzs2una4mm.woff2")format("woff2");font-display:swap;font-weight:700;font-style:normal}
+    @font-face{font-family:satoshi;src:url("assets/fonts/captured-satoshi_900-s.p.1_bicwjk2v12h.woff2")format("woff2");font-display:swap;font-weight:900;font-style:normal}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-04c5164763c40239-s.1kd-r_s9smv5m.woff2")format("woff2");unicode-range:U+460-52F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-26f284dcc38c84c0-s.3hlisc-pwq13z.woff2")format("woff2");unicode-range:U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-7e7f32a39836f228-s.0-oo9_1x_xmvg.woff2")format("woff2");unicode-range:U+370-377,U+37A-37F,U+384-38A,U+38C,U+38E-3A1,U+3A3-3FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-fa39153a3fc630ba-s.36fqqi66-3tjb.woff2")format("woff2");unicode-range:U+102-103,U+110-111,U+128-129,U+168-169,U+1A0-1A1,U+1AF-1B0,U+300-301,U+303-304,U+308-309,U+323,U+329,U+1EA0-1EF9,U+20AB}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-6a5386fd6038edbe-s.3_z45zcoc-xoz.woff2")format("woff2");unicode-range:U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+    @font-face{font-family:JetBrains Mono;font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/captured-051742360c26797e-s.p.1bkzbscqrt8rl.woff2")format("woff2")}
+  </style>
+
+  <style>
+    /* ============ frame 05 · back to the vault ============
+       world map in authored px (canvas 1920x1080 at the rest pose; a third column at x>1920
+       is what the camera travels to, so the journey never re-lays-out anything):
+         prologue strip   64,88   -> 1856,132
+         verdict card     64,160  -> 844,460     left-weighted (~40% width), already at rest on t=0
+         terminal panel   64,492  -> 1044,750    the command types on here
+         payload panel    1070,150 -> 1856,750   dive target: "manage_url" row centre = 1473,445
+         vault grant      1980,150 -> 2680,750   splits open right of the payload
+       camera (outer scale, inner counter-translate => offset is scale-independent):
+         rest    s 1.00  tx     0  ty  0
+         dive    s 1.90  tx  -513  ty 95     complete by 3.80
+         hold    s 1.02  tx  -915  ty 90     still from 5.00 -> 7.059
+       */
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: satoshi, serif;
+      color: #1a1a18;
+    }
+    #root > .clip { position: absolute; inset: 0; overflow: hidden; }
+
+    /* ---- ground: this frame owns its own full-bleed field (track 0) ---- */
+    #f05-ground { background-color: #fafaf8; }
+    .f05-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(26, 26, 24, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26, 26, 24, 0.035) 1px, transparent 1px);
+      background-size: 96px 96px;
+    }
+    .f05-edge { position: absolute; left: 0; right: 0; top: 0; height: 6px; background-color: #f7dad6; }
+
+    /* ---- one virtual camera over the world ---- */
+    #f05-camera { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
+    #f05-cam-shift { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
+    #f05-world { position: absolute; left: 0; top: 0; width: 2800px; height: 1080px; }
+
+    /* ---- shared surfaces / voices ---- */
+    .f05-kicker {
+      font-family: satoshi, serif;
+    }
+    .f05-mono-k {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 22px; font-weight: 500; line-height: 1;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(26, 26, 24, 0.58);
+    }
+    .f05-spike { color: #e5523d; }
+    .f05-panel {
+      position: absolute; background-color: #181515;
+      border: 1px solid rgba(250, 250, 248, 0.14); border-radius: 8px; overflow: hidden;
+    }
+    .f05-card {
+      position: absolute; background-color: #fafaf8;
+      border: 1px solid rgba(26, 26, 24, 0.12); border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(26, 26, 24, 0.08), 0 4px 16px rgba(26, 26, 24, 0.04);
+    }
+    .f05-hr { height: 1px; background-color: rgba(26, 26, 24, 0.12); }
+    .f05-hr-dark { height: 1px; background-color: rgba(250, 250, 248, 0.14); }
+    /* depth-of-field layer: blur radius is the --dof var, advanced on the timeline */
+    .f05-dof { --dof: 0px; filter: blur(var(--dof)); will-change: filter, opacity; }
+
+    /* ---- prologue strip ---- */
+    #f05-head {
+      position: absolute; left: 64px; top: 88px; width: 1792px; height: 44px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 22px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase; color: rgba(26, 26, 24, 0.52);
+    }
+
+    /* ---- verdict block ---- */
+    #f05-verdict { left: 64px; top: 160px; width: 780px; height: 300px; padding: 34px; }
+    .f05-badge-row { display: flex; align-items: center; gap: 18px; margin-top: 22px; }
+    .f05-badge {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 24px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase; color: #c64545;
+      border: 1px solid rgba(198, 69, 69, 0.34); border-radius: 6px; padding: 9px 14px; line-height: 1;
+    }
+    .f05-flag {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 26px; font-weight: 400;
+      color: rgba(26, 26, 24, 0.72);
+    }
+    #f05-verdict-rule {
+      margin-top: 24px; height: 1px; width: 100%; background-color: rgba(198, 69, 69, 0.45);
+      transform-origin: left center; will-change: transform;
+    }
+    .f05-lockup { display: flex; align-items: baseline; gap: 20px; margin-top: 12px; }
+    .f05-figure { font-family: satoshi, serif; font-weight: 400; font-size: 5.625cqw; line-height: 0.95; letter-spacing: -0.025em; }
+    .f05-unit {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 500; font-size: 1.35cqw;
+      letter-spacing: 0.16em; text-transform: uppercase; color: rgba(26, 26, 24, 0.5);
+    }
+
+    /* ---- terminal + payload surfaces ---- */
+    #f05-terminal { left: 64px; top: 492px; width: 980px; height: 258px; }
+    #f05-payload { left: 1070px; top: 150px; width: 786px; height: 600px; }
+    .f05-bar {
+      height: 52px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 22px; background-color: #252120; border-bottom: 1px solid rgba(250, 250, 248, 0.14);
+    }
+    .f05-file { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 23px; font-weight: 500; letter-spacing: 0.02em; color: rgba(250, 250, 248, 0.78); }
+    .f05-chip { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 20px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(250, 250, 248, 0.45); }
+    .f05-send {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 20px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase; color: rgba(250, 250, 248, 0.86);
+      border: 1px solid rgba(250, 250, 248, 0.22); border-radius: 6px; padding: 7px 13px; line-height: 1;
+      transform-origin: 50% 50%; will-change: transform;
+    }
+    .f05-term-body { padding: 40px 34px 0; }
+    .f05-input-row { display: flex; align-items: flex-start; }
+    .f05-prompt { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 26px; line-height: 44px; color: #5db8a6; margin-right: 14px; }
+    .f05-type {
+      display: inline-block; vertical-align: top; width: 790px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 26px; line-height: 44px;
+      white-space: pre-wrap; color: rgba(250, 250, 248, 0.92);
+    }
+    .f05-tq { color: #5db8a6; }
+    .f05-caret { display: inline-block; vertical-align: top; width: 14px; height: 34px; margin-left: 4px; background-color: #fafaf8; }
+
+    #f05-json { padding: 40px 30px 0; }
+    .f05-jrow {
+      position: relative; height: 58px; line-height: 58px; white-space: nowrap; padding-left: 30px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 26px; font-weight: 400;
+      color: rgba(250, 250, 248, 0.75);
+    }
+    .f05-brace { padding-left: 0; }
+    .f05-brace .f05-c { color: rgba(250, 250, 248, 0.4); }
+    .f05-cont { padding-left: 120px; color: #5db8a6; }
+    .f05-k { color: #fafaf8; }
+    .f05-v { margin-left: 1ch; color: #5db8a6; }
+    .f05-c { color: rgba(250, 250, 248, 0.4); }
+    #f05-row-manage { color: #fafaf8; }
+    #f05-row-manage .f05-v { color: #fafaf8; }
+    .f05-halo {
+      position: absolute; left: 8px; right: 8px; top: 7px; bottom: 7px;
+      border: 1px solid rgba(250, 250, 248, 0.24); border-radius: 6px;
+    }
+    .f05-foot { position: absolute; left: 0; right: 0; bottom: 34px; padding: 0 30px; }
+    .f05-foot-line { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    .f05-foot-t { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 20px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(250, 250, 248, 0.5); }
+
+    /* ---- vault grant card (single split-tilt card) ---- */
+    #f05-grant-persp { position: absolute; left: 1980px; top: 150px; width: 700px; height: 600px; perspective: 1500px; }
+    #f05-grant-holder { position: absolute; inset: 0; will-change: transform; }
+    #f05-grant {
+      position: absolute; inset: 0; padding: 34px;
+      background-color: #f7dad6; border: 1px solid rgba(26, 26, 24, 0.14); border-radius: 12px;
+      box-shadow: 8px 0 24px rgba(26, 26, 24, 0.06);
+      transform-origin: 50% 50%; backface-visibility: hidden; will-change: transform, opacity;
+    }
+    #f05-grant .f05-gtitle { font-family: satoshi, serif; font-weight: 500; font-size: 2.3cqw; line-height: 1.25; letter-spacing: -0.005em; margin-top: 20px; }
+    .f05-grow { display: flex; align-items: center; justify-content: space-between; height: 58px; }
+    .f05-grows { margin-top: 20px; }
+    .f05-glabel { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 24px; font-weight: 500; letter-spacing: 0.02em; color: rgba(26, 26, 24, 0.52); }
+    .f05-gval { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 26px; font-weight: 400; color: #1a1a18; }
+    #f05-grant .f05-hr { margin-top: 14px; }
+    #f05-pill-jitter { position: relative; will-change: transform; }
+    #f05-pill {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      min-width: 330px; height: 56px; padding: 0 24px;
+      border: 1px solid rgba(26, 26, 24, 0.2); border-radius: 9999px; background-color: rgba(250, 250, 248, 0.5);
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 27px; font-weight: 500;
+      letter-spacing: 0.02em; color: #1a1a18; white-space: nowrap;
+      transform-origin: 50% 50%; will-change: transform;
+    }
+    #f05-pill.f05-lit { background-color: #e5523d; border-color: #e5523d; color: #fafaf8; }
+  </style>
+
+  <div data-hf-id="hf-br3c" id="root" data-composition-id="05-back-to-the-vault" data-width="1920" data-height="1080" data-duration="7.659">
+    <div data-hf-id="hf-tgaw" class="clip" id="f05-ground" data-start="0" data-duration="7.659" data-track-index="0">
+      <div data-hf-id="hf-3q1w" class="f05-grid"></div>
+      <div data-hf-id="hf-98ff" class="f05-edge"></div>
+    </div>
+
+    <div data-hf-id="hf-0mve" class="clip" id="f05-stage" data-start="0" data-duration="7.659" data-track-index="1">
+      <div data-hf-id="hf-83sk" id="f05-camera">
+        <div data-hf-id="hf-t01h" id="f05-cam-shift">
+          <div data-hf-id="hf-k554" id="f05-world" data-layout-allow-overflow data-layout-allow-caption-zone>
+            <div data-hf-id="hf-11n8" class="f05-dof" id="f05-head" data-depth="3" data-dim="0.3">
+              <span data-hf-id="hf-82g7">the paybox gauntlet</span>
+              <span data-hf-id="hf-ca0v">moonpay hackathons · chapter 1</span>
+            </div>
+
+            <section data-hf-id="hf-6zui" class="f05-card f05-dof" id="f05-verdict" data-depth="2" data-dim="0.3">
+              <div data-hf-id="hf-8sh9" class="f05-mono-k"><span data-hf-id="hf-8nf8" class="f05-spike">&#10033;</span>&#160; scan verdict</div>
+              <div data-hf-id="hf-s5li" class="f05-badge-row">
+                <span data-hf-id="hf-p0lq" class="f05-badge">dangerous</span>
+                <span data-hf-id="hf-3dg4" class="f05-flag">quarantined=True</span>
+              </div>
+              <div data-hf-id="hf-oj53" id="f05-verdict-rule"></div>
+              <div data-hf-id="hf-hiay" class="f05-lockup"><span data-hf-id="hf-zvu1" class="f05-figure">0.73</span><span data-hf-id="hf-jvos" class="f05-unit">risk</span></div>
+            </section>
+
+            <section data-hf-id="hf-4z0b" class="f05-panel f05-dof" id="f05-terminal" data-depth="2" data-dim="0.3">
+              <div data-hf-id="hf-v8ej" class="f05-bar">
+                <span data-hf-id="hf-1ql7" class="f05-file">paybox · terminal</span>
+                <span data-hf-id="hf-k7qd" class="f05-send" id="f05-send">send</span>
+              </div>
+              <div data-hf-id="hf-6vdf" class="f05-term-body">
+                <div data-hf-id="hf-dvdj" class="f05-input-row">
+                  <span data-hf-id="hf-b0k5" class="f05-prompt">$</span>
+                  <span data-hf-id="hf-anr7" class="f05-type" id="f05-type"></span><span data-hf-id="hf-j1it" class="f05-caret" id="f05-caret"></span>
+                </div>
+              </div>
+            </section>
+
+            <section data-hf-id="hf-c33i" class="f05-panel" id="f05-payload">
+              <div data-hf-id="hf-1zbw" class="f05-bar f05-dof" data-depth="1">
+                <span data-hf-id="hf-4qit" class="f05-file">account_change.req</span>
+                <span data-hf-id="hf-ze9n" class="f05-chip">post &gt; vault</span>
+              </div>
+              <div data-hf-id="hf-qrnn" id="f05-json">
+                <div data-hf-id="hf-6t5l" class="f05-jrow f05-brace f05-dof" data-depth="3" data-dim="0.45"><span data-hf-id="hf-2u6p" class="f05-c">{</span></div>
+                <div data-hf-id="hf-k5q8" class="f05-jrow f05-dof" data-depth="1" data-dim="0.45"><span data-hf-id="hf-914r" class="f05-k">&quot;client_id&quot;</span><span data-hf-id="hf-dsvy" class="f05-c">:</span><span data-hf-id="hf-ibk2" class="f05-v">&quot;paybox-ag-4471&quot;</span><span data-hf-id="hf-6ndg" class="f05-c">,</span></div>
+                <div data-hf-id="hf-yvtv" class="f05-jrow f05-dof" data-depth="2" data-dim="0.45"><span data-hf-id="hf-tcra" class="f05-k">&quot;kind&quot;</span><span data-hf-id="hf-040y" class="f05-c">:</span><span data-hf-id="hf-liih" class="f05-v">&quot;account_change&quot;</span><span data-hf-id="hf-y0oc" class="f05-c">,</span></div>
+                <div data-hf-id="hf-ik7c" class="f05-jrow" id="f05-row-manage"><span data-hf-id="hf-36v7" class="f05-halo" id="f05-halo"></span><span data-hf-id="hf-sldr" class="f05-k">&quot;manage_url&quot;</span><span data-hf-id="hf-0ibz" class="f05-c">:</span><span data-hf-id="hf-i5cn" class="f05-v">&quot;elcaro.trustfall.xyz/paybox&quot;</span><span data-hf-id="hf-wtr9" class="f05-c">,</span></div>
+                <div data-hf-id="hf-mvmr" class="f05-jrow f05-dof" data-depth="2" data-dim="0.45"><span data-hf-id="hf-bv2g" class="f05-k">&quot;note&quot;</span><span data-hf-id="hf-0wn0" class="f05-c">:</span><span data-hf-id="hf-uagh" class="f05-v">&quot;poisoned content &#8212;</span></div>
+                <div data-hf-id="hf-bcbi" class="f05-jrow f05-cont f05-dof" data-depth="2" data-dim="0.45">tighten grant to always_approve&quot;</div>
+                <div data-hf-id="hf-i4fh" class="f05-jrow f05-brace f05-dof" data-depth="3" data-dim="0.45"><span data-hf-id="hf-21kn" class="f05-c">}</span></div>
+              </div>
+              <div data-hf-id="hf-rot5" class="f05-foot f05-dof" data-depth="1">
+                <div data-hf-id="hf-w12f" class="f05-hr-dark"></div>
+                <div data-hf-id="hf-zgxz" class="f05-foot-line"><span data-hf-id="hf-65pg" class="f05-foot-t">queued for vault</span><span data-hf-id="hf-c3d2" class="f05-foot-t">client paybox-ag-4471</span></div>
+              </div>
+            </section>
+
+            <div data-hf-id="hf-fgxy" id="f05-grant-persp">
+              <div data-hf-id="hf-shpk" id="f05-grant-holder">
+                <article data-hf-id="hf-gwjc" id="f05-grant">
+                  <div data-hf-id="hf-9zrc" class="f05-mono-k f05-rev"><span data-hf-id="hf-d2gc" class="f05-spike">&#10033;</span>&#160; vault grant</div>
+                  <div data-hf-id="hf-us8i" class="f05-gtitle f05-rev">Spending grant</div>
+                  <div data-hf-id="hf-tbwm" class="f05-hr"></div>
+                  <div data-hf-id="hf-kxf0" class="f05-grows">
+                    <div data-hf-id="hf-ro6e" class="f05-grow f05-rev"><span data-hf-id="hf-1o40" class="f05-glabel">tool</span><span data-hf-id="hf-2eqf" class="f05-gval">request_payment</span></div>
+                    <div data-hf-id="hf-j8oa" class="f05-grow f05-rev"><span data-hf-id="hf-rrz9" class="f05-glabel">limit</span><span data-hf-id="hf-880a" class="f05-gval">up to $1,200</span></div>
+                    <div data-hf-id="hf-jmzb" class="f05-grow f05-rev"><span data-hf-id="hf-pxhx" class="f05-glabel">client</span><span data-hf-id="hf-rws8" class="f05-gval">paybox-ag-4471</span></div>
+                    <div data-hf-id="hf-tswr" class="f05-grow f05-rev" id="f05-scope-row"><span data-hf-id="hf-pdpe" class="f05-glabel">scope</span><span data-hf-id="hf-sdnm" id="f05-pill-jitter"><span data-hf-id="hf-d0cs" id="f05-pill">auto</span></span></div>
+                    <div data-hf-id="hf-k1ac" class="f05-grow f05-rev"><span data-hf-id="hf-01aa" class="f05-glabel">note</span><span data-hf-id="hf-ak1h" class="f05-gval">invoice #4471</span></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var D = 7.059;
+      var tl = gsap.timeline({ paused: true });
+
+      /* ---------- camera: one pose track, one writer, no CSS transition anywhere ---------- */
+      var DIVE_AT = 2.4, DIVE_DUR = 1.4;        // dive COMPLETE by 3.8
+      var TRAVEL_AT = 3.8, TRAVEL_DUR = 1.2;    // travel to the grant card, still from 5.0
+      var REST = { s: 1, tx: 0, ty: 0 };
+      var DIVE = { s: 1.9, tx: -513, ty: 95 };
+      var HOLD = { s: 1.02, tx: -915, ty: 90 };
+      var LINEAR = function (p) { return p; };
+      var P4OUT = function (p) { return 1 - Math.pow(1 - p, 4); };
+      var P2INOUT = function (p) { return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; };
+      var LEGS = [
+        { a: 0, b: DIVE_AT, from: REST, to: REST, e: LINEAR },
+        { a: DIVE_AT, b: DIVE_AT + DIVE_DUR, from: REST, to: DIVE, e: P4OUT },
+        { a: DIVE_AT + DIVE_DUR, b: TRAVEL_AT + TRAVEL_DUR, from: DIVE, to: HOLD, e: P2INOUT },
+        { a: TRAVEL_AT + TRAVEL_DUR, b: D, from: HOLD, to: HOLD, e: LINEAR }
+      ];
+      function poseAt(time) {
+        for (var i = LEGS.length - 1; i >= 0; i--) {
+          var l = LEGS[i];
+          if (time >= l.a) {
+            if (l.from === l.to) return l.from;
+            var p = Math.min(1, Math.max(0, (time - l.a) / (l.b - l.a)));
+            var k = l.e(p);
+            return {
+              s: l.from.s + (l.to.s - l.from.s) * k,
+              tx: l.from.tx + (l.to.tx - l.from.tx) * k,
+              ty: l.from.ty + (l.to.ty - l.from.ty) * k
+            };
+          }
+        }
+        return REST;
+      }
+      function dampAt(time) {
+        var a = 4.8, b = 5.6;
+        if (time <= a) return 1;
+        if (time >= b) return 0;
+        var p = (time - a) / (b - a);
+        return 1 - (p * p * (3 - 2 * p));
+      }
+
+      var camOuter = document.getElementById("f05-camera");
+      var camInner = document.getElementById("f05-cam-shift");
+      var camT = { t: 0 };
+      var drift = { p: 0 };
+      var DRIFT_CYCLES = 2, DRIFT_X = 3.2, DRIFT_Y = 1.8, DRIFT_RATIO = 1.3;
+      function applyCamera() {
+        var pose = poseAt(camT.t);
+        var d = dampAt(camT.t);
+        var dx = Math.sin(drift.p) * DRIFT_X * d;
+        var dy = Math.sin(drift.p * DRIFT_RATIO) * DRIFT_Y * d;
+        camOuter.style.transform = "scale(" + pose.s + ")";
+        camInner.style.transform = "translate(" + (pose.tx + dx) + "px," + (pose.ty + dy) + "px)";
+      }
+      tl.fromTo(camT, { t: 0 }, { t: D, duration: D, ease: "none", onUpdate: applyCamera }, 0);
+      tl.to(drift, { p: Math.PI * 2 * DRIFT_CYCLES, duration: D, ease: "none", onUpdate: applyCamera }, 0);
+
+      /* ---------- Scene 1 (0.0-2.4) — verdict at rest, the command types on ---------- */
+      tl.fromTo("#f05-verdict-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.2);
+
+      var CMD = 'paybox account-change --note "poisoned content \u2014 tighten grant to always_approve"';
+      var TYPE_AT = 0.4, PER_CHAR = 0.017, CARET_OFF = 2.35;
+      var BURSTS = [4, 3, 5, 2, 4, 3, 4, 2, 5, 3, 4, 3, 5, 2, 4, 3];
+      var QUOTE_AT = CMD.indexOf('"');
+      var SEQ = [{ t: TYPE_AT, text: "" }];
+      (function () {
+        var cur = 0, acc = TYPE_AT, k = 0;
+        while (cur < CMD.length) {
+          var n = BURSTS[k % BURSTS.length];
+          cur = Math.min(CMD.length, cur + n);
+          acc += n * PER_CHAR + (CMD.charAt(cur - 1) === " " ? 0.03 : 0);
+          SEQ.push({ t: acc, text: CMD.slice(0, cur) });
+          k++;
+        }
+      })();
+      function textAt(time) {
+        for (var i = SEQ.length - 1; i >= 0; i--) if (time >= SEQ[i].t) return SEQ[i].text;
+        return "";
+      }
+
+      var typeEl = document.getElementById("f05-type");
+      var caretEl = document.getElementById("f05-caret");
+      function paintType(time) {
+        var s = textAt(time);
+        typeEl.textContent = "";
+        if (!s) return;
+        var head = s.slice(0, Math.min(QUOTE_AT, s.length));
+        typeEl.appendChild(document.createTextNode(head));
+        if (s.length > QUOTE_AT) {
+          var q = document.createElement("span");
+          q.className = "f05-tq";
+          q.textContent = s.slice(QUOTE_AT);
+          typeEl.appendChild(q);
+        }
+      }
+      var typer = { t: 0 };
+      tl.fromTo(typer, { t: 0 }, { t: D, duration: D, ease: "none", onUpdate: function () { paintType(typer.t); } }, 0);
+
+      var BLINK_CYCLES = 11;
+      var blink = { p: 0 };
+      tl.to(blink, {
+        p: Math.PI * 2 * BLINK_CYCLES, duration: D, ease: "none",
+        onUpdate: function () {
+          var tNow = (blink.p / (Math.PI * 2 * BLINK_CYCLES)) * D;
+          caretEl.style.opacity = tNow > CARET_OFF ? "0" : Math.sin(blink.p) > 0 ? "1" : "0";
+        }
+      }, 0);
+
+      // the hinge — the send fires, the artefact answers
+      tl.fromTo("#f05-send", { opacity: 0.34 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 1.78);
+      tl.fromTo("#f05-send", { scale: 1 }, { scale: 0.93, duration: 0.1, ease: "power2.in" }, 1.9);
+      tl.fromTo("#f05-send", { scale: 0.93 }, { scale: 1, duration: 0.24, ease: "power2.out" }, 2.02);
+
+      /* ---------- Scene 2 (2.4-3.8) — the dive: depth of field falls off onto manage_url ---------- */
+      tl.fromTo("#f05-payload", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power3.out" }, 1.95);
+      tl.fromTo("#f05-json .f05-jrow", { opacity: 0, x: -18 }, { opacity: 1, x: 0, duration: 0.28, stagger: 0.05, ease: "power2.out" }, 1.98);
+
+      var FOCUS_AT = 2.7, FOCUS_DUR = 0.75, BLUR_PER_DEPTH = 4.5, REFOCUS_AT = 4.5, REFOCUS_DUR = 0.55;
+      gsap.utils.toArray("#f05-world .f05-dof").forEach(function (el) {
+        var depth = Number(el.getAttribute("data-depth")) || 1;
+        var hasDim = el.hasAttribute("data-dim");
+        var dim = hasDim ? Number(el.getAttribute("data-dim")) : 1;
+        var blurred = BLUR_PER_DEPTH * depth;
+        tl.fromTo(
+          el,
+          { "--dof": "0px", opacity: dim },
+          { "--dof": blurred + "px", opacity: dim === 1 ? dim : dim, duration: FOCUS_DUR, ease: "power2.inOut" },
+          FOCUS_AT
+        );
+        tl.fromTo(
+          el,
+          { "--dof": blurred + "px", opacity: dim },
+          { "--dof": "0px", opacity: 1, duration: REFOCUS_DUR, ease: "power2.inOut" },
+          REFOCUS_AT
+        );
+      });
+      tl.fromTo("#f05-halo", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 2.9);
+
+      /* ---------- Scene 3 (3.8-5.0) — the grant card splits open, the scope tightens ---------- */
+      tl.fromTo("#f05-grant-holder", { rotateY: -14 }, { rotateY: 0, duration: 0.9, ease: "power3.out" }, 3.85);
+      tl.fromTo("#f05-grant", { x: 420, opacity: 0 }, { x: 0, opacity: 1, duration: 0.9, ease: "power3.out" }, 3.85);
+      tl.fromTo("#f05-grant-holder .f05-rev", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.2, stagger: 0.05, ease: "power2.out" }, 4.02);
+
+      var PILL_LAND = 4.48;
+      var PILL_SEQ = [
+        { t: 0, s: "auto" },
+        { t: 4.34, s: "always_approve" },
+        { t: 4.4, s: "auto" },
+        { t: 4.44, s: "always_approve" },
+        { t: 4.46, s: "auto" },
+        { t: PILL_LAND, s: "always_approve" }
+      ];
+      function pillAt(time) {
+        for (var i = PILL_SEQ.length - 1; i >= 0; i--) if (time >= PILL_SEQ[i].t) return PILL_SEQ[i].s;
+        return "auto";
+      }
+      var pillEl = document.getElementById("f05-pill");
+      var pillR = { t: 0 };
+      tl.fromTo(pillR, { t: 0 }, {
+        t: D, duration: D, ease: "none",
+        onUpdate: function () {
+          var s = pillAt(pillR.t);
+          if (pillEl.textContent !== s) pillEl.textContent = s;
+          var lit = pillR.t >= PILL_LAND;
+          var isLit = pillEl.className.indexOf("f05-lit") > -1;
+          if (lit !== isLit) pillEl.className = lit ? "f05-lit" : "";
+        }
+      }, 0);
+      tl.fromTo("#f05-pill", { scale: 1 }, { scale: 1.06, duration: 0.14, ease: "power2.out" }, PILL_LAND);
+      tl.fromTo("#f05-pill", { scale: 1.06 }, { scale: 1, duration: 0.26, ease: "power2.inOut" }, PILL_LAND + 0.14);
+
+      /* ---------- Scene 4 (5.0-7.059) — settle and hold: only the changed pill stays bright ---------- */
+      var SPOT_AT = 5.1, SPOT_DUR = 0.65;
+      tl.fromTo("#f05-payload", { opacity: 1 }, { opacity: 0.84, duration: SPOT_DUR, ease: "power2.out" }, SPOT_AT);
+      tl.fromTo("#f05-json .f05-jrow:not(#f05-row-manage)", { opacity: 1 }, { opacity: 0.62, duration: SPOT_DUR, ease: "power2.out" }, SPOT_AT);
+      tl.fromTo("#f05-row-manage", { opacity: 1 }, { opacity: 0.95, duration: SPOT_DUR, ease: "power2.out" }, SPOT_AT);
+      tl.fromTo("#f05-grant-holder .f05-rev:not(#f05-scope-row)", { opacity: 1 }, { opacity: 0.76, duration: SPOT_DUR, ease: "power2.out" }, SPOT_AT);
+
+      var jit = { p: 0 };
+      var jitEl = document.getElementById("f05-pill-jitter");
+      tl.to(jit, {
+        p: Math.PI * 2 * 3, duration: D, ease: "none",
+        onUpdate: function () {
+          var tNow = (jit.p / (Math.PI * 2 * 3)) * D;
+          var a = tNow < 5.0 ? 0 : Math.min(1, (tNow - 5.0) / 0.4);
+          jitEl.style.transform = "translateY(" + (Math.sin(jit.p) * 1.1 * a).toFixed(2) + "px)";
+        }
+      }, 0);
+
+      /* ---------- seed the t=0 state, then register ---------- */
+      applyCamera();
+      paintType(0);
+      caretEl.style.opacity = "0";
+      pillEl.textContent = pillAt(0);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["05-back-to-the-vault"] = tl;
+    })();
+  </script>
+</template>
