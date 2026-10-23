@@ -140,6 +140,28 @@ export interface ScanResponse {
     output_tokens?: number | null;
     cost_usd?: number | null;
   } | null;
+  // JEV-27B-VL (AutoTrust via Novita) comparison — a third shadow pass, same
+  // contract as Jev and Laya: never adjusts risk_score / risk_level /
+  // safe_content. Populated when the miner has a Novita key + JEV_VL_ENABLED=1
+  // and the request opted in via jev_vl_enabled. jev_vl_score is
+  // P(injection) 0-1 (a noul answer), so probabilities are keyed true/false
+  // and jev_vl_confidence is |2p-1|. cost_usd is null unless the miner sets
+  // JEV_VL_INPUT_PRICE_PER_M — Novita publishes no unit price.
+  jev_vl_available?: boolean;
+  jev_vl_attempted?: boolean;
+  jev_vl_used?: boolean;
+  jev_vl_comparison?: {
+    rule_score: number;
+    rule_level: RiskLevel;
+    jev_vl_score: number;
+    jev_vl_level: string;
+    jev_vl_confidence: number;
+    probabilities: Record<string, number>;
+    agrees_with_rules: boolean;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    cost_usd?: number | null;
+  } | null;
 }
 
 export interface ScanRequest {
@@ -157,6 +179,9 @@ export interface ScanRequest {
   // Second comparison toggle: same as jev_enabled but for Convai's Laya model
   // (via Runware). Independent of Jev — either, both, or neither may run.
   laya_enabled?: boolean;
+  // Third comparison toggle: same as jev_enabled but for AutoTrust's
+  // JEV-27B-VL model (via Novita). Independent of Jev and Laya.
+  jev_vl_enabled?: boolean;
 }
 
 export interface ScanError {

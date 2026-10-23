@@ -31,6 +31,7 @@ from core.detectors.placement import PlacementDetector
 from core.detectors.swarm_directive import SwarmDirectiveDetector
 from core.detectors.task_reframe import TaskReframeDetector
 from core.jev_reasoner import JevReasoner
+from core.jev_vl_reasoner import JevVlReasoner
 from core.laya_reasoner import LayaReasoner
 from core.llm_classifier import LlmClassifier
 from core.normalize import normalization_indicators, normalize
@@ -118,6 +119,7 @@ _CLASSIFIER_UNSET = object()
 _SERV_UNSET = object()
 _JEV_UNSET = object()
 _LAYA_UNSET = object()
+_JEV_VL_UNSET = object()
 _CANARY_UNSET = object()
 
 
@@ -151,6 +153,14 @@ def _load_laya_reasoner_from_env() -> LayaReasoner | None:
     return LayaReasoner.from_env()
 
 
+def _load_jev_vl_reasoner_from_env() -> JevVlReasoner | None:
+    """Build the JEV-27B-VL comparison reasoner from JEV_VL_* / NOVITA_* env vars.
+
+    Returns None when JEV-VL is disabled — the engine attaches no comparison.
+    """
+    return JevVlReasoner.from_env()
+
+
 # ── Scoring engine ─────────────────────────────────────────────────────────────
 
 
@@ -175,6 +185,7 @@ class IpiDetectionEngine:
         serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
         jev_reasoner: JevReasoner | None | object = _JEV_UNSET,
         laya_reasoner: LayaReasoner | None | object = _LAYA_UNSET,
+        jev_vl_reasoner: JevVlReasoner | None | object = _JEV_VL_UNSET,
         canary_registry: CanaryRegistry | None | object = _CANARY_UNSET,
     ) -> None:
         self.detectors = [
@@ -198,6 +209,9 @@ class IpiDetectionEngine:
         if laya_reasoner is _LAYA_UNSET:
             laya_reasoner = _load_laya_reasoner_from_env()
         self.laya_reasoner: LayaReasoner | None = laya_reasoner  # type: ignore[assignment]
+        if jev_vl_reasoner is _JEV_VL_UNSET:
+            jev_vl_reasoner = _load_jev_vl_reasoner_from_env()
+        self.jev_vl_reasoner: JevVlReasoner | None = jev_vl_reasoner  # type: ignore[assignment]
         if canary_registry is _CANARY_UNSET:
             # Default on (ELCARO_CANARY=0 disables). Stamping only touches
             # quarantined safe_content — the verbatim-relay surface — so
@@ -396,6 +410,39 @@ class IpiDetectionEngine:
                     "cost_usd": laya_result.cost_usd,
                 }
 
+        # JEV-27B-VL (AutoTrust via Novita) shadow pass: same contract as Jev
+        # and Laya — gray-zone AND opted in, comparison-only, never touches
+        # weighted_score / risk_level. See core/jev_vl_reasoner.py. Independent
+        # of both: any combination of the three may run in a single scan.
+        jev_vl_available = self.jev_vl_reasoner is not None
+        jev_vl_attempted = False
+        jev_vl_used = False
+        jev_vl_comparison: dict | None = None
+        should_run_jev_vl = bool(request.jev_vl_enabled) and in_gray_zone
+
+        if should_run_jev_vl and self.jev_vl_reasoner is not None:
+            jev_vl_attempted = True
+            jev_vl_result = self.jev_vl_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if jev_vl_result.ok:
+                jev_vl_used = True
+                jev_vl_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "jev_vl_score": round(jev_vl_result.jev_vl_score, 4),
+                    "jev_vl_level": jev_vl_result.jev_vl_level,
+                    "jev_vl_confidence": round(jev_vl_result.confidence, 4),
+                    "probabilities": jev_vl_result.probabilities,
+                    "agrees_with_rules": jev_vl_result.agrees_with_rules,
+                    "input_tokens": jev_vl_result.input_tokens,
+                    "output_tokens": jev_vl_result.output_tokens,
+                    # Input-token billing only; None unless
+                    # JEV_VL_INPUT_PRICE_PER_M is set — see
+                    # core/jev_vl_reasoner.py.
+                    "cost_usd": jev_vl_result.cost_usd,
+                }
+
         latency_ms = int((time.monotonic() - start_time) * 1000)
 
         # Generate summary
@@ -525,6 +572,10 @@ class IpiDetectionEngine:
             laya_attempted=laya_attempted,
             laya_used=laya_used,
             laya_comparison=laya_comparison,
+            jev_vl_available=jev_vl_available,
+            jev_vl_attempted=jev_vl_attempted,
+            jev_vl_used=jev_vl_used,
+            jev_vl_comparison=jev_vl_comparison,
         )
 
     def _compute_score(self, indicators: list[DetectionIndicator]) -> float:

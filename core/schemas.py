@@ -221,6 +221,17 @@ class ScanRequest(BaseModel):
             "required."
         ),
     )
+    jev_vl_enabled: bool = Field(
+        default=False,
+        description=(
+            "Optional comparison toggle: when true AND the server is "
+            "configured with a Novita key + JEV_VL_ENABLED=1, borderline "
+            "(gray-zone) scans also get a shadow verdict from AutoTrust's "
+            "JEV-27B-VL decision model (via Novita AI) for side-by-side "
+            "comparison. Like Jev and Laya, JEV-VL never adjusts risk_score "
+            "or risk_level. Default off; no network call, no key required."
+        ),
+    )
 
 
 class ScanResponse(BaseModel):
@@ -419,6 +430,48 @@ class ScanResponse(BaseModel):
             "input_tokens, output_tokens, cost_usd (free until 2026-10-12, "
             "then launch-note pricing — see core/laya_reasoner.py). "
             "Informational only — never fed back into the quarantine decision."
+        ),
+    )
+    # ── JEV-27B-VL (AutoTrust via Novita) comparison observability ────────────
+    # A third shadow pass, identical contract to Jev and Laya: reports what
+    # JEV-VL saw on the same borderline content, purely for comparison. Never
+    # contributes to risk_score / risk_level / safe_content.
+    jev_vl_available: bool = Field(
+        default=False,
+        description=(
+            "True when the miner is configured with a Novita key and "
+            "JEV_VL_ENABLED=1 — the JEV-27B-VL comparison pass is ready to run."
+        ),
+    )
+    jev_vl_attempted: bool = Field(
+        default=False,
+        description=(
+            "True when the engine attempted to call JEV-27B-VL for this scan "
+            "(gray-zone AND jev_vl_enabled). False when the request stayed on "
+            "the rule-only fast path or fell outside the gray zone."
+        ),
+    )
+    jev_vl_used: bool = Field(
+        default=False,
+        description=(
+            "True when the JEV-27B-VL call succeeded and jev_vl_comparison is "
+            "populated. False when JEV-VL was unavailable, in cooldown (incl. "
+            "post-promo 403 balance/budget errors), timed out, or returned an "
+            "error — jev_vl_comparison is None in that case."
+        ),
+    )
+    jev_vl_comparison: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Side-by-side comparison of the rule engine's verdict and "
+            "JEV-27B-VL's injection probability on the same content, present "
+            "only when jev_vl_used=True. Keys: rule_score, rule_level, "
+            "jev_vl_score (P(injection), 0-1), jev_vl_level, "
+            "jev_vl_confidence (|2p-1|), probabilities (map<true|false, "
+            "prob>), agrees_with_rules, input_tokens, output_tokens, cost_usd "
+            "(input-token billing only; null unless JEV_VL_INPUT_PRICE_PER_M "
+            "is configured — see core/jev_vl_reasoner.py). Informational only "
+            "— never fed back into the quarantine decision."
         ),
     )
     canary_hits: list[dict[str, Any]] | None = Field(

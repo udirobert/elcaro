@@ -104,3 +104,10 @@ export function countLayaCompared(lastN: number = 10): number {
   const history = getHistory();
   return history.slice(0, lastN).filter((e) => e.response.laya_used).length;
 }
+
+// Same as countLayaCompared but for the JEV-27B-VL (Novita) comparison rail.
+export function countJevVlCompared(lastN: number = 10): number {
+  if (typeof window === "undefined") return 0;
+  const history = getHistory();
+  return history.slice(0, lastN).filter((e) => e.response.jev_vl_used).length;
+}

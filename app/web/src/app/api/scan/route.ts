@@ -30,6 +30,13 @@ export async function POST(request: Request) {
         : layaQuery === "0" || layaQuery === "false" ? false
           : undefined;
 
+    // Same override pattern for the JEV-27B-VL (Novita) comparison toggle.
+    const jevVlQuery = url.searchParams.get("jevvl");
+    const jevVlFromQuery =
+      jevVlQuery === "1" || jevVlQuery === "true" ? true
+        : jevVlQuery === "0" || jevVlQuery === "false" ? false
+          : undefined;
+
     const minerResponse = await fetch(`${MINER_URL}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,6 +50,8 @@ export async function POST(request: Request) {
           jevFromQuery !== undefined ? jevFromQuery : (body.jev_enabled || false),
         laya_enabled:
           layaFromQuery !== undefined ? layaFromQuery : (body.laya_enabled || false),
+        jev_vl_enabled:
+          jevVlFromQuery !== undefined ? jevVlFromQuery : (body.jev_vl_enabled || false),
       }),
     });
 

@@ -8,7 +8,7 @@ import { InlineHighlight } from "./inline-highlight";
 import { IndicatorAnnotation } from "./indicator-annotation";
 import { NextSteps } from "./next-steps";
 import { getReviewerMode, recordExpandAll, setReviewerMode } from "@/lib/reviewer";
-import { countServRefined, countJevCompared, countLayaCompared, getHistory } from "@/lib/history";
+import { countServRefined, countJevCompared, countLayaCompared, countJevVlCompared, getHistory } from "@/lib/history";
 
 interface ScanResultProps {
   result: ScanResponse;
@@ -184,6 +184,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
           verdict). */}
       {result.jev_used && <SessionJevCount />}
       {result.laya_used && <SessionLayaCount />}
+      {result.jev_vl_used && <SessionJevVlCount />}
 
       {/* Jev comparison — a pure side-by-side, never a verdict input. Shown
           whenever Jev contributed a comparison; framed as "rules saw X, Jev
@@ -224,6 +225,27 @@ export function ScanResult({ result, content }: ScanResultProps) {
           </span>
           <span className="text-ink-muted leading-relaxed">
             Laya was unavailable for this scan — no comparison to show
+          </span>
+        </motion.div>
+      )}
+
+      {/* JEV-27B-VL comparison — a third shadow rail, same contract as Jev
+          and Laya. */}
+      {result.jev_vl_used && result.jev_vl_comparison && (
+        <JevVlComparisonCard comparison={result.jev_vl_comparison} />
+      )}
+      {result.jev_vl_attempted && !result.jev_vl_used && result.jev_vl_available && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
+          className="flex items-start gap-2 text-xs text-ink-faint bg-canvas border border-border rounded-lg px-3 py-2"
+        >
+          <span className="font-mono font-semibold shrink-0 mt-px">
+            JEV-VL fallback
+          </span>
+          <span className="text-ink-muted leading-relaxed">
+            JEV-27B-VL was unavailable for this scan — no comparison to show
           </span>
         </motion.div>
       )}
@@ -723,6 +745,101 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
           not evidence it's safe.
         </p>
       )}
+
+      {(comparison.input_tokens != null || comparison.cost_usd != null) && (
+        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+          {comparison.input_tokens != null && (
+            <span>
+              {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens
+            </span>
+          )}
+          {comparison.cost_usd != null && <span>· {formatCostUsd(comparison.cost_usd)}</span>}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+
+// ── Session JEV-VL counter ─────────────────────────────────────────────────────
+// Same as SessionLayaCount, for the JEV-27B-VL (Novita) comparison rail.
+function SessionJevVlCount() {
+  const compared = countJevVlCompared(10);
+  const total = getHistory().slice(0, 10).length;
+
+  if (total < 2 || compared === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
+      JEV-VL compared {compared} of {total} recent scans
+    </motion.div>
+  );
+}
+
+// ── JEV-27B-VL comparison card ────────────────────────────────────────────────
+
+type JevVlComparison = NonNullable<ScanResponse["jev_vl_comparison"]>;
+
+/**
+ * Side-by-side rule-engine-vs-JEV-27B-VL comparison. Like the Laya card it
+ * never claims JEV-VL "changed" anything — it's a shadow pass
+ * (core/jev_vl_reasoner.py). One probability of injection, coloured by the
+ * band it falls in. No calibration note yet — JEV-VL has no corpus numbers.
+ */
+function JevVlComparisonCard({ comparison }: { comparison: JevVlComparison }) {
+  const ruleColor = LEVEL_TEXT_COLOR[comparison.rule_level] ?? "text-ink-muted";
+  const jevVlColor = LEVEL_TEXT_COLOR[comparison.jev_vl_level] ?? "text-ink-muted";
+  const pInjection = comparison.probabilities.true ?? comparison.jev_vl_score;
+  const barColor = LEVEL_BG_COLOR[comparison.jev_vl_level] ?? "bg-ink-faint";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
+      className="rounded-lg border border-teal/20 bg-teal/5 overflow-hidden"
+    >
+      <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap">
+        <span className="font-mono text-xs font-bold text-teal shrink-0">
+          JEV-VL comparison
+        </span>
+        <span className="text-xs text-ink-muted leading-relaxed flex items-center gap-1.5 flex-wrap">
+          <span>rules saw</span>
+          <span className={`font-mono font-semibold ${ruleColor}`}>
+            {comparison.rule_level}
+          </span>
+          <span className="text-ink-faint">({comparison.rule_score.toFixed(2)})</span>
+          <span>· JEV-VL saw</span>
+          <span className={`font-mono font-semibold ${jevVlColor}`}>
+            {comparison.jev_vl_level}
+          </span>
+          <span className="text-ink-faint">
+            (P(injection) {comparison.jev_vl_score.toFixed(2)})
+          </span>
+        </span>
+        {!comparison.agrees_with_rules && (
+          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+            disagreement
+          </span>
+        )}
+      </div>
+
+      {/* Single probability-of-injection bar, coloured by the band. */}
+      <div className="px-3 pb-2">
+        <div
+          className="flex h-1.5 rounded-full overflow-hidden bg-border"
+          role="img"
+          aria-label={`JEV-27B-VL's probability of injection: ${Math.round(pInjection * 100)} percent`}
+        >
+          <div className={barColor} style={{ width: `${pInjection * 100}%` }} />
+        </div>
+      </div>
 
       {(comparison.input_tokens != null || comparison.cost_usd != null) && (
         <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">

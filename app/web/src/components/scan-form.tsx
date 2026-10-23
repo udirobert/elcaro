@@ -126,6 +126,10 @@ export function ScanForm() {
   // Same contract — never changes the verdict, no-op unless the miner has a
   // Runware key + LAYA_ENABLED=1.
   const [layaEnabled, setLayaEnabled] = useState(false);
+  // Third comparison rail: AutoTrust's JEV-27B-VL (via Novita), independent
+  // of Jev and Laya. Same contract — never changes the verdict, no-op unless
+  // the miner has a Novita key + JEV_VL_ENABLED=1.
+  const [jevVlEnabled, setJevVlEnabled] = useState(false);
   // URL fetching — hidden entirely when the deployment has no TAVILY_API_KEY,
   // so self-hosters without a key see exactly the paste-only experience.
   const [fetchUrlEnabled, setFetchUrlEnabled] = useState(false);
@@ -241,6 +245,7 @@ export function ScanForm() {
         serv_enabled: servEnabled,
         jev_enabled: jevEnabled,
         laya_enabled: layaEnabled,
+        jev_vl_enabled: jevVlEnabled,
       });
 
       if (isError(response)) {
@@ -712,6 +717,52 @@ export function ScanForm() {
                   className="text-[11px] text-ink-faint leading-relaxed"
                 >
                   Laya was unavailable for this scan — no comparison to show.
+                </motion.p>
+              )}
+          </div>
+
+          {/* JEV-27B-VL comparison toggle — a third rail, same contract as
+              Jev and Laya. No-op when the miner isn't configured with a
+              Novita key. */}
+          <div className="flex flex-col gap-1">
+            <label
+              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+              title="Comparison only: ask the miner for AutoTrust's JEV-27B-VL probability (via Novita) that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
+            >
+              <input
+                type="checkbox"
+                checked={jevVlEnabled}
+                onChange={(e) => setJevVlEnabled(e.target.checked)}
+                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                aria-label="Compare against JEV-27B-VL"
+              />
+              <span className="font-medium">Compare with JEV-VL</span>
+            </label>
+            {jevVlEnabled &&
+              result !== null &&
+              result.jev_vl_available === false &&
+              result.jev_vl_attempted === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-teal font-medium leading-relaxed"
+                >
+                  Miner not configured for JEV-VL — set
+                  {' '}JEV_VL_ENABLED=1 + a Novita key{' '}on your deployment, then re-scan.
+                </motion.p>
+              )}
+            {jevVlEnabled &&
+              result?.jev_vl_attempted &&
+              !result.jev_vl_used &&
+              result.jev_vl_available && (
+                <motion.p
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] text-ink-faint leading-relaxed"
+                >
+                  JEV-VL was unavailable for this scan — no comparison to show.
                 </motion.p>
               )}
           </div>
