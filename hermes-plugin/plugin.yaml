@@ -19,6 +19,7 @@ provides_hooks:
   - transform_tool_result
   - pre_tool_call
   - pre_llm_call
+  - subagent_start
 config_schema:
   sensitivity:
     type: str
@@ -43,11 +44,11 @@ config_schema:
     description: Tool names whose results are never scanned (e.g. trusted internal tools).
   scan_args_tools:
     type: list
-    default: [write_file, terminal]
+    default: [write_file, terminal, memory]
     description: >-
       Tools whose arguments are scanned at pre_tool_call for embedded
-      injection payloads (model pasting fetched content into a file or
-      heredoc).
+      injection payloads (model pasting fetched content into a file,
+      heredoc, or a standing memory write).
   advisory_threshold:
     type: float
     default: 0.3
@@ -72,3 +73,24 @@ config_schema:
     description: >-
       Ed25519 seed (hex) for signing verdicts in the threat log. When unset,
       verdicts are logged unsigned.
+  taint_policy:
+    type: str
+    default: enforce
+    description: >-
+      Kernel gate while a session is tainted by a recent quarantine:
+      enforce (block/escalate per policy), monitor (log only), or off.
+  taint_ttl_seconds:
+    type: int
+    default: 1800
+    description: >-
+      How long a quarantine taints the session. While tainted, credential
+      reads/writes, instruction-file writes, and network egress are
+      blocked or sent to the approval gate.
+  policy_allow_paths:
+    type: list
+    default: []
+    description: Path substrings exempt from taint policy blocks.
+  policy_allow_hosts:
+    type: list
+    default: []
+    description: Host/destination substrings exempt from egress checks.

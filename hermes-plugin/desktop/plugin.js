@@ -73,11 +73,15 @@ function VerdictRow({ e }) {
   const techs = (e.flagged_techniques || []).join(', ') || 'none'
   const label = honeypot
     ? 'HONEYPOT'
-    : e.surface === 'tool_args'
-      ? 'args-block'
-      : e.quarantined
-        ? 'quarantined'
-        : 'scanned'
+    : e.surface === 'policy'
+      ? e.quarantined
+        ? 'gate-block'
+        : 'gate-approve'
+      : e.surface === 'tool_args'
+        ? 'args-block'
+        : e.quarantined
+          ? 'quarantined'
+          : 'scanned'
   return jsxs('div', {
     className: 'flex flex-col gap-0.5 rounded border border-(--ui-border) px-2 py-1.5',
     style: honeypot ? { borderColor: '#e5484d' } : {},

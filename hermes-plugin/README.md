@@ -29,6 +29,19 @@ result and stops prompt injection **before it reaches the model**.
   hash-chained JSONL threat log (`prev_hash` → `entry_hash`, Ed25519-signed when
   a key is configured) with canary provenance edges (`type: "edge"`, rendered as
   `propagation ⚡` in the Desktop pane) and signed clean-scan receipts.
+- **Gates actions, not just content.** A quarantine taints the session
+  (`taint_ttl_seconds`, default 30 min). While tainted, the kernel evaluates
+  each tool call as the action it really makes — `tool_call` unwraps to its
+  target, `execute_code` is judged as the shell it runs, `process_manage` as
+  the line it types — and refuses credential-path reads/writes and
+  instruction-file writes (`SKILL.md`, `AGENTS.md`, `SOUL.md`, plugin configs),
+  while network egress and outside-workspace writes escalate to Hermes's
+  approval gate. A credential read + egress channel in one shell step is
+  refused even in a clean session. Taint propagates into spawned subagents
+  (`subagent_start`) so delegation can't launder it. `taint_policy`
+  (`enforce` / `monitor` / `off`), `policy_allow_paths` and
+  `policy_allow_hosts` tune the gate; every decision lands in the same signed
+  log as a `policy` receipt (`gate-block` / `gate-approve` rows in the pane).
 
 ## Commands & Surfaces
 

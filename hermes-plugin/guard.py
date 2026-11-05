@@ -24,7 +24,7 @@ import threading
 from collections import deque
 from typing import Any
 
-from . import config, engine, threatlog
+from . import config, engine, policy, threatlog
 
 # Tool-name → content-type inference for the scanner (names verified
 # against hermes-agent's built-in registry). Unknown tools default to
@@ -236,6 +236,7 @@ def transform_tool_result(
 
     advisory_t, quarantine_t = _thresholds()
     if verdict.risk_score >= quarantine_t:
+        policy.mark_taint(str(kwargs.get("session_id") or ""))
         with _pending_lock:
             _pending.append(
                 {
@@ -262,10 +263,24 @@ def transform_tool_result(
 
 
 def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | None:
-    """Scan args-carried payloads on the configured tool set."""
+    """Kernel gate + args-payload scan.
+
+    The policy layer runs first — it evaluates the *action* (unwrapping
+    tool_call/execute_code/process_manage), gating credential paths,
+    instruction-file writes, and egress while the session is tainted.
+    Then the content scan catches smuggled payloads in args.
+    """
     if tool_name in _OWN_TOOLS:
         return None
-    if tool_name not in config.get_list("scan_args_tools", ["write_file", "terminal"]):
+    session_id = str(kwargs.get("session_id") or "")
+    try:
+        decision = policy.evaluate_and_log(tool_name, args, session_id)
+    except Exception:
+        decision = None  # fail open — the gate must not wedge the agent
+    if decision:
+        policy.mark_taint(session_id)  # a blocked payload is itself an injection tell
+        return decision
+    if tool_name not in config.get_list("scan_args_tools", ["write_file", "terminal", "memory"]):
         return None
     serialized = _extract_text(args)[: config.get_int("scan_max_chars", 48000)]
     if len(serialized) < _MIN_ARGS_CHARS:
@@ -278,6 +293,7 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
 
     _, quarantine_t = _thresholds()
     if verdict.risk_score >= max(quarantine_t, 0.7):
+        policy.mark_taint(session_id)
         return {
             "action": "block",
             "message": (
@@ -287,6 +303,7 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
             ),
         }
     if verdict.risk_score >= quarantine_t:
+        policy.mark_taint(session_id)
         return {
             "action": "approve",
             "message": (
@@ -294,6 +311,23 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
                 f"(risk {verdict.risk_score:.2f}) — confirm before running."
             ),
         }
+    return None
+
+
+def subagent_start(**kwargs) -> None:
+    """Taint follows the delegate — a spawned agent inherits the parent's."""
+    parent = str(kwargs.get("parent_session_id") or kwargs.get("session_id") or "")
+    child = str(
+        kwargs.get("child_session_id")
+        or kwargs.get("subagent_session_id")
+        or kwargs.get("agent_session_id")
+        or kwargs.get("subagent_id")
+        or ""
+    )
+    try:
+        policy.inherit_taint(parent, child)
+    except Exception:
+        logging.getLogger(__name__).debug("subagent taint inherit failed")
     return None
 
 

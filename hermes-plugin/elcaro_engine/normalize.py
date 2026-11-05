@@ -36,7 +36,7 @@ from .schemas import (
 
 # Zero-width / invisible format characters (superset of the obfuscation
 # detector's set — normalization removes them rather than flagging them).
-_ZERO_WIDTH_RE = re.compile("[​‌‍‎‏‪-‮⁠﻿]")
+_ZERO_WIDTH_RE = re.compile("[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060\ufeff]")
 
 # Unicode dash/middot separators attackers substitute for '-' to evade
 # token-splitting patterns.

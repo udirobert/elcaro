@@ -53,6 +53,10 @@ def register(ctx) -> None:
     ctx.register_hook("transform_tool_result", guard.transform_tool_result)
     ctx.register_hook("pre_tool_call", guard.pre_tool_call)
     ctx.register_hook("pre_llm_call", guard.pre_llm_call)
+    try:
+        ctx.register_hook("subagent_start", guard.subagent_start)
+    except Exception:
+        logger.debug("elcaro: subagent_start hook unavailable", exc_info=True)
 
     try:
         ctx.register_command(

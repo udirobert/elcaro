@@ -204,6 +204,70 @@ false-positive). Site: `/hermes` page tells the scanner→enforcement→flight
 recorder story with a pane mock — doubles as catalog screenshot material.
 15/15 tests.
 
+## Competitive field re-scouted (Nov 5 PM — catalog PRs are the real intel)
+
+Catalog entries are PRs adding `plugin-catalog/<name>.yaml` to
+`NousResearch/hermes-agent`, so every competitor is public. **159 PRs in
+the first ~30 h; ~4 merged, all core-team** — nobody holds an acceptance
+edge yet, so a clean early PR is free positioning (the Typeform takes the
+PR link as soon as it's open).
+
+**Inbound injection niche — 4 entries, ours included:**
+
+| PR | Plugin | Mechanism | vs elcaro |
+|---|---|---|---|
+| #149412 | **sentry** | Provenance classification → third-party content taints the session (30 min TTL) → side-effecting calls blocked/escalated while tainted. Explicitly positions *against* signature scanning | **Strongest.** Action gating we lack, `tool_call`/`execute_code`/`process_manage` wrapper unwrapping, `subagent_start` taint propagation, 75 tests, validated on 0.22.x |
+| #149325 | injection-guard | Signal families + span redaction (keeps doc, removes instructions) | Same approach, less depth — no provenance/receipts/honeypot story |
+| #149147 | CaMeL Guard | DeepMind's CaMeL capability model — sensitive calls restricted to capability categories from the isolated user request | Academic pedigree but needs `ctx.llm` classification calls (token cost) |
+| — | **elcaro** | Detector taxonomy quarantine + args lane + canary edges + honeypot + hash-chained signed log | See moats below |
+
+**Adjacent entries squatting on our vocabulary:** `lineage` #149244
+(provenance receipts + graph for agent outputs), `no-cap` #149272
+(claim-verification receipts), `Say-Do Gate` #149365, `hunk-consent-guard`
+and `source-trail-supervisor` #149353 (integrity/consent/citation trails).
+
+**Moats that survive the field:** canary propagation edges (nobody else
+tracks an injection *traveling between calls*), the decoy honeypot (only
+deterministic zero-FP catch), hash-chained tamper-evident log (sentry's
+receipts are unsigned SQLite), Ed25519-signed verdicts, explainable
+technique names, tuned 0-FP corpus, real engine pedigree (live miner,
+paid scans).
+
+**Gaps sentry holds over us (fix list):**
+1. **Action gating** — they block/escalate dangerous calls during taint;
+   we only filter content. This is the "kernel" shape that won July.
+2. **Wrapper unwrapping** — `tool_call`→real tool, `execute_code`→shell
+   intent, `process_manage`→typed line (7 bypass routes in their probe).
+3. **`subagent_start` taint** — spawned delegates inherit the taint.
+4. **Marketplace-era validation** — they published `plugins validate`
+   output on 0.22.x; ours is still 0.19.0-era smoke-tested.
+5. Their disclosed `hermes chat -q` hook-delivery gap (0.22.7) applies to
+   us too — document it in our disclosure.
+
+**Their structural weakness (our counter-frame):** taint-TTL gates
+*benign* side-effects for 30 min after any flag — nag cost on normal
+work. Ours is per-content enforcement that bites only on evidence, and
+canaries/decoy catch propagation regardless of phrasing. Also their own
+limitations list admits `memory`-tool and cron persistence are ungated —
+add `memory`/cron tools to `scan_args_tools`.
+
+## What wins Nous hackathons (their own history)
+
+**July 2026 hackathon ($26.5k): 1st = Custodian** — "a kernel that runs
+between the agent and every payment; the model proposes, the kernel
+approves." SHA-256 fingerprinted outputs, **cryptographic receipts per
+decision**, operator kill switch — and the winning demo beat was *a rogue
+agent trying to rewrite its own policy file getting caught and
+escalated*. 2nd = real-business deployment (Telegram agent for a parent's
+company). 187 submissions, judged on creativity/usefulness/presentation.
+
+**The proven formula = external-to-model enforcement + crypto artifacts +
+a theatrical rogue catch.** Elcaro already has all three *available*:
+hooks-as-kernel, Ed25519 receipts + hash chain, and the honeypot exfil
+catch. The work left is shipping the action-gating layer (the kernel
+shape) and leading the video with the deterministic decoy catch —
+Custodian's beat, inbound-content edition.
+
 ## Demo Video Script (≤90 s — "The Black Box: Scanner → Enforcement → Flight Recorder")
 
 Target: **~82 s** on X tagging `@NousResearch`, showing the plugin working live
