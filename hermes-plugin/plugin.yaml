@@ -1,0 +1,74 @@
+name: elcaro
+version: 1.0.0
+manifest_version: 2
+api_version: 1
+description: >-
+  Runtime prompt-injection defense for agents. Elcaro scans every tool
+  result — fetched pages, file reads, command output, subagent reports —
+  before it reaches the model, and swaps quarantined content for a signed
+  verdict notice. The injection never enters the conversation.
+author: Trustfall
+license: MIT
+homepage: https://github.com/udirobert/elcaro
+tags: [security, prompt-injection, guardrails, scanning, quarantine]
+provides_tools:
+  - elcaro_scan
+  - elcaro_quick_scan
+  - elcaro_explain
+provides_hooks:
+  - transform_tool_result
+  - pre_tool_call
+  - pre_llm_call
+config_schema:
+  sensitivity:
+    type: str
+    default: balanced
+    description: >-
+      Detection posture: strict (more blocking, more noise), balanced, or
+      permissive (only high-confidence hits quarantine).
+  enforcement:
+    type: str
+    default: replace
+    description: >-
+      What to do with quarantined tool results: replace (swap in the
+      quarantine notice), flag (leave content, append advisory), or off
+      (log only, never touch the result).
+  scan_max_chars:
+    type: int
+    default: 48000
+    description: Maximum characters of a tool result sent through the scanner.
+  skip_tools:
+    type: list
+    default: []
+    description: Tool names whose results are never scanned (e.g. trusted internal tools).
+  scan_args_tools:
+    type: list
+    default: [write_file, terminal]
+    description: >-
+      Tools whose arguments are scanned at pre_tool_call for embedded
+      injection payloads (model pasting fetched content into a file or
+      heredoc).
+  advisory_threshold:
+    type: float
+    default: 0.3
+    description: Risk score at/above which a [ELCARO GUARD] advisory is appended.
+  quarantine_threshold:
+    type: float
+    default: 0.5
+    description: Risk score at/above which a tool result is quarantined.
+  api_url:
+    type: str
+    default: ""
+    description: >-
+      Optional hosted scan lane (e.g. the elcaro miner API). Empty means the
+      bundled local engine — no network, works fully offline.
+  api_key:
+    type: secret
+    env: ELCARO_API_KEY
+    description: API key for the hosted scan lane, when api_url is set.
+  signing_key:
+    type: secret
+    env: ELCARO_SIGNING_KEY
+    description: >-
+      Ed25519 seed (hex) for signing verdicts in the threat log. When unset,
+      verdicts are logged unsigned.

@@ -1,7 +1,34 @@
 # Hackathon Participation
 
-Elcaro is competing in five hackathons. The product is the same; this page
+Elcaro is competing in six hackathons. The product is the same; this page
 records the submission details for each.
+
+## Hermes Agent Plugin Hackathon (Nous Research) — Nov 5–11, 2026
+
+- **Prize pool:** $20,000 (1st $10k · 2nd $5k · 3rd $2.5k · 4th $1.5k · 5th
+  $1k · runners-up ×5) — paid on **usefulness · reliability · polish ·
+  creativity**, with a stated bias for "plugins that do more than a prompt
+  or skill could"
+- **Window:** announced Nov 4 · **submissions due Tue Nov 11, 5:00 PM EST** ·
+  internal target Sun Nov 9
+- **Entry:** PR to the plugin catalog + demo video on X tagging
+  @NousResearch (≤90 s, plugin working on screen) +
+  [form](https://form.typeform.com/to/FwJLvOln) (can be sent as soon as the
+  PR is open; catalog checks run when a maintainer starts them)
+- **Positioning & plan:** [hermes-plugin.md](hermes-plugin.md) — "Elcaro
+  rides every tool result": inbound content defense at `post_tool_call`
+  detection + `pre_llm_call` enforcement, while OpenGuardrails occupies the
+  *outbound* provenance niche and Hermes's own scanning is install/static
+  time (their own issue #8884 concedes the runtime content gap)
+- **Surfaces:** `elcaro_scan` / `elcaro_quick_scan` / `elcaro_explain`
+  tools + hooks + Desktop threat-log pane; standalone-repo form (third-party
+  product plugins are standalone, not core PRs)
+- **Status:** scaffold + all surfaces built Nov 5 and verified against a
+  live Hermes install — tools/hooks/commands/desktop-pane all registered;
+  injection quarantined in-conversation via `transform_tool_result`,
+  args-smuggling blocked via `pre_tool_call`, 0 FPs on realistic corpus.
+  Next: `plugins validate` on a marketplace-era build, ≤90 s video, PR +
+  form by Nov 9
 
 ## MoonPay Hackathons — PayBox Chapter 1 — Oct 16–17, 2026
 

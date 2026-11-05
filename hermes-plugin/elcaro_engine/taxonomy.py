@@ -1,0 +1,739 @@
+"""IPI detection taxonomy and scoring engine.
+
+Coordinates the individual technique detectors (A–G), combines their results
+into a weighted risk score, and applies content-type contextual weighting.
+
+Scoring model:
+    - Each detector returns indicators with confidence (0–1)
+    - Multiple technique classes firing = higher risk
+    - Obfuscation (D) alongside any other class = risk multiplier
+    - Conditional triggers (F) paired with imperative actions (C) = high risk
+    - Content type adjusts the baseline (email/search_result/webpage = 1.0,
+      code = 0.7, chat_message = 0.7). Caller-declared types can no longer
+      drop the weight below 0.7 — content_type arbitrage was a single-
+      operator bypass found by redteam/.
+    - Evasion normalization (core/normalize.py) runs before detection:
+      zero-width strip, confusable fold, token de-split, declared-encoding
+      decode. Detectors see the reconstructed text.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import time
+
+from .canary import CanaryRegistry, extract_canaries, registry_from_env
+from .detectors.authority import AuthorityDetector
+from .detectors.conditional import ConditionalDetector
+from .detectors.delimiter import DelimiterDetector
+from .detectors.obfuscation import ObfuscationDetector
+from .detectors.placement import PlacementDetector
+from .detectors.swarm_directive import SwarmDirectiveDetector
+from .detectors.task_reframe import TaskReframeDetector
+from .jev_reasoner import JevReasoner
+from .jev_vl_reasoner import JevVlReasoner
+from .laya_reasoner import LayaReasoner
+from .llm_classifier import LlmClassifier
+from .normalize import normalization_indicators, normalize
+from .quarantine import DEFAULT_RISK_THRESHOLD, quarantine_decision
+from .schemas import (
+    ContentType,
+    DetectionIndicator,
+    RiskLevel,
+    ScanRequest,
+    ScanResponse,
+    TechniqueClass,
+)
+from .serv_reasoner import ServReasoner
+
+# ── Content type risk multipliers ──────────────────────────────────────────────
+
+CONTENT_TYPE_WEIGHTS: dict[ContentType, float] = {
+    ContentType.EMAIL: 1.0,
+    ContentType.SEARCH_RESULT: 1.0,
+    ContentType.WEBPAGE: 1.0,
+    ContentType.DOCUMENT: 0.8,
+    ContentType.CODE: 0.7,
+    ContentType.CHAT_MESSAGE: 0.7,
+    ContentType.SYSTEM_PROMPT: 1.0,
+}
+
+# Retrieved content is untrusted by definition: the caller declares the
+# content type, so a payload mislabeled "chat_message" or "system_prompt"
+# must not soften the verdict. The floor keeps real weight differences
+# (document 0.8, code 0.7) while closing the arbitrage hole.
+CONTENT_TYPE_WEIGHT_FLOOR = 0.7
+
+# Detectors gate whole pattern families on an "untrusted type" allowlist
+# (authority imperatives, turn spoofing, HTML-comment smuggling skip
+# system_prompt/chat_message/code entirely). A caller-declared label must
+# not disable detection: content scanned under a privileged type that
+# comes back below quarantine is rescanned as the canonical untrusted
+# type and the higher verdict stands.
+PRIVILEGED_SCAN_TYPES = {
+    ContentType.CODE,
+    ContentType.CHAT_MESSAGE,
+    ContentType.SYSTEM_PROMPT,
+}
+CANONICAL_UNTRUSTED_TYPE = ContentType.EMAIL
+
+# Risk level thresholds
+RISK_THRESHOLDS = {
+    RiskLevel.SAFE: 0.0,
+    RiskLevel.LOW: 0.2,
+    RiskLevel.SUSPICIOUS: 0.5,
+    RiskLevel.DANGEROUS: 0.7,
+}
+
+# Gray zone for LLM second pass
+GRAY_ZONE_LOW = 0.3
+GRAY_ZONE_HIGH = 0.7
+
+# Plain-English names for technique classes, used in the prose `summary`.
+_TECHNIQUE_PHRASES: dict[TechniqueClass, str] = {
+    TechniqueClass.AUTHORITY: "authority impersonation",
+    TechniqueClass.DELIMITER: "delimiter confusion (context boundary escape)",
+    TechniqueClass.TASK_REFRAME: "task hijacking",
+    TechniqueClass.OBFUSCATION: "obfuscated instructions",
+    TechniqueClass.PLACEMENT: "hidden placement",
+    TechniqueClass.CONDITIONAL: "conditional triggers",
+    TechniqueClass.SWARM_DIRECTIVE: "agent-to-agent steering",
+}
+
+# Breadth (multiple technique classes firing) is only meaningful once at
+# least one of those classes is a substantive signal on its own — breadth
+# among several incidental, weak classes isn't evidence of anything. Real
+# fetched web content commonly carries incidental invisible Unicode
+# (editor artifacts, typographic joiners) alongside an equally weak,
+# generic signal (e.g. LOW-confidence repeated-imperatives); that
+# combination alone should not read as "dangerous" via either the additive
+# class_bonus (_compute_score) or the obfuscation combo-multiplier
+# (_apply_multipliers) — both are gated on this floor. Chosen to sit above
+# LOW/MEDIUM-confidence indicators (~0.5-0.55) but below genuine
+# attack-grade signals (0.65+).
+BREADTH_BONUS_CONFIDENCE_FLOOR = 0.6
+
+# Sentinel distinguishing "no classifier argument given" (auto-configure from
+# env) from an explicit classifier=None (second pass forcibly disabled).
+_CLASSIFIER_UNSET = object()
+_SERV_UNSET = object()
+_JEV_UNSET = object()
+_LAYA_UNSET = object()
+_JEV_VL_UNSET = object()
+_CANARY_UNSET = object()
+
+
+def _load_classifier_from_env() -> LlmClassifier | None:
+    """Build the LLM classifier from ELCARO_LLM_* env vars, if configured."""
+    return LlmClassifier.from_env()
+
+
+def _load_serv_reasoner_from_env() -> ServReasoner | None:
+    """Build the SERV reasoner from SERV_* env vars, if configured.
+
+    Returns None when SERV is disabled (no SERV_ENABLED or no SERV_API_KEY) —
+    the engine treats that as "stay on the rule-only fast path".
+    """
+    return ServReasoner.from_env()
+
+
+def _load_jev_reasoner_from_env() -> JevReasoner | None:
+    """Build the Jev comparison reasoner from JEV_* env vars, if configured.
+
+    Returns None when Jev is disabled — the engine attaches no comparison.
+    """
+    return JevReasoner.from_env()
+
+
+def _load_laya_reasoner_from_env() -> LayaReasoner | None:
+    """Build the Laya comparison reasoner from LAYA_* / RUNWARE_* env vars.
+
+    Returns None when Laya is disabled — the engine attaches no comparison.
+    """
+    return LayaReasoner.from_env()
+
+
+def _load_jev_vl_reasoner_from_env() -> JevVlReasoner | None:
+    """Build the JEV-27B-VL comparison reasoner from JEV_VL_* / NOVITA_* env vars.
+
+    Returns None when JEV-VL is disabled — the engine attaches no comparison.
+    """
+    return JevVlReasoner.from_env()
+
+
+# ── Scoring engine ─────────────────────────────────────────────────────────────
+
+
+class IpiDetectionEngine:
+    """Orchestrates the A–F detectors and combines results into a risk score.
+
+    Args:
+        classifier: Optional :class:`LlmClassifier` for the deep-analysis
+            second pass. When omitted, one is built from ``ELCARO_LLM_*`` env
+            vars; if no API key is configured the second pass stays off and
+            ``deep_analysis_used`` is always False.
+        serv_reasoner: Optional :class:`ServReasoner` for the progressive-
+            enhancement second pass. Takes priority over ``classifier`` when
+            both are configured: SERV is the premium tier, the ELCARO_LLM_*
+            key is the fallback tier. Built from SERV_* env vars by default.
+            Pass ``serv_reasoner=None`` to force-disable regardless of env.
+    """
+
+    def __init__(
+        self,
+        classifier: LlmClassifier | None | object = _CLASSIFIER_UNSET,
+        serv_reasoner: ServReasoner | None | object = _SERV_UNSET,
+        jev_reasoner: JevReasoner | None | object = _JEV_UNSET,
+        laya_reasoner: LayaReasoner | None | object = _LAYA_UNSET,
+        jev_vl_reasoner: JevVlReasoner | None | object = _JEV_VL_UNSET,
+        canary_registry: CanaryRegistry | None | object = _CANARY_UNSET,
+    ) -> None:
+        self.detectors = [
+            AuthorityDetector(),
+            DelimiterDetector(),
+            TaskReframeDetector(),
+            ObfuscationDetector(),
+            PlacementDetector(),
+            ConditionalDetector(),
+            SwarmDirectiveDetector(),
+        ]
+        if classifier is _CLASSIFIER_UNSET:
+            classifier = _load_classifier_from_env()
+        self.classifier: LlmClassifier | None = classifier  # type: ignore[assignment]
+        if serv_reasoner is _SERV_UNSET:
+            serv_reasoner = _load_serv_reasoner_from_env()
+        self.serv_reasoner: ServReasoner | None = serv_reasoner  # type: ignore[assignment]
+        if jev_reasoner is _JEV_UNSET:
+            jev_reasoner = _load_jev_reasoner_from_env()
+        self.jev_reasoner: JevReasoner | None = jev_reasoner  # type: ignore[assignment]
+        if laya_reasoner is _LAYA_UNSET:
+            laya_reasoner = _load_laya_reasoner_from_env()
+        self.laya_reasoner: LayaReasoner | None = laya_reasoner  # type: ignore[assignment]
+        if jev_vl_reasoner is _JEV_VL_UNSET:
+            jev_vl_reasoner = _load_jev_vl_reasoner_from_env()
+        self.jev_vl_reasoner: JevVlReasoner | None = jev_vl_reasoner  # type: ignore[assignment]
+        if canary_registry is _CANARY_UNSET:
+            # Default on (ELCARO_CANARY=0 disables). Stamping only touches
+            # quarantined safe_content — the verbatim-relay surface — so
+            # clean passthrough is byte-identical either way.
+            canary_registry = registry_from_env()
+        self.canary_registry: CanaryRegistry | None = canary_registry  # type: ignore[assignment]
+
+    def scan(self, request: ScanRequest) -> ScanResponse:
+        """Scan content for indirect prompt injection indicators.
+
+        Args:
+            request: The scan request containing content, type, and options.
+
+        Returns:
+            ScanResponse with risk score, flagged techniques, and indicators.
+        """
+        start_time = time.monotonic()
+        content = request.content
+        content_type = request.content_type
+
+        # Normalize evasion surface before detection: zero-width chars
+        # removed, confusables folded, split tokens rejoined, declared
+        # encodings decoded and appended. Detectors run on the normalized
+        # text; safe_content/quarantine still reference the original.
+        norm = normalize(content)
+        scan_content = norm.content
+
+        # Run all detectors
+        all_indicators: list[DetectionIndicator] = []
+        for detector in self.detectors:
+            indicators = detector.detect(scan_content, content_type)
+            all_indicators.extend(indicators)
+
+        # Normalization artifacts are evidence too: the original content
+        # carried evasion machinery even if the normalized text no longer
+        # shows it. Synthesized OBFUSCATION indicators keep that visible.
+        all_indicators.extend(normalization_indicators(norm.applied))
+
+        # Compute raw risk score
+        raw_score = self._compute_score(all_indicators)
+
+        # Apply content type weighting — floored so a caller-declared type
+        # cannot soften the scan of untrusted retrieved content.
+        weight = max(CONTENT_TYPE_WEIGHTS.get(content_type, 1.0), CONTENT_TYPE_WEIGHT_FLOOR)
+        weighted_score = min(raw_score * weight, 1.0)
+
+        # Determine flagged technique classes
+        flagged_classes = list({ind.technique_class for ind in all_indicators})
+
+        # Apply risk multipliers
+        weighted_score = self._apply_multipliers(weighted_score, flagged_classes, all_indicators)
+
+        # Privileged-type arbitrage floor: if the declared type suppressed
+        # pattern families and the content slipped under the quarantine
+        # line, rescan as the canonical untrusted type and take the
+        # higher verdict. Costs a second detector pass only on the
+        # under-threshold privileged-type path.
+        if weighted_score < DEFAULT_RISK_THRESHOLD and content_type in PRIVILEGED_SCAN_TYPES:
+            rescan: list[DetectionIndicator] = []
+            for detector in self.detectors:
+                rescan.extend(detector.detect(scan_content, CANONICAL_UNTRUSTED_TYPE))
+            if rescan:
+                rescan.extend(normalization_indicators(norm.applied))
+                rescan_classes = list({ind.technique_class for ind in rescan})
+                rescan_score = self._apply_multipliers(
+                    min(self._compute_score(rescan), 1.0),
+                    rescan_classes,
+                    rescan,
+                )
+                if rescan_score > weighted_score:
+                    weighted_score = rescan_score
+                    seen = {(i.technique_name, i.evidence.matched_text) for i in all_indicators}
+                    all_indicators.extend(
+                        i for i in rescan if (i.technique_name, i.evidence.matched_text) not in seen
+                    )
+                    flagged_classes = list({ind.technique_class for ind in all_indicators})
+
+        # Determine risk level
+        risk_level = self._risk_level(weighted_score)
+
+        # Second-pass judge selection.
+        #
+        # SERV is the premium tier — when configured AND requested it runs
+        # the gray-zone / deep-analysis pass INSTEAD of the LLM classifier,
+        # so the two paths are alternatives, not additive. The rule verdict
+        # is always authoritative; both providers can only refine within the
+        # rule-floor window (max(adjusted, 0.5 * rule)). On any provider
+        # failure (timeout, 401 / 402 / 403, malformed JSON) the rule score
+        # stands unchanged and `serv_used` / `deep_analysis_used` stay False.
+        serv_available = self.serv_reasoner is not None
+        serv_attempted = False
+        serv_used = False
+        deep_analysis_used = False
+        serv_result = None  # captured for the enrichment pass below
+
+        # Trigger condition: caller opts in to a second pass
+        # (deep_analysis / serv_enabled) AND the score is borderline. Outside
+        # the gray zone the rule verdict is conclusive — don't pay for a
+        # second opinion. This mirrors the original LlmClassifier contract.
+        serv_requested = bool(request.deep_analysis or request.serv_enabled)
+        in_gray_zone = GRAY_ZONE_LOW <= weighted_score <= GRAY_ZONE_HIGH
+        should_run_second_pass = serv_requested and in_gray_zone
+
+        # Snapshot the pure rule verdict before SERV/LLM may adjust
+        # weighted_score below — the Jev comparison is "rule engine vs Jev",
+        # not "rule+SERV blend vs Jev".
+        pure_rule_score = weighted_score
+        pure_rule_level = risk_level
+
+        if should_run_second_pass and self.serv_reasoner is not None:
+            serv_attempted = True
+            serv_result = self.serv_reasoner.classify(
+                content, content_type.value, all_indicators, weighted_score
+            )
+            if serv_result.confidence > 0.0:
+                weighted_score = serv_result.adjusted_score
+                risk_level = self._risk_level(weighted_score)
+                deep_analysis_used = True
+                serv_used = True
+        elif should_run_second_pass and self.classifier is not None:
+            # SERV not configured — fall back to the existing OpenAI-style
+            # classifier path. Preserves ELCARO_LLM_* users who haven't
+            # enabled SERV.
+            llm_result = self.classifier.classify(
+                content, content_type.value, all_indicators, weighted_score
+            )
+            if llm_result.confidence > 0.0:
+                weighted_score = llm_result.adjusted_score
+                risk_level = self._risk_level(weighted_score)
+                deep_analysis_used = True
+
+        # Jev shadow pass: a pure comparison, gated the same way as the SERV
+        # second pass (gray-zone AND opted in), but its verdict never touches
+        # weighted_score / risk_level. See core/jev_reasoner.py.
+        jev_available = self.jev_reasoner is not None
+        jev_attempted = False
+        jev_used = False
+        jev_comparison: dict | None = None
+        jev_requested = bool(request.jev_enabled)
+        should_run_jev = jev_requested and in_gray_zone
+
+        if should_run_jev and self.jev_reasoner is not None:
+            jev_attempted = True
+            jev_result = self.jev_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if jev_result.confidence > 0.0:
+                jev_used = True
+                jev_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "jev_score": round(jev_result.jev_score, 4),
+                    "jev_level": jev_result.jev_level,
+                    "jev_confidence": round(jev_result.confidence, 4),
+                    "probabilities": jev_result.probabilities,
+                    "agrees_with_rules": jev_result.agrees_with_rules,
+                    "input_tokens": jev_result.input_tokens,
+                    "output_tokens": jev_result.output_tokens,
+                    # Priced from console-observed pricing (see
+                    # JEV_INPUT_PRICE_PER_M / JEV_OUTPUT_PRICE_PER_M in
+                    # core/jev_reasoner.py) — TypeSafe publishes no pricing
+                    # docs, so this may drift; re-check the console if it
+                    # looks stale.
+                    "cost_usd": jev_result.cost_usd,
+                }
+
+        # Laya shadow pass: same contract as Jev — gray-zone AND opted in,
+        # comparison-only, never touches weighted_score / risk_level. See
+        # core/laya_reasoner.py. Independent of Jev: either, both, or neither
+        # may run in a single scan.
+        laya_available = self.laya_reasoner is not None
+        laya_attempted = False
+        laya_used = False
+        laya_comparison: dict | None = None
+        should_run_laya = bool(request.laya_enabled) and in_gray_zone
+
+        if should_run_laya and self.laya_reasoner is not None:
+            laya_attempted = True
+            laya_result = self.laya_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if laya_result.ok:
+                laya_used = True
+                laya_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "laya_score": round(laya_result.laya_score, 4),
+                    "laya_level": laya_result.laya_level,
+                    "laya_confidence": round(laya_result.confidence, 4),
+                    "probabilities": laya_result.probabilities,
+                    "agrees_with_rules": laya_result.agrees_with_rules,
+                    "input_tokens": laya_result.input_tokens,
+                    "output_tokens": laya_result.output_tokens,
+                    # Free until 2026-10-12, then launch-note pricing — see
+                    # LAYA_INPUT_PRICE_PER_M in core/laya_reasoner.py.
+                    "cost_usd": laya_result.cost_usd,
+                }
+
+        # JEV-27B-VL (AutoTrust via Novita) shadow pass: same contract as Jev
+        # and Laya — gray-zone AND opted in, comparison-only, never touches
+        # weighted_score / risk_level. See core/jev_vl_reasoner.py. Independent
+        # of both: any combination of the three may run in a single scan.
+        jev_vl_available = self.jev_vl_reasoner is not None
+        jev_vl_attempted = False
+        jev_vl_used = False
+        jev_vl_comparison: dict | None = None
+        should_run_jev_vl = bool(request.jev_vl_enabled) and in_gray_zone
+
+        if should_run_jev_vl and self.jev_vl_reasoner is not None:
+            jev_vl_attempted = True
+            jev_vl_result = self.jev_vl_reasoner.classify(
+                content, content_type.value, all_indicators, pure_rule_score
+            )
+            if jev_vl_result.ok:
+                jev_vl_used = True
+                jev_vl_comparison = {
+                    "rule_score": round(pure_rule_score, 4),
+                    "rule_level": pure_rule_level.value,
+                    "jev_vl_score": round(jev_vl_result.jev_vl_score, 4),
+                    "jev_vl_level": jev_vl_result.jev_vl_level,
+                    "jev_vl_confidence": round(jev_vl_result.confidence, 4),
+                    "probabilities": jev_vl_result.probabilities,
+                    "agrees_with_rules": jev_vl_result.agrees_with_rules,
+                    "input_tokens": jev_vl_result.input_tokens,
+                    "output_tokens": jev_vl_result.output_tokens,
+                    # Input-token billing only; None unless
+                    # JEV_VL_INPUT_PRICE_PER_M is set — see
+                    # core/jev_vl_reasoner.py.
+                    "cost_usd": jev_vl_result.cost_usd,
+                }
+
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+
+        # Generate summary
+        summary = self._generate_summary(
+            risk_level, flagged_classes, all_indicators, content_type, weighted_score
+        )
+
+        # Canary mint (core/canary.py): when the verdict quarantines, the
+        # substituted notice carries a per-issuance token — the one Elcaro
+        # output designed for verbatim relay, so a copy seen inside a later
+        # scan resolves to this exact issuance. Mint before
+        # quarantine_decision so the ref lands inside the notice.
+        canary_ref = None
+        if self.canary_registry is not None and weighted_score >= DEFAULT_RISK_THRESHOLD:
+            # Postgres-backed registries return None on outage — an unstamped
+            # scan beats a failed one; canary_ref=None leaves the notice clean.
+            canary_ref = self.canary_registry.mint(
+                kind="scan",
+                content_sha256=hashlib.sha256(content.encode()).hexdigest(),
+                risk_score=round(weighted_score, 4),
+                risk_level=risk_level.value,
+                techniques=[t.value for t in flagged_classes],
+                content_type=content_type.value,
+            )
+
+        # Apply the quarantine policy (core/quarantine.py) so every consumer
+        # of ScanResponse sees the same safe_content the middleware would
+        # substitute, and the same human_summary the agent should relay —
+        # single source of truth.
+        decision = quarantine_decision(
+            content,
+            weighted_score,
+            risk_level,
+            flagged_classes,
+            content_type,
+            canary_ref=canary_ref,
+        )
+
+        # SERV enrichment layers onto the verdict AFTER quarantine_decision
+        # so its safe_content suggestion (when present) replaces the rule-
+        # derived quarantine notice — the operator asked for SERV's view.
+        # Top-indicator remediation is upgraded the same way. Both are
+        # optional: missing values leave the rule-derived fields intact.
+        if serv_used and serv_result is not None:
+            if serv_result.safe_content_suggestion:
+                decision = decision.__class__(
+                    safe_content=serv_result.safe_content_suggestion,
+                    quarantined=decision.quarantined,
+                    human_summary=decision.human_summary,
+                )
+            if serv_result.remediation_refined and all_indicators:
+                top = max(
+                    all_indicators,
+                    key=lambda i: (
+                        {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[
+                            i.severity.value
+                        ],
+                        i.confidence,
+                    ),
+                )
+                top.remediation = serv_result.remediation_refined
+
+        # A SERV-supplied safe_content replaces the stamped notice — re-attach
+        # the ref so the token rides whatever the agent actually receives.
+        if canary_ref and canary_ref not in decision.safe_content:
+            decision = decision.__class__(
+                safe_content=f"{decision.safe_content} Ref: {canary_ref}.",
+                quarantined=decision.quarantined,
+                human_summary=decision.human_summary,
+            )
+
+        # Inbound half of the canary contract: any elc- tokens already in the
+        # scanned content resolve against this miner's issuance registry.
+        canary_hits = None
+        if self.canary_registry is not None:
+            canary_hits = [
+                {
+                    "token": tok,
+                    "recognized": (event := self.canary_registry.lookup(tok)) is not None,
+                    **(event or {}),
+                }
+                for tok in extract_canaries(content)
+            ]
+
+        return ScanResponse(
+            risk_score=round(weighted_score, 4),
+            risk_level=risk_level,
+            flagged_techniques=flagged_classes,
+            indicators=all_indicators,
+            summary=summary,
+            content_type=content_type,
+            deep_analysis_used=deep_analysis_used,
+            latency_ms=latency_ms,
+            safe_content=decision.safe_content,
+            quarantined=decision.quarantined,
+            human_summary=decision.human_summary,
+            normalizations_applied=norm.applied,
+            canary_hits=canary_hits,
+            serv_available=serv_available,
+            serv_attempted=serv_attempted,
+            serv_used=serv_used,
+            serv_rule_score_before=serv_result.llm_score_raw if serv_result else None,
+            serv_cost={
+                "input_tokens": serv_result.cost_estimate.input_tokens
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "output_tokens": serv_result.cost_estimate.output_tokens
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "input_cost_usdc": serv_result.cost_estimate.input_cost_usdc
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "output_cost_usdc": serv_result.cost_estimate.output_cost_usdc
+                if serv_result and serv_result.cost_estimate
+                else None,
+                "total_usdc": round(serv_result.cost_estimate.total_usdc, 8)
+                if serv_result and serv_result.cost_estimate
+                else None,
+            }
+            if serv_result and serv_result.cost_estimate
+            else None,
+            jev_available=jev_available,
+            jev_attempted=jev_attempted,
+            jev_used=jev_used,
+            jev_comparison=jev_comparison,
+            laya_available=laya_available,
+            laya_attempted=laya_attempted,
+            laya_used=laya_used,
+            laya_comparison=laya_comparison,
+            jev_vl_available=jev_vl_available,
+            jev_vl_attempted=jev_vl_attempted,
+            jev_vl_used=jev_vl_used,
+            jev_vl_comparison=jev_vl_comparison,
+        )
+
+    def _compute_score(self, indicators: list[DetectionIndicator]) -> float:
+        """Compute a raw risk score from detected indicators.
+
+        Strategy:
+        - Base score from the highest single indicator confidence
+        - Bonus for multiple technique classes (breadth = more suspicious —
+          but only once max_confidence itself clears
+          BREADTH_BONUS_CONFIDENCE_FLOOR; breadth among several incidental,
+          weak-confidence classes is not evidence of anything, see that
+          constant's docstring)
+        - Bonus for high-confidence matches (0.8+)
+        """
+        if not indicators:
+            return 0.0
+
+        # Highest single-indicator confidence
+        max_confidence = max(ind.confidence for ind in indicators)
+
+        # Number of distinct technique classes
+        distinct_classes = {ind.technique_class for ind in indicators}
+        class_bonus = (
+            min(len(distinct_classes) * 0.08, 0.3)
+            if max_confidence >= BREADTH_BONUS_CONFIDENCE_FLOOR
+            else 0.0
+        )
+
+        # Count of high-confidence matches
+        high_conf_count = sum(1 for ind in indicators if ind.confidence >= 0.8)
+        high_conf_bonus = min(high_conf_count * 0.05, 0.15)
+
+        raw_score = max_confidence + class_bonus + high_conf_bonus
+        return min(raw_score, 1.0)
+
+    def _apply_multipliers(
+        self,
+        score: float,
+        flagged_classes: list[TechniqueClass],
+        indicators: list[DetectionIndicator],
+    ) -> float:
+        """Apply risk multipliers for dangerous combinations.
+
+        - Obfuscation (D) + another substantive class (>= OBFUSCATION_COMBO_
+          CONFIDENCE_FLOOR) = 1.3x (hiding an attack — but only when there's
+          actually an attack-grade signal underneath; see the constant's
+          docstring for why this is gated rather than unconditional)
+        - Conditional (F) + Task reframe (C) = 1.2x (hidden redirect)
+        - Authority (A) + Delimiter (B) = 1.15x (system spoofing + frame break)
+        """
+        multiplier = 1.0
+        class_set = set(flagged_classes)
+
+        if TechniqueClass.OBFUSCATION in class_set and len(class_set) > 1:
+            strongest_other = max(
+                (
+                    ind.confidence
+                    for ind in indicators
+                    if ind.technique_class != TechniqueClass.OBFUSCATION
+                ),
+                default=0.0,
+            )
+            if strongest_other >= BREADTH_BONUS_CONFIDENCE_FLOOR:
+                multiplier *= 1.3
+
+        if TechniqueClass.CONDITIONAL in class_set and TechniqueClass.TASK_REFRAME in class_set:
+            multiplier *= 1.2
+
+        if TechniqueClass.AUTHORITY in class_set and TechniqueClass.DELIMITER in class_set:
+            multiplier *= 1.15
+
+        return min(score * multiplier, 1.0)
+
+    def _risk_level(self, score: float) -> RiskLevel:
+        """Map a numeric score to a categorical risk level."""
+        if score < RISK_THRESHOLDS[RiskLevel.LOW]:
+            return RiskLevel.SAFE
+        elif score < RISK_THRESHOLDS[RiskLevel.SUSPICIOUS]:
+            return RiskLevel.LOW
+        elif score < RISK_THRESHOLDS[RiskLevel.DANGEROUS]:
+            return RiskLevel.SUSPICIOUS
+        else:
+            return RiskLevel.DANGEROUS
+
+    def _generate_summary(
+        self,
+        risk_level: RiskLevel,
+        flagged_classes: list[TechniqueClass],
+        indicators: list[DetectionIndicator],
+        content_type: ContentType,
+        risk_score: float = 0.0,
+    ) -> str:
+        """Generate the prose verdict carried in ``summary``.
+
+        This is the field Telegraph scoring modules grade (``reason_field`` in
+        ``miner/telegraph.yaml``), and most of them compare text against a
+        ground-truth answer. So it leads with an explicit, committed verdict,
+        then states the band, score and technique classes in plain words.
+
+        It deliberately never quotes matched content: ``summary`` is relayed to
+        agents, and echoing the payload would re-inject it downstream. Evidence
+        stays in ``indicators``.
+        """
+        where = content_type.value.replace("_", " ")
+        score = f"risk {risk_score:.2f} of 1"
+
+        if risk_level == RiskLevel.SAFE:
+            return (
+                f"Verdict: safe, no prompt injection ({risk_level.value}, {score}). "
+                f"No injection techniques were found in this {where}; "
+                f"it can be passed to an agent."
+            )
+
+        techniques_str = self._join_phrases(
+            [_TECHNIQUE_PHRASES.get(t, t.value) for t in flagged_classes]
+        )
+        signals = self._signal_phrases(indicators)
+        signals_str = f" Signals: {signals}." if signals else ""
+
+        if risk_level == RiskLevel.LOW:
+            return (
+                f"Verdict: likely safe, no deliberate prompt injection "
+                f"({risk_level.value}, {score}). Weak indicators of {techniques_str} "
+                f"were found in this {where}, below the review threshold.{signals_str}"
+            )
+
+        if risk_level == RiskLevel.DANGEROUS:
+            return (
+                f"Verdict: prompt injection ({risk_level.value}, {score}). "
+                f"This {where} contains an indirect prompt injection attempt using "
+                f"{techniques_str}.{signals_str} Do not let an agent act on this content."
+            )
+
+        # SUSPICIOUS
+        return (
+            f"Verdict: suspected prompt injection ({risk_level.value}, {score}). "
+            f"This {where} shows signs of an indirect prompt injection attempt using "
+            f"{techniques_str}.{signals_str} Review before an agent acts on it."
+        )
+
+    @staticmethod
+    def _join_phrases(items: list[str]) -> str:
+        """Join phrases as natural English: 'a', 'a and b', 'a, b and c'."""
+        if not items:
+            return "unclassified techniques"
+        if len(items) == 1:
+            return items[0]
+        return f"{', '.join(items[:-1])} and {items[-1]}"
+
+    @staticmethod
+    def _signal_phrases(indicators: list[DetectionIndicator], limit: int = 3) -> str:
+        """Name the strongest distinct detector patterns, e.g. 'system voice marker'."""
+        ranked = sorted(indicators, key=lambda i: i.confidence, reverse=True)
+        names: list[str] = []
+        for ind in ranked:
+            name = ind.technique_name.split(":", 1)[-1].replace("_", " ").strip()
+            if name and name not in names:
+                names.append(name)
+            if len(names) >= limit:
+                break
+        return ", ".join(names)

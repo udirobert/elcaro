@@ -1,0 +1,14 @@
+# Dependency declaration for Hermes PM (preferred over plugin.yaml's
+# python_dependencies). Floors are the oldest API-compatible versions the
+# vendored engine needs; upper bounds keep the shared env stable.
+[project]
+name = "hermes-plugin-elcaro"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0,<3",
+    "cryptography>=42.0,<50",
+    # Only the optional second-pass reasoners and the hosted scan lane use
+    # httpx — the default local engine path never touches the network.
+    "httpx>=0.25,<1",
+]

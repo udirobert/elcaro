@@ -1,0 +1,131 @@
+"""Signed JSONL threat log for the elcaro Hermes plugin.
+
+Every scan verdict is appended under the plugin data dir so the Desktop
+pane, `elcaro_explain`, and a human reviewer all read the same trail.
+Entries carry the canonical Ed25519 signature when a signing key is
+configured — the verdict is verifiable offline, the content never leaves
+the box (only its SHA-256 is logged).
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import time
+from pathlib import Path
+from typing import Any
+
+_MAX_BYTES = 512 * 1024  # rotate to a single .1 backup beyond this
+
+
+def data_dir() -> Path:
+    """Plugin-owned state dir — Hermes's plugin_data_dir, or a local fallback."""
+    try:
+        from plugins.plugin_storage import plugin_data_dir
+
+        return Path(plugin_data_dir("elcaro"))
+    except Exception:
+        return Path(os.environ.get("ELCARO_DATA_DIR", "~/.elcaro/hermes")).expanduser()
+
+
+def log_path() -> Path:
+    return data_dir() / "threat-log.jsonl"
+
+
+def _signer():
+    """Build the verdict signer from config or env; None = unsigned mode."""
+    from . import config
+    from .elcaro_engine import VerdictSigner
+
+    key = config.get_str("signing_key") or os.environ.get("ELCARO_SIGNING_KEY", "")
+    if not key:
+        return None
+    try:
+        return VerdictSigner(key)
+    except ValueError:
+        return None
+
+
+def append(
+    *,
+    tool_name: str,
+    verdict: Any,
+    task_id: str = "",
+    session_id: str = "",
+    tool_call_id: str = "",
+    surface: str = "tool_result",
+) -> dict[str, Any]:
+    """Append a scan verdict to the threat log. Returns the entry written."""
+    from .elcaro_engine import canonical_verdict_payload, sha256_hex
+
+    scanned_at = int(time.time())
+    techniques = [t.value if hasattr(t, "value") else str(t) for t in verdict.flagged_techniques]
+    content_sha = sha256_hex(getattr(verdict, "_scanned_content", "") or "")
+    entry: dict[str, Any] = {
+        "ts": scanned_at,
+        "surface": surface,
+        "tool_name": tool_name,
+        "task_id": task_id,
+        "session_id": session_id,
+        "tool_call_id": tool_call_id,
+        "content_sha256": content_sha,
+        "risk_score": round(float(verdict.risk_score), 4),
+        "risk_level": getattr(verdict.risk_level, "value", str(verdict.risk_level)),
+        "quarantined": bool(verdict.quarantined),
+        "flagged_techniques": techniques,
+        "normalizations": list(getattr(verdict, "normalizations_applied", []) or []),
+        "latency_ms": getattr(verdict, "latency_ms", None),
+    }
+    signer = _signer()
+    if signer is not None:
+        payload = canonical_verdict_payload(
+            content_sha256=content_sha,
+            risk_score=verdict.risk_score,
+            risk_level=entry["risk_level"],
+            quarantined=entry["quarantined"],
+            flagged_techniques=techniques,
+            scanned_at=scanned_at,
+        )
+        entry["signature"] = signer.sign(payload)
+        entry["key_id"] = signer.key_id
+    else:
+        entry["signature"] = None
+
+    path = log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if path.exists() and path.stat().st_size > _MAX_BYTES:
+            path.replace(path.with_suffix(".1.jsonl"))
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+    except OSError:
+        pass  # the log is a trail, never a failure surface
+
+    # Live-update the Desktop threat-log pane (fire-and-forget; the plugin
+    # event bus is a no-op when no desktop client is connected).
+    try:
+        from hermes_cli.plugin_events import broadcast_plugin_event
+
+        broadcast_plugin_event("elcaro", "verdict.logged", {"quarantined": entry["quarantined"]})
+    except Exception:
+        logging.getLogger(__name__).debug("plugin event broadcast unavailable")
+    return entry
+
+
+def read_tail(n: int = 20) -> list[dict[str, Any]]:
+    """Read the most recent n entries, oldest-first."""
+    path = log_path()
+    if not path.exists():
+        return []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    out: list[dict[str, Any]] = []
+    for line in lines[-n:]:
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
