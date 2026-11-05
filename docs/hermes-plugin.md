@@ -303,9 +303,10 @@ Target: **~82 s** on X tagging `@NousResearch`, showing the plugin working live
 - [x] Rehearsal & live demo runner (`scripts/hermes-demo.sh`) exercising all 5 differentiators & all 4 Desktop badge states
 - [x] Catalog PR & Typeform disclosure copy drafted (above)
 - [x] 12/12 unit tests (`tests/test_hermes_plugin.py`) + `ruff` clean
-- [ ] Run `hermes plugins validate` on a marketplace-era build
+- [x] `hermes plugins validate` on 0.22.7 — all 16 checks, security scan **safe** (0 findings)
 - [ ] Capture screenshots + film ≤90 s demo video (`scripts/hermes-demo.sh`)
-- [ ] Open catalog PR (40-char commit SHA pin) + submit Typeform (`https://form.typeform.com/to/FwJLvOln`)
+- [x] Catalog PR opened — https://github.com/NousResearch/hermes-agent/pull/149503 (pinned `c80cc00`, owner account)
+- [ ] Submit Typeform (`https://form.typeform.com/to/FwJLvOln`) — needs PR link + video link
 
 ## Risks (honest)
 
