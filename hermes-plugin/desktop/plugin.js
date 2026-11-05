@@ -115,6 +115,13 @@ function VerdictRow({ e }) {
           e.session_id ? ` · sess ${String(e.session_id).slice(0, 8)}` : ''
         }`,
       }),
+      e.autopsy?.summary
+        ? jsx('div', {
+            className: 'text-[0.6875rem]',
+            style: { color: '#f5a524' },
+            children: e.autopsy.summary,
+          })
+        : null,
     ],
   })
 }

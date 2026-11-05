@@ -168,6 +168,15 @@ def _scan_and_log(scan_text: str, tool_name: str, task_id: str, kwargs: dict, su
     except Exception:
         logging.getLogger(__name__).debug("decoy check unavailable")
 
+    extra = None
+    if getattr(verdict, "quarantined", False):
+        try:
+            from . import autopsy
+
+            extra = {"autopsy": autopsy.summarize(verdict, scan_text)}
+        except Exception:
+            extra = None
+
     threatlog.append(
         tool_name=tool_name,
         verdict=verdict,
@@ -175,6 +184,7 @@ def _scan_and_log(scan_text: str, tool_name: str, task_id: str, kwargs: dict, su
         session_id=str(kwargs.get("session_id") or ""),
         tool_call_id=str(kwargs.get("tool_call_id") or ""),
         surface=surface,
+        extra=extra,
     )
     return verdict
 
@@ -236,7 +246,9 @@ def transform_tool_result(
 
     advisory_t, quarantine_t = _thresholds()
     if verdict.risk_score >= quarantine_t:
-        policy.mark_taint(str(kwargs.get("session_id") or ""))
+        _sid = str(kwargs.get("session_id") or "")
+        policy.mark_taint(_sid)
+        policy.record_event(_sid, "untrusted_result")
         with _pending_lock:
             _pending.append(
                 {

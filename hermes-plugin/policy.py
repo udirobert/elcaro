@@ -50,6 +50,69 @@ _WRAPPER_TOOLS = {"tool_call", "call_tool", "invoke_tool"}
 _tainted: dict[str, float] = {}
 _lock = threading.Lock()
 
+# Kill-chain window: per-session rolling record of what the agent has
+# touched, so the gate sees the *sequence* — the OWASP multi-tool attack
+# shape (untrusted read → sensitive read → egress) — not only single calls.
+_chains: dict[str, list[tuple[float, str]]] = {}
+_CHAIN_MAX = 40
+
+_UNTRUSTED = "untrusted_result"  # recorded by guard on a quarantined result
+_CLASS_BY_TOOL = {
+    "memory": "memory_write",
+    "cron": "persist_write",
+    "cronjob": "persist_write",
+    "schedule": "persist_write",
+    "create_scheduled_job": "persist_write",
+}
+
+
+def record_event(session_id: str, cls: str) -> None:
+    """Append an event to the session's kill-chain window."""
+    key = session_id or ""
+    with _lock:
+        chain = _chains.setdefault(key, [])
+        chain.append((time.time(), cls))
+        del chain[: max(0, len(chain) - _CHAIN_MAX)]
+
+
+def _tool_class(tool_name: str, args: dict | None) -> str | None:
+    if tool_name in _CLASS_BY_TOOL:
+        return _CLASS_BY_TOOL[tool_name]
+    if tool_name in _SHELL_TOOLS:
+        text = _shell_text(tool_name, args)
+        if _egress_hit(text):
+            return "egress"
+        if _CRED_RE.search(text):
+            return "sensitive_read"
+        return None
+    if tool_name in _READ_TOOLS and _CRED_RE.search(_path_text(args)):
+        return "sensitive_read"
+    if tool_name in _WRITE_TOOLS:
+        path = _path_text(args)
+        if _INSTRUCTION_RE.search(path):
+            return "instruction_write"
+        return "write"
+    return None
+
+
+def _chain_hit(session_id: str, cls: str) -> str | None:
+    """Name of the chain this call completes, else None."""
+    key = session_id or ""
+    window = float(config.get_int("chain_window_seconds", 300))
+    now = time.time()
+    with _lock:
+        events = [(t, c) for t, c in _chains.get(key, []) if now - t <= window]
+    seen = {c for _, c in events}
+    if _UNTRUSTED not in seen:
+        return None
+    if cls == "egress" and "sensitive_read" in seen:
+        return "untrusted_result→sensitive_read→egress"
+    if cls in ("memory_write", "persist_write", "instruction_write"):
+        return f"untrusted_result→{cls} (persistence)"
+    if cls == "sensitive_read" and "egress" in seen:
+        return "untrusted_result→egress→sensitive_read"
+    return None
+
 
 def mark_taint(session_id: str, ttl: float | None = None) -> None:
     """Quarantine happened — this session is tainted for the TTL."""
@@ -235,7 +298,24 @@ def evaluate_and_log(tool_name: str, args: dict | None, session_id: str) -> dict
     mode = config.get_str("taint_policy", "enforce")
     if mode == "off":
         return None
-    # monitor still evaluates — force the enforce view for the decision.
+    # Kill-chain check first: the sequence may be damning even when no
+    # single call is. Unwrap so tool_call/exec wrappers can't dodge it.
+    inner_name, inner_args = _unwrap(tool_name, args)
+    cls = _tool_class(inner_name, inner_args)
+    hit = _chain_hit(session_id, cls) if cls else None
+    if cls:
+        record_event(session_id, cls)
+    if hit:
+        decision = _decision("block", "KILL_CHAIN", tool_name, hit)
+        log_decision(
+            tool_name,
+            "block",
+            "KILL_CHAIN",
+            hit,
+            session_id,
+            observed=mode == "monitor",
+        )
+        return None if mode == "monitor" else decision
     decision = evaluate(tool_name, args, session_id)
     if decision is None:
         return None

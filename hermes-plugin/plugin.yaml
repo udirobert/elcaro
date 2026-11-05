@@ -94,3 +94,10 @@ config_schema:
     type: list
     default: []
     description: Host/destination substrings exempt from egress checks.
+  chain_window_seconds:
+    type: int
+    default: 300
+    description: >-
+      Kill-chain window: an untrusted_result followed by a sensitive read
+      then egress (or a persistence write) inside this window is blocked
+      as a named chain, even when no single call trips the gate.

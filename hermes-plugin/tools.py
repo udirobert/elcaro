@@ -106,6 +106,8 @@ def elcaro_explain(args: dict, **kwargs) -> str:
     # Forensic layer: propagation edges and time-shifted verdicts turn the
     # single entry into a trail.
     out: dict[str, Any] = {"event": e}
+    if e.get("autopsy"):
+        explanation.append(f"Autopsy: {e['autopsy'].get('summary')}")
     if e.get("type") == "edge":
         for edge in e.get("edges") or []:
             origin = (edge.get("origin_sha256") or "?")[:12]
