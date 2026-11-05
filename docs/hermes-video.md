@@ -92,3 +92,38 @@ sheet → `frame scene@50%` at key moments → `onion` on every transition →
 - Skia GPU (Metal) backend ~10× CPU; static SVG subtrees are
   compile-time cached — keep `{expressions}` out of static content.
 - Beta (`v1.0.0-beta.7`): footage `Clip` path is the one to spike first.
+
+## Build state (Nov 5 — phase 1 spike complete)
+
+`demo-video/hermes/montage/` — fframes project, 5 scenes live, all verified:
+Montage (incident cards + dimmed ledger + red progress), StatCard (0→3B
+counter), Turn (draw-on boundary line), LiveTake (footage + lower-third —
+**Clip path proven end-to-end with placeholder mp4**), Tag (badge stamps +
+caret). `inspect` clean, `timeline` 31 s/930 fr, `render --draft` 3.2 s →
+valid h264.
+
+### Gotchas hit (needed for any rebuild)
+
+- **fframes 1.4.x dep skew**: `fframes-media`/`fframes-media-dir-macro` must
+  be pinned `=1.4.0` in `[dependencies]` — 1.4.1 broke `Subtitles`/`usvgr`
+  compat against `fframes 1.4.0`.
+- **Video files are never embedded** — `include_media_dir!` takes
+  audio/images/fonts/vtt only and *panics* on mp4. Footage resolves by path
+  via a second provider: `CombinedMediaProvider::from([&embedded, &extra])`
+  where `extra = DynamicMediaProvider::new(.., videos, ..)` with
+  `VideoMedia { path: "footage/take.mp4" }`. Put takes in `footage/`, not `media/`.
+- **Scenes must return a rooted `<svg>`** — bare `<g>` fragments →
+  `NoRootNode` on inspect.
+- **`timeline!` can't capture vars** — use manual `ease_out(t)` math for
+  data-dependent timing (card entries), `&timeline!(...)` for literals.
+- **Fonts: ttf only** — woff2 rejected; `fontTools` converts (`flavor=None`).
+- **Zero-size rects rejected** — floor widths at 0.5. Unicode `▌` not in
+  Satoshi — draw carets as `<rect>`.
+
+### Next (blocked on assets, not code)
+
+1. Record the 4 live takes per SHOTLIST → `footage/` (swap names in
+   `videos` map + duplicate LiveTake scene per incident lower-third).
+2. Soundtrack pick → beat grid → lock scene `duration`s + `overlap`s to it.
+3. VO via narrate.mjs → `AudioMap` with ducking (audio.md recipe).
+4. `render --draft` loop → human `preview` → `render` ×2 cuts.
