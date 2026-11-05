@@ -94,16 +94,33 @@ def slash_elcaro(raw_args: str = "", **kwargs) -> str:
 
 
 def cli_setup(subparsers) -> None:
-    """hermes elcaro {log,status} [n]"""
+    """hermes elcaro {log,status,calibrate,verify} [n]"""
     parser = subparsers.add_parser("elcaro", help="Elcaro guard — threat log and status")
     sub = parser.add_subparsers(dest="elcaro_cmd")
     for name in ("log", "status"):
         p = sub.add_parser(name, help=f"show {'recent verdicts' if name == 'log' else 'summary'}")
         p.add_argument("n", nargs="?", type=int, default=10)
         p.set_defaults(elcaro_cmd=name)
+    sub.add_parser("calibrate", help="replay the seeded attack & benign corpus").set_defaults(
+        elcaro_cmd="calibrate"
+    )
+    sub.add_parser("verify", help="recompute the threat-log hash chain").set_defaults(
+        elcaro_cmd="verify"
+    )
 
 
 def cli_handler(args) -> int:
+    cmd = getattr(args, "elcaro_cmd", "log")
+    if cmd == "calibrate":
+        print(_calibrate())
+        return 0
+    if cmd == "verify":
+        c = threatlog.verify_chain()
+        print(
+            f"[ELCARO] threat-log chain: {c['checked']} entries checked, "
+            f"{c['broken']} broken — {'tamper-evident ✓' if c['ok'] else 'TAMPERED'}"
+        )
+        return 0 if c["ok"] else 1
     n = getattr(args, "n", 10) or 10
-    print(_status_text(n if getattr(args, "elcaro_cmd", "log") == "log" else 10))
+    print(_status_text(n if cmd == "log" else 10))
     return 0

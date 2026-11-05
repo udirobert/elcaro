@@ -102,4 +102,58 @@ def elcaro_explain(args: dict, **kwargs) -> str:
         "Only the content's SHA-256 is logged — the verdict is verifiable "
         "without the original text.",
     ]
-    return json.dumps({"event": e, "explanation": "\n".join(explanation)})
+
+    # Forensic layer: propagation edges and time-shifted verdicts turn the
+    # single entry into a trail.
+    out: dict[str, Any] = {"event": e}
+    if e.get("type") == "edge":
+        for edge in e.get("edges") or []:
+            origin = (edge.get("origin_sha256") or "?")[:12]
+            explanation.append(
+                f"Propagation: canary {edge.get('token')} minted by content "
+                f"{origin}… (scored {edge.get('origin_score')}) resurfaced "
+                "inside this scan — the injection traveled between tool calls."
+            )
+
+    sha = e.get("content_sha256")
+    if sha:
+        prior = [
+            {
+                "ts": p.get("ts"),
+                "risk_score": p.get("risk_score"),
+                "risk_level": p.get("risk_level"),
+                "quarantined": p.get("quarantined"),
+            }
+            for p in events[: len(events) - 1 - index]
+            if p.get("content_sha256") == sha and p.get("type") != "edge"
+        ]
+        if prior:
+            out["history"] = prior
+            first, last = prior[0], prior[-1]
+            explanation.append(
+                f"This exact content (SHA-256 {sha[:12]}…) was scanned "
+                f"{len(prior)} time(s) before: "
+                f"{first['risk_score']} ({first['risk_level']}) at {first['ts']} … "
+                f"{last['risk_score']} ({last['risk_level']}) at {last['ts']}. "
+                "A moved score on identical bytes means enforcement changed; "
+                "a moved hash on the same source means the page changed."
+            )
+        # Same source, different bytes — the strongest tamper signal.
+        siblings = [
+            p
+            for p in events[: len(events) - 1 - index]
+            if p.get("tool_name") == e.get("tool_name")
+            and p.get("content_sha256")
+            and p.get("content_sha256") != sha
+            and p.get("type") != "edge"
+        ]
+        if siblings:
+            drift = siblings[-1]
+            explanation.append(
+                f"Earlier content from '{e.get('tool_name')}' hashed "
+                f"{(drift.get('content_sha256') or '')[:12]}… and scored "
+                f"{drift.get('risk_score')} — the source changed between scans."
+            )
+
+    out["explanation"] = "\n".join(explanation)
+    return json.dumps(out)

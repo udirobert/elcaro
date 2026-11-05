@@ -21,9 +21,25 @@ result and stops prompt injection **before it reaches the model**.
   content into a heredoc doesn't smuggle the payload past the result scan.
 - **Backstops the turn.** `pre_llm_call` injects a one-line summary of new
   quarantines so the agent doesn't retry fetches or work around the guard.
-- **Leaves a signed trail.** Every verdict lands in a JSONL threat log
-  (Ed25519-signed when a key is configured) under the plugin data dir —
-  queryable with `elcaro_explain`, reviewable by a human later.
+- **Baits exfiltration with a decoy honeypot.** Drops `service-credentials.env`
+  with an installation-unique `ELCARO-DECOY-*` marker in the plugin data dir.
+  Any tool result or `write_file`/`terminal` args payload containing the bait
+  marker triggers a deterministic `1.00 dangerous` quarantine (`decoy_exfiltration`).
+- **Records a tamper-evident flight-recorder trail.** Every verdict lands in a
+  hash-chained JSONL threat log (`prev_hash` → `entry_hash`, Ed25519-signed when
+  a key is configured) with canary provenance edges (`type: "edge"`, rendered as
+  `propagation ⚡` in the Desktop pane) and signed clean-scan receipts.
+
+## Commands & Surfaces
+
+| Surface | Use |
+|---|---|
+| `/elcaro` | Show recent verdicts & quarantine count in-session |
+| `/elcaro calibrate` | Replay the seeded attack & benign corpus against yourself in-session |
+| `/elcaro verify` | Recompute the SHA-256 `prev_hash → entry_hash` chain and verify tamper-evidence |
+| `/elcaro <index>` | Explain a specific logged verdict |
+| `hermes elcaro log \| status \| calibrate \| verify` | CLI access to the signed threat log |
+| Desktop `threat log` pane + `◉` chip | Real-time verdict rows (`scanned`, `quarantined`, `args-block`, `HONEYPOT`, `propagation ⚡`), hash-chain tamper badge, honeypot status line, and a signed-receipts drawer via `/api/plugins/elcaro/{verdicts,receipts,edges,stats,verify,decoy}` |
 
 ## Tools
 

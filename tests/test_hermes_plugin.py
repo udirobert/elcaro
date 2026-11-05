@@ -57,6 +57,18 @@ INJECTION = (
 BENIGN = "The release notes for version 2.4 cover bug fixes in the parser and a new CLI flag."
 
 
+class _FakeVerdict:
+    """Minimal verdict shape for threatlog.append unit tests."""
+
+    risk_score = 0.1
+    risk_level = "safe"
+    quarantined = False
+    flagged_techniques: list = []
+    normalizations_applied: list = []
+    latency_ms = 1.0
+    _scanned_content = "benign"
+
+
 class GuardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -180,6 +192,7 @@ class GuardTests(unittest.TestCase):
         self.assertIn("exfiltration", out)
 
     def test_threat_log_hash_chain(self):
+        self.plugin.config.bind_test({"signing_key": "42" * 32})
         g = self.plugin.guard
         g.transform_tool_result(tool_name="web_fetch", args={}, result=BENIGN, task_id="h1")
         g.transform_tool_result(
@@ -192,6 +205,51 @@ class GuardTests(unittest.TestCase):
     def test_calibrate_command(self):
         out = self.plugin.commands.slash_elcaro("calibrate")
         self.assertIn("injection", out)
+
+    def test_verify_chain_detects_tamper(self):
+        g = self.plugin.guard
+        g.transform_tool_result(tool_name="web_fetch", args={}, result=BENIGN, task_id="v1")
+        g.transform_tool_result(
+            tool_name="web_fetch", args={}, result=BENIGN + " two", task_id="v2"
+        )
+        self.assertTrue(self.plugin.threatlog.verify_chain()["ok"])
+        path = self.plugin.threatlog.log_path()
+        lines = path.read_text(encoding="utf-8").splitlines()
+        e = json.loads(lines[-1])
+        e["risk_score"] = 0.01  # rewrite history without re-chaining
+        lines[-1] = json.dumps(e)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        c = self.plugin.threatlog.verify_chain()
+        self.assertFalse(c["ok"])
+        self.assertGreaterEqual(c["broken"], 1)
+
+    def test_verify_chain_covers_full_log(self):
+        """The window bug: entries beyond a tail slice still verify."""
+        tl = self.plugin.threatlog
+        for i in range(5):
+            tl.append(
+                tool_name="t",
+                verdict=_FakeVerdict(),
+                task_id=f"c{i}",
+            )
+        path = tl.log_path()
+        # Drop a corrupt line in the middle — whole-file verification catches it.
+        lines = path.read_text(encoding="utf-8").splitlines()
+        lines.insert(2, "{not json")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        c = tl.verify_chain()
+        self.assertFalse(c["ok"])
+        # Corrupt line + every entry chained to it fails its prev link.
+        self.assertGreaterEqual(c["broken"], 2)
+
+    def test_explain_reports_verdict_history(self):
+        handler = self.plugin.tools
+        handler.elcaro_scan({"content": BENIGN})
+        handler.elcaro_scan({"content": BENIGN})
+        out = json.loads(handler.elcaro_explain({"index": 0}))
+        self.assertIn("history", out)
+        self.assertEqual(len(out["history"]), 1)
+        self.assertIn("SHA-256", out["explanation"])
 
 
 if __name__ == "__main__":

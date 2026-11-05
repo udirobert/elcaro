@@ -14,6 +14,7 @@ export type NavKey =
   | "canary"
   | "supervise"
   | "paybox"
+  | "hermes"
   | "for-agents";
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
@@ -32,6 +33,7 @@ const FOOTER_LINKS: { key: NavKey; href: string; label: string }[] = [
   { key: "canary", href: "/canary", label: "Canary lookup" },
   { key: "supervise", href: "/supervise", label: "Session watch" },
   { key: "paybox", href: "/paybox", label: "PayBox gauntlet" },
+  { key: "hermes", href: "/hermes", label: "Hermes plugin" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },
 ];
 

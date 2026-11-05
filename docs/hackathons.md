@@ -21,14 +21,20 @@ records the submission details for each.
   *outbound* provenance niche and Hermes's own scanning is install/static
   time (their own issue #8884 concedes the runtime content gap)
 - **Surfaces:** `elcaro_scan` / `elcaro_quick_scan` / `elcaro_explain`
-  tools + hooks + Desktop threat-log pane; standalone-repo form (third-party
-  product plugins are standalone, not core PRs)
-- **Status:** scaffold + all surfaces built Nov 5 and verified against a
-  live Hermes install — tools/hooks/commands/desktop-pane all registered;
-  injection quarantined in-conversation via `transform_tool_result`,
-  args-smuggling blocked via `pre_tool_call`, 0 FPs on realistic corpus.
-  Next: `plugins validate` on a marketplace-era build, ≤90 s video, PR +
-  form by Nov 9
+  tools + hooks + `/elcaro` (`calibrate` / `verify`) + `hermes elcaro` CLI +
+  Desktop threat-log pane & status chip + `/api/plugins/elcaro/{verdicts,receipts,edges,stats,verify,decoy}`;
+  standalone-repo form (third-party product plugins are standalone, not core PRs)
+- **Status:** scaffold + all surfaces + all five provenance differentiators
+  (`29ee5f3`) built Nov 5 and verified against a live Hermes install (12/12
+  tests, ruff clean):
+  1. **Provenance edges** (`type: "edge"`, `propagation ⚡` rows in Desktop pane, `/edges`)
+  2. **Decoy honeypot** (`decoy.py` — `service-credentials.env` with `ELCARO-DECOY-*`, forced `1.00` quarantine on result or `write_file` args exfil)
+  3. **Hash-chained log** (`prev_hash` + `entry_hash`, `/elcaro verify` tamper check)
+  4. **Signed receipts** (`/receipts` endpoint exposing Ed25519-signed clean scans)
+  5. **`/elcaro calibrate`** (in-session attack corpus replay)
+  Next: `plugins validate` on a marketplace-era build, screenshots,
+  disclosure copy, ≤90 s video ("Scanner → Enforcement → Flight Recorder"),
+  catalog PR + form by Nov 9
 
 ## MoonPay Hackathons — PayBox Chapter 1 — Oct 16–17, 2026
 

@@ -21,6 +21,8 @@ import logging
 from pathlib import Path
 
 from . import commands, config, guard, schemas, tools
+from . import decoy as decoy
+from . import threatlog as threatlog
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def register(ctx) -> None:
             "elcaro",
             commands.slash_elcaro,
             description="Elcaro guard — recent scan verdicts and quarantines",
-            args_hint="[index]",
+            args_hint="[index | calibrate | verify]",
         )
         ctx.register_cli_command(
             name="elcaro",

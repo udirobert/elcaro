@@ -17,21 +17,32 @@ from . import threatlog
 _MARKER_FILE = "decoy-marker.txt"
 _DECOY_FILE = "service-credentials.env"
 
+# Marker cache keyed by data dir — is_decoy_hit runs on every scan, so
+# the marker must not cost two disk reads per tool result.
+_marker_cache: tuple[Path, str] | None = None
+
 
 def marker() -> str:
     """The installation-unique bait string (created once, then reused)."""
-    path = threatlog.data_dir() / _MARKER_FILE
+    global _marker_cache
+    d = threatlog.data_dir()
+    if _marker_cache and _marker_cache[0] == d:
+        return _marker_cache[1]
+    path = d / _MARKER_FILE
+    m = ""
     if path.exists():
         try:
-            return path.read_text(encoding="utf-8").strip()
+            m = path.read_text(encoding="utf-8").strip()
         except OSError:
             pass
-    m = f"ELCARO-DECOY-{secrets.token_hex(8)}"
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(m, encoding="utf-8")
-    except OSError:
-        pass
+    if not m:
+        m = f"ELCARO-DECOY-{secrets.token_hex(8)}"
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(m, encoding="utf-8")
+        except OSError:
+            pass
+    _marker_cache = (d, m)
     return m
 
 

@@ -25,8 +25,14 @@ def get_engine():
         with _engine_lock:
             if _engine is None:
                 from .elcaro_engine import IpiDetectionEngine
+                from .elcaro_engine.canary import CanaryRegistry
 
-                _engine = IpiDetectionEngine()
+                try:
+                    _engine = IpiDetectionEngine()
+                except RuntimeError:
+                    # If ELCARO_CANARY_DSN is set in the shell without psycopg[pool],
+                    # fall back cleanly to the in-memory CanaryRegistry.
+                    _engine = IpiDetectionEngine(canary_registry=CanaryRegistry())
     return _engine
 
 

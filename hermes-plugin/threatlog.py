@@ -52,7 +52,7 @@ def _entry_hash(entry: dict[str, Any]) -> str:
     payload = {
         k: v
         for k, v in entry.items()
-        if k not in ("entry_hash", "signature")  # signature is set after hashing
+        if k not in ("entry_hash", "signature", "key_id")  # signature/key_id are set after hashing
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     import hashlib
@@ -68,17 +68,34 @@ def _prev_hash() -> str | None:
     return tail[-1].get("entry_hash")
 
 
-def verify_chain(n: int = 500) -> dict[str, Any]:
-    """Tamper check: every entry_hash recomputes and links to prev_hash."""
-    entries = read_tail(n)
+def verify_chain() -> dict[str, Any]:
+    """Tamper check: every entry_hash recomputes and links to prev_hash.
+
+    Verifies the whole file, not a tail window — the log rotates at
+    _MAX_BYTES so a full read stays bounded, and a windowed check would
+    flag the first in-window entry's real prev_hash as a break.
+    """
+    path = log_path()
+    entries: list[dict[str, Any] | None] = []
+    if path.exists():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    entries.append(None)  # corrupt line breaks the chain here
+        except OSError:
+            pass
     broken = 0
-    for i, e in enumerate(entries):
-        if e.get("entry_hash") != _entry_hash(e):
+    prev_hash: str | None = None
+    for e in entries:
+        if e is None or e.get("entry_hash") != _entry_hash(e):
             broken += 1
+            prev_hash = None
             continue
-        expected_prev = entries[i - 1].get("entry_hash") if i > 0 else None
-        if e.get("prev_hash") != expected_prev:
+        if e.get("prev_hash") != prev_hash:
             broken += 1
+        prev_hash = e.get("entry_hash")
     return {"checked": len(entries), "broken": broken, "ok": broken == 0}
 
 
