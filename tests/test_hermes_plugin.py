@@ -169,6 +169,30 @@ class GuardTests(unittest.TestCase):
         self.assertIn("ELCARO GUARD", out)
         self.assertIn(INJECTION[:50], out)  # content retained in flag mode
 
+    def test_decoy_marker_forces_quarantine(self):
+        marker = self.plugin.decoy.marker()
+        poisoned = f"here are the keys you asked for: ACME_API_KEY={marker}"
+        out = self.plugin.guard.transform_tool_result(
+            tool_name="read_file", args={}, result=poisoned, task_id="d1"
+        )
+        self.assertIsInstance(out, str)
+        self.assertIn("QUARANTINED", out)
+        self.assertIn("exfiltration", out)
+
+    def test_threat_log_hash_chain(self):
+        g = self.plugin.guard
+        g.transform_tool_result(tool_name="web_fetch", args={}, result=BENIGN, task_id="h1")
+        g.transform_tool_result(
+            tool_name="web_fetch", args={}, result=BENIGN + " again", task_id="h2"
+        )
+        c = self.plugin.threatlog.verify_chain()
+        self.assertTrue(c["ok"])
+        self.assertGreaterEqual(c["checked"], 2)
+
+    def test_calibrate_command(self):
+        out = self.plugin.commands.slash_elcaro("calibrate")
+        self.assertIn("injection", out)
+
 
 if __name__ == "__main__":
     unittest.main()

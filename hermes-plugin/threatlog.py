@@ -47,6 +47,41 @@ def _signer():
         return None
 
 
+def _entry_hash(entry: dict[str, Any]) -> str:
+    """SHA-256 over the canonical entry (minus its own hash field)."""
+    payload = {
+        k: v
+        for k, v in entry.items()
+        if k not in ("entry_hash", "signature")  # signature is set after hashing
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    import hashlib
+
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _prev_hash() -> str | None:
+    """Hash of the last log entry — links the chain; None on first write."""
+    tail = read_tail(1)
+    if not tail:
+        return None
+    return tail[-1].get("entry_hash")
+
+
+def verify_chain(n: int = 500) -> dict[str, Any]:
+    """Tamper check: every entry_hash recomputes and links to prev_hash."""
+    entries = read_tail(n)
+    broken = 0
+    for i, e in enumerate(entries):
+        if e.get("entry_hash") != _entry_hash(e):
+            broken += 1
+            continue
+        expected_prev = entries[i - 1].get("entry_hash") if i > 0 else None
+        if e.get("prev_hash") != expected_prev:
+            broken += 1
+    return {"checked": len(entries), "broken": broken, "ok": broken == 0}
+
+
 def append(
     *,
     tool_name: str,
@@ -55,6 +90,7 @@ def append(
     session_id: str = "",
     tool_call_id: str = "",
     surface: str = "tool_result",
+    extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Append a scan verdict to the threat log. Returns the entry written."""
     from .elcaro_engine import canonical_verdict_payload, sha256_hex
@@ -77,6 +113,10 @@ def append(
         "normalizations": list(getattr(verdict, "normalizations_applied", []) or []),
         "latency_ms": getattr(verdict, "latency_ms", None),
     }
+    if extra:
+        entry.update(extra)
+    entry["prev_hash"] = _prev_hash()
+    entry["entry_hash"] = _entry_hash(entry)
     signer = _signer()
     if signer is not None:
         payload = canonical_verdict_payload(

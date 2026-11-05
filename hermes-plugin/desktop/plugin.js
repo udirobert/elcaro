@@ -33,7 +33,7 @@ function VerdictRow({ e }) {
       }),
       jsx('div', {
         className: 'text-[0.6875rem] text-(--ui-text-tertiary)',
-        children: `${e.quarantined ? 'quarantined' : 'scanned'} · ${techs}${e.signature ? ' · signed' : ''}`,
+        children: `${e.type === 'edge' ? 'propagation ⚡' : e.surface === 'tool_args' ? 'args-block' : e.quarantined ? 'quarantined' : 'scanned'} · ${techs}${e.signature ? ' · signed' : ''}`,
       }),
     ],
   })

@@ -55,6 +55,23 @@ async def verdicts(n: int = Query(50, ge=1, le=500)):
     }
 
 
+@router.get("/receipts")
+async def receipts(n: int = Query(50, ge=1, le=500)):
+    """Signed clean-scan receipts — proof a verdict was issued before acting."""
+    entries = _entries(n)
+    return {
+        "receipts": [
+            e for e in reversed(entries) if e.get("signature") and not e.get("quarantined")
+        ]
+    }
+
+
+@router.get("/edges")
+async def edges(n: int = Query(50, ge=1, le=500)):
+    """Propagation edges — canaries resurfacing inside later scans."""
+    return {"edges": [e for e in reversed(_entries(n)) if e.get("type") == "edge"]}
+
+
 @router.get("/stats")
 async def stats():
     entries = _entries(500)
