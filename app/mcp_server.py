@@ -32,6 +32,7 @@ main() need the package.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from typing import Any
 
@@ -154,7 +155,17 @@ async def scan_content_impl(
         )
     else:
         response = await _scan_remote(miner_url, content, ct, deep_analysis)
-    return response.model_dump(mode="json")
+    out = response.model_dump(mode="json")
+    # Incident response: a quarantine ships the autopsy — what the payload
+    # wanted, its targets, kill-chain stage, and concealment.
+    if out.get("quarantined"):
+        try:
+            from core.autopsy import summarize
+
+            out["autopsy"] = summarize(response, content)
+        except Exception:
+            logging.getLogger(__name__).debug("autopsy summarize failed")
+    return out
 
 
 def explain_verdict_impl(

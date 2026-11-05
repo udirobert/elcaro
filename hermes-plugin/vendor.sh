@@ -12,7 +12,7 @@ DEST="$(cd "$(dirname "$0")" && pwd)/elcaro_engine"
 rm -rf "$DEST"
 mkdir -p "$DEST/detectors"
 
-TOP="schemas.py taxonomy.py normalize.py quarantine.py signing.py canary.py \
+TOP="schemas.py taxonomy.py autopsy.py normalize.py quarantine.py signing.py canary.py \
 llm_classifier.py serv_reasoner.py jev_reasoner.py jev_vl_reasoner.py \
 laya_reasoner.py"
 
