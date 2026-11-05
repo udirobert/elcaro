@@ -32,9 +32,10 @@ records the submission details for each.
   3. **Hash-chained log** (`prev_hash` + `entry_hash`, `/elcaro verify` tamper check)
   4. **Signed receipts** (`/receipts` endpoint exposing Ed25519-signed clean scans)
   5. **`/elcaro calibrate`** (in-session attack corpus replay)
-  Next: `plugins validate` on a marketplace-era build, screenshots,
-  disclosure copy, ≤90 s video ("Scanner → Enforcement → Flight Recorder"),
-  catalog PR + form by Nov 9
+  Validated clean on 0.22.7; kernel layer (session taint + action gating +
+  subagent propagation) and incident response (autopsy, kill-chain window,
+  persistence gate) shipped; **catalog PR open: #149503 pinned `9f6a14c`**.
+  Next: ≤90 s video + Typeform by Nov 11
 
 ## MoonPay Hackathons — PayBox Chapter 1 — Oct 16–17, 2026
 

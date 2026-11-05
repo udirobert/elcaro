@@ -185,6 +185,19 @@ The story for judges is now **Scanner → Enforcement → Flight Recorder**:
 12/12 unit tests in `tests/test_hermes_plugin.py`, `ruff` clean, both commits
 on `main`.
 
+**Incident-response pass (Nov 5 PM — PR #149503 opened, pin `9f6a14c`):**
+Shipped the layer that separates us from sentry: `autopsy.py` (canonical in
+`core/`, vendored — objective class, named targets, kill-chain stage,
+concealment; rendered as `wanted: exfil ~/.ssh/id_rsa → host` in pane, log,
+`elcaro_explain`, and the MCP scan lane), a rolling per-session **kill-chain
+window** in `policy.py` (`untrusted_result→sensitive_read→egress` and
+post-quarantine memory/cron writes block as named chains — sequence
+detection surviving zero-day phrasing), and the **persistence gate** on
+memory/cron writes (sentry's admitted hole). 25/25 tests. `plugins
+validate` clean on 0.22.7 (1 caution: dump_all_env on the autopsy
+path-regex — a detector naming what it detects). Catalog PR opened from
+the owner account: https://github.com/NousResearch/hermes-agent/pull/149503
+
 **Frontend pass (Nov 5, fourth pass — pane surfaces the full story):**
 The differentiators were backend-only; the Desktop pane now renders all of
 them. New `/verify` + `/decoy` routes power a hash-chain tamper badge
