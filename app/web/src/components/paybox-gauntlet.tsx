@@ -33,12 +33,13 @@ function useScramble(text: string, active: boolean): string {
   // SSR paints the real text; the decode runs once on mount, so the
   // title "re-encrypts" once on load rather than arriving blank.
   const [out, setOut] = useState(text);
+  const [prev, setPrev] = useState({ active, text });
+  if (prev.active !== active || prev.text !== text) {
+    setPrev({ active, text });
+    setOut(active ? "" : text);
+  }
   useEffect(() => {
-    if (!active) {
-      setOut(text);
-      return;
-    }
-    setOut("");
+    if (!active) return;
     let frame = 0;
     const id = setInterval(() => {
       frame += 1;
@@ -418,11 +419,9 @@ function BleedPane({ scenario: s, play }: { scenario: PayboxScenario; play: bool
     if (!play) playedRef.current = false;
   }, [play]);
 
+  if (playing && shown >= lines.length) setPlaying(false);
   useEffect(() => {
-    if (!playing || shown >= lines.length) {
-      if (shown >= lines.length) setPlaying(false);
-      return;
-    }
+    if (!playing || shown >= lines.length) return;
     const t = setTimeout(() => setShown(shown + 1), LINE_MS);
     return () => clearTimeout(t);
   }, [playing, shown, lines.length]);

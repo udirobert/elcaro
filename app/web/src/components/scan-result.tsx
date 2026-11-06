@@ -742,7 +742,7 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
         <p className="px-3 pb-2 text-[10px] text-ink-faint leading-relaxed">
           Note: calibration runs (26-case corpus, Brier 0.32) show Laya rates
           most real injections as clean — treat this disagreement as noise,
-          not evidence it's safe.
+          not evidence it&rsquo;s safe.
         </p>
       )}
 
