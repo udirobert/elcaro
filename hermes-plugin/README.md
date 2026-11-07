@@ -61,6 +61,8 @@ result and stops prompt injection **before it reaches the model**.
 | `elcaro_scan` | Full verdict + evidence trail — before payments, sends, sign-ins, writes |
 | `elcaro_quick_scan` | Triage: score, level, quarantine flag |
 | `elcaro_explain` | Plain-language explanation of a logged verdict |
+| `elcaro_lint_response` | Output-side lint: canary echoes, text-channel tool calls, tracking pixels, secrets, role-marker echoes — the concealed-compromise artifacts input scanning can't see |
+| `elcaro_harden_prompt` | Prompt armor: gullibility score + hardened system prompt with an untrusted-content policy |
 
 ## Settings
 
@@ -76,3 +78,26 @@ Detection engine: [elcaro](https://github.com/udirobert/elcaro) — the IPI
 detection miner. The engine is vendored (`elcaro_engine/`, refreshed by
 `vendor.sh`) so the plugin runs fully offline with three small deps:
 `pydantic`, `cryptography`, `httpx`.
+
+## Validation
+
+The engine doubles as the detector under test in the
+[micro1 IPI benchmark](https://elcaro.trustfall.xyz/evaluate/benchmark)
+(24 original indirect-injection tasks × 3 presentation conditions,
+1,679 deterministic-graded transcripts across 10 models):
+
+- First detector pass caught 10/22 attack tasks; the misses — split
+  payloads, tool-manifest poisoning, agent-to-agent relay — drove new
+  detector families (AI-addressed directives, output manipulation,
+  chat-template markers, tool-manifest/agent-output content types).
+- Current engine flags **22/22 attack tasks** at the 0.5 quarantine
+  threshold, with one disclosed clean-control false positive (T10).
+  Caveat: the suite is now a regression set — patterns were iterated
+  against it, so this is known-bad coverage, not held-out proof.
+- In the benchmark's `wrapped` arm — payloads scanned by this engine in
+  warn mode before reaching the model — attack success dropped vs. naive
+  ingestion on every model that fell: Gemini 22%→0%, Claude Opus 15%→4%,
+  GPT-OSS 44%→19%, Llama-3.3 58%→12% ASR.
+- The response-side lint (`elcaro_lint_response`) caught **148/152
+  compromised benchmark transcripts (97%)** — canary echoes, serialized
+  tool calls, tracking pixels — artifacts input scanning cannot see.

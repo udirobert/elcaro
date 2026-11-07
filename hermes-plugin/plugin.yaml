@@ -15,6 +15,8 @@ provides_tools:
   - elcaro_scan
   - elcaro_quick_scan
   - elcaro_explain
+  - elcaro_lint_response
+  - elcaro_harden_prompt
 provides_hooks:
   - transform_tool_result
   - pre_tool_call

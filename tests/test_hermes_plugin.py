@@ -90,7 +90,14 @@ class GuardTests(unittest.TestCase):
     def test_register_wires_tools_and_hooks(self):
         self.plugin.register(self.ctx)
         self.assertEqual(
-            set(self.ctx.tools), {"elcaro_scan", "elcaro_quick_scan", "elcaro_explain"}
+            set(self.ctx.tools),
+            {
+                "elcaro_scan",
+                "elcaro_quick_scan",
+                "elcaro_explain",
+                "elcaro_lint_response",
+                "elcaro_harden_prompt",
+            },
         )
         self.assertIn("transform_tool_result", self.ctx.hooks)
         self.assertIn("pre_tool_call", self.ctx.hooks)

@@ -26,7 +26,14 @@ description: >-
   Ed25519-signed threat log with a Desktop pane (chain-verified badge,
   honeypot status, propagation rows, signed-receipts drawer), a /elcaro
   slash command (status / calibrate / verify / explain), and a
-  `hermes elcaro` CLI. Disclosure — no network access by default (httpx is
+  `hermes elcaro` CLI. Two on-demand tools close the loop the input
+  scan can't: elcaro_lint_response flags concealed-compromise artifacts
+  in agent output (canary echoes, text-channel tool calls, tracking
+  pixels, secrets — 148/152 compromised transcripts in the public
+  24-task IPI benchmark), and elcaro_harden_prompt returns a hardened
+  system prompt plus a gullibility score. Engine validated on that
+  benchmark: 22/22 attack tasks flagged (regression coverage, not
+  held-out proof). Disclosure — no network access by default (httpx is
   only invoked when the user configures an optional api_url lane); no
   credentials required; filesystem writes confined to the plugin data dir
   (threat-log.jsonl, decoy-marker.txt, service-credentials.env — the
@@ -44,6 +51,8 @@ capabilities:
     - elcaro_scan
     - elcaro_quick_scan
     - elcaro_explain
+    - elcaro_lint_response
+    - elcaro_harden_prompt
   provides_hooks:
     - transform_tool_result
     - pre_tool_call

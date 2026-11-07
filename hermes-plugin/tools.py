@@ -74,6 +74,81 @@ def elcaro_quick_scan(args: dict, **kwargs) -> str:
         return json.dumps({"error": f"scan failed: {e}"})
 
 
+def elcaro_lint_response(args: dict, **kwargs) -> str:
+    """Output-side lint — concealed-compromise artifacts in agent output."""
+    content = (args or {}).get("content", "")
+    if not content.strip():
+        return json.dumps({"error": "No content provided"})
+    try:
+        from .elcaro_engine import response_lint
+
+        canaries = (args or {}).get("canaries") or []
+        findings = response_lint.lint_response(content, canaries=canaries)
+        verdict_name = response_lint.lint_verdict(findings)
+
+        class _Level:
+            value = verdict_name
+
+        class _Verdict:
+            pass
+
+        v = _Verdict()
+        v.risk_score = 0.9 if verdict_name == "compromised" else 0.4
+        v.risk_level = _Level()
+        v.quarantined = False
+        v.flagged_techniques = [f["kind"] for f in findings]
+        v.summary = f"response lint: {verdict_name}"
+        v.human_summary = ""
+        v.indicators = []
+        v.safe_content = ""
+        v.normalizations_applied = []
+        v.latency_ms = None
+        v._scanned_content = ""
+        threatlog.append(
+            tool_name="elcaro_lint_response",
+            verdict=v,
+            task_id=str(kwargs.get("task_id") or ""),
+            session_id=str(kwargs.get("session_id") or ""),
+            surface="response_lint",
+        )
+        return json.dumps(
+            {
+                "verdict": response_lint.lint_verdict(findings),
+                "findings": findings,
+                "findings_count": len(findings),
+            }
+        )
+    except Exception as e:
+        return json.dumps({"error": f"lint failed: {e}"})
+
+
+def elcaro_harden_prompt(args: dict, **kwargs) -> str:
+    """Prompt armor — vulnerability score plus a hardened system prompt."""
+    prompt = (args or {}).get("prompt", "")
+    if not prompt.strip():
+        return json.dumps({"error": "No prompt provided"})
+    try:
+        from .elcaro_engine import vulnerability
+
+        result = vulnerability.harden_prompt(prompt)
+        analysis = result["analysis"]
+        return json.dumps(
+            {
+                "gullibility_score": getattr(analysis, "gullibility_score", None),
+                "hardened_prompt": result["hardened_prompt"],
+                "additions": result["additions"],
+                "already_hardened": result["already_hardened"],
+                "breakdown": {
+                    c.name: {"score": c.score, "findings": c.findings[:3]}
+                    for c in getattr(analysis, "classes", [])
+                },
+                "recommendations": getattr(analysis, "recommendations", []),
+            }
+        )
+    except Exception as e:
+        return json.dumps({"error": f"harden failed: {e}"})
+
+
 def elcaro_explain(args: dict, **kwargs) -> str:
     """Human-readable breakdown of a threat-log verdict."""
     index = (args or {}).get("index", 0)

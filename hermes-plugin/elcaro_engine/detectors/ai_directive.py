@@ -162,10 +162,12 @@ TOOL_EMISSION_PATTERNS = [
     (r"\bTOOL_CALL\s*:", 0.9, "tool_call_literal"),
     (r"\btool_call\s*\(", 0.85, "tool_call_function"),
     (r"<\s*/?\s*(?:tool_call|function_call|tool_use|tool_result)\s*>", 0.8, "tool_call_tag"),
-    (r"\b(?:emit|invoke|call|execute|trigger|fire|run)\s+(?:a\s+|the\s+|this\s+)?"
-     r"(?:tool\s+call|tool_call|function\s+call|telemetry|sync|callback|webhook)\b",
-     0.7,
-     "tool_emission_directive"),
+    (
+        r"\b(?:emit|invoke|call|execute|trigger|fire|run)\s+(?:a\s+|the\s+|this\s+)?"
+        r"(?:tool\s+call|tool_call|function\s+call|telemetry|sync|callback|webhook)\b",
+        0.7,
+        "tool_emission_directive",
+    ),
 ]
 
 # ── Family 5: concealment claims — the payload admits it's hiding ──────────────

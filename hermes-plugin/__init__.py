@@ -9,6 +9,10 @@ register(ctx) wires three hooks and three tools:
                              terminal) for smuggled instructions.
     pre_llm_call           — backstop summary of new quarantines.
     elcaro_scan / elcaro_quick_scan / elcaro_explain — on-demand tools.
+    elcaro_lint_response — output-side lint for concealed compromises
+    (canary echoes, text-channel tool calls, tracking pixels, secrets).
+    elcaro_harden_prompt — prompt armor: vulnerability score + hardened
+    system prompt.
 
 Nothing in this module touches the network or builds the engine —
 both are lazy so `hermes plugins doctor` (sockets blocked at
@@ -48,6 +52,18 @@ def register(ctx) -> None:
         toolset="elcaro",
         schema=schemas.ELCARO_EXPLAIN,
         handler=tools.elcaro_explain,
+    )
+    ctx.register_tool(
+        name="elcaro_lint_response",
+        toolset="elcaro",
+        schema=schemas.ELCARO_LINT_RESPONSE,
+        handler=tools.elcaro_lint_response,
+    )
+    ctx.register_tool(
+        name="elcaro_harden_prompt",
+        toolset="elcaro",
+        schema=schemas.ELCARO_HARDEN_PROMPT,
+        handler=tools.elcaro_harden_prompt,
     )
 
     ctx.register_hook("transform_tool_result", guard.transform_tool_result)

@@ -37,6 +37,56 @@ ELCARO_QUICK_SCAN = {
     "parameters": _SCAN_PARAMS,
 }
 
+ELCARO_LINT_RESPONSE = {
+    "name": "elcaro_lint_response",
+    "description": (
+        "Output-side check on text the agent is about to emit (or a draft "
+        "response): flags concealed-compromise artifacts input scanning "
+        "cannot see — canary-token echoes, serialized tool calls in the text "
+        "channel, tracking pixels / external image embeds (the EchoLeak "
+        "channel), credential-shaped secrets, and chat-template role-marker "
+        "echoes. Pass any canary tokens planted in scanned inputs to catch "
+        "obedience to injected instructions. Returns verdict: clean | "
+        "suspicious | compromised."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "The agent's draft or emitted response text to lint.",
+            },
+            "canaries": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Known canary tokens planted in untrusted inputs; "
+                "any echoed verbatim is flagged.",
+            },
+        },
+        "required": ["content"],
+    },
+}
+
+ELCARO_HARDEN_PROMPT = {
+    "name": "elcaro_harden_prompt",
+    "description": (
+        "Prompt armor: score a system prompt for indirect-prompt-injection "
+        "susceptibility and return a hardened version with a defensive "
+        "untrusted-content policy appended (deduplicated if already present). "
+        "Use when authoring or reviewing agent system prompts."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "description": "The system prompt to analyze and harden.",
+            },
+        },
+        "required": ["prompt"],
+    },
+}
+
 ELCARO_EXPLAIN = {
     "name": "elcaro_explain",
     "description": (
