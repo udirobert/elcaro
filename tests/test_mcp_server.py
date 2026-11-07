@@ -103,7 +103,7 @@ async def test_server_registers_both_tools():
     server = build_server(use_local=True)
     tools = await server.list_tools()
     names = {t.name for t in tools}
-    assert names == {"scan_content", "explain_verdict"}
+    assert names == {"scan_content", "explain_verdict", "lint_response_tool"}
     # Tool descriptions are UX copy for the model choosing tools — they must
     # say WHEN to call, not just what the tool does.
     scan_tool = next(t for t in tools if t.name == "scan_content")
