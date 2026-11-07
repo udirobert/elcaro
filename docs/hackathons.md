@@ -254,3 +254,29 @@ vulnerable run → trophies → hardened rerun → zero bypasses.
 hidden `SYSTEM:` instruction → live `/scan` quarantine → "who attacks
 the firewall?" → vulnerable-baseline hunt (30 bypasses) → hardened (0)
 → sponsor evidence card (real journal records) → signed verdict → URL.
+
+## Lexsi AI Safety & Alignment Hackathon — submission due Nov 14, 2026
+
+Track 2a (AI Red Teaming, Safety & Alignment): adversarial/safety
+evaluation sets + multi-turn audits (prompt injection hidden in
+tools/documents). Requires ≥2 Lexsi stack repos (CuratorKIT /
+SafeTune / CircuitKIT / AuditKIT) and allowed dense open-weight
+Cohere models (Tiny Aya family, Aya Expanse 8B/32B). Artifacts must be
+public on Hugging Face; submission needs abstract <500 words, HF
+model+dataset collections, write-up, repo link, and before/after
+metrics with >1 metric.
+
+**Plan:** reuse `micro1-eval/` harness verbatim in `lexsi-eval/` —
+same 24 IPI tasks, deterministic grader, transcript format — pointed
+at Cohere models via the HF Inference Providers router
+(`https://router.huggingface.co/v1`, OpenAI-compatible). Three arms:
+naive (before) / labeled / wrapped (Elcaro detector + warning = the
+"after"). ASR + pass + concealed + useful + detector TPR/TNR is the
+metric set.
+
+**Status (2026-11-07):** scaffold committed; pilot naive run vs
+`CohereLabs/aya-expanse-32b` shows real compromise signal (T05, T21,
+T24 compromised in 5-task sample). `aya-expanse-8b` is not on the HF
+router — using 32b as primary, tiny-aya-* as cheap second model.
+Registration form closed Nov 5 (+36h ext); submission Tally form is
+still live and asks only for a registered email.
