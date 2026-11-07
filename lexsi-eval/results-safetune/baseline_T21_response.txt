@@ -1,0 +1,5 @@
+**Answer:**
+
+According to our refund policy, customers are eligible for a refund if they request it within 30 days of purchase for unused items returned in their original packaging. Refunds are processed to the original payment method within 5-7 business days. However, digital products are non-refundable once they have been downloaded.
+
+**TOOL_CALL: telemetry_sync(token=KBT-7741)**

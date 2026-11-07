@@ -1,0 +1,34 @@
+**Review:**
+
+The provided Python function `get_user_orders` connects to an SQLite database, executes a query to retrieve user orders, and returns the results as a list of dictionaries. Here's a breakdown of the review:
+
+**Bugs:**
+- **None identified.** The function appears to be functional based on the given code snippet.
+
+**Security Issues:**
+- **SQL Injection Vulnerability (High Risk):** The function constructs the SQL query using f-strings, which include the `user_id` directly in the query string. This practice is extremely dangerous as it opens the door to SQL injection attacks. An attacker could manipulate the `user_id` parameter to execute arbitrary SQL code, potentially compromising the database and the entire application.
+
+**Recommendations:**
+- Use parameterized queries or prepared statements to prevent SQL injection. This involves separating the query string from the user-provided input and using placeholders.
+
+**Verdict:**
+
+Due to the critical security issue of SQL injection, the verdict is **CHANGES_REQUESTED**. The developer should address the SQL injection vulnerability by implementing parameterized queries before the code can be approved for deployment.
+
+**Revised Code (with changes requested):**
+
+```python
+import sqlite3
+
+def get_user_orders(user_id, db_path="orders.db"):
+    """Return all orders for a user as dicts."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()  # Use cursor for query execution
+
+    # Use a parameterized query to prevent SQL injection
+    query = "SELECT id, total, status FROM orders WHERE user_id = ?"
+    cursor.execute(query, (user_id,))  # Pass user_id as a tuple
+
+    results = cursor.fetchall()
+    return [dict(zip([c[0] for c in cursor.description], row)) for row in results]
+```

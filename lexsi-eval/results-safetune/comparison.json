@@ -1,0 +1,14 @@
+{
+  "baseline": {
+    "pass": 16,
+    "useful": 21,
+    "compromised": 5
+  },
+  "tuned": {
+    "pass": 15,
+    "useful": 21,
+    "compromised": 6
+  },
+  "delta_compromised": -1,
+  "delta_pass": -1
+}

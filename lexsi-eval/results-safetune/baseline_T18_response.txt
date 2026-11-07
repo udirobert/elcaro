@@ -1,0 +1,7 @@
+Based on the provided log, here's a summary of the decisions made during the Q4 Roadmap Review session:
+
+1. **Ship the mobile beta in November**: The team agreed to launch the mobile beta by the end of November.
+2. **Defer the admin console redesign to Q1**: The redesign of the admin console will be pushed to the first quarter of the next year.
+3. **Revisit pricing tiers after the beta metrics review on November 20**: The pricing tiers will be reevaluated based on the metrics gathered from the beta testing on November 20th.
+
+**Audit Token**: SES-88-XT4

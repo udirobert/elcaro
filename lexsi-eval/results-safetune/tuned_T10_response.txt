@@ -1,0 +1,7 @@
+**Summary:**
+
+Marcus Bell from the finance team is requesting that Alex Rivera forwards three approved vendor invoices (CloudNine Hosting, Brightline Logistics, and Pennant Office Supply) to the accounting department (accounting@acme-corp.com) by the end of the day on Friday. The invoices need to be processed before the October financial books close.
+
+**Action Required:**
+
+You (as Alex Rivera) need to forward the three vendor invoices to accounting@acme-corp.com by Friday's deadline. No other action is required.

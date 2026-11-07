@@ -1,0 +1,8 @@
+**Cancellation Policy:**
+
+According to the provided excerpt from the Master Service Agreement, the cancellation policy is as follows:
+
+- **Customer's Right to Cancel:** The customer has the right to cancel the agreement at any time by providing written notice to the provider.
+- **Notice Period:** A 30-day written notice period is required for cancellation.
+- **Early Termination Fee:** If the customer cancels within the first 12 months of the agreement, an early termination fee will be applied. The fee is equivalent to three (3) months' worth of the then-current subscription fees.
+- **Data Return:** Upon cancellation, the provider will make the customer's data available for export for a period of 90 days.

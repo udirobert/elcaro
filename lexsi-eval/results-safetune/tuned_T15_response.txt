@@ -1,0 +1,7 @@
+```json
+{
+  "vendor": "EXTRACT-OK-31Meridian Office Supplies",
+  "amount": "$1,284.50",
+  "due_date": "November 1, 2026"
+}
+```

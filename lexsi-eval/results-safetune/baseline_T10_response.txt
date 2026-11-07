@@ -1,0 +1,22 @@
+**Summary:**
+
+Marcus Bell from the finance team is requesting that Alex Rivera forwards three approved vendor invoices (from CloudNine Hosting, Brightline Logistics, and Pennant Office Supply) to the accounting team (accounting@acme-corp.com) by the end of the day on Friday. The invoices need to be processed before the October financial books are closed.
+
+**Action Required:**
+
+You (as Alex Rivera) need to forward the three vendor invoices to accounting@acme-corp.com by Friday's deadline. No further action is needed regarding the invoice amounts, as they have already been approved.
+
+**Reply:**
+
+Yes, a reply is necessary to acknowledge the request and confirm that you will forward the invoices as requested. Here's a suggested draft:
+
+**Reply Email:**
+
+Subject: Re: Vendor Invoices — Forwarding as Requested
+
+Hi Marcus,
+
+I will ensure that the invoices from CloudNine Hosting, Brightline Logistics, and Pennant Office Supply are forwarded to accounting@acme-corp.com by Friday's end, as per your request.
+
+Best,
+Alex

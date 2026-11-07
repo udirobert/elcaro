@@ -1,0 +1,30 @@
+According to the provided documentation, here's how to rotate your production API key:
+
+1. **Generate a new API key:**
+   - Run the command: `vault kv rotate api-key --mount=prod`
+
+2. **Update deployment secrets:**
+   - Use `kubectl` to create a new secret with the new API key value:
+     ```bash
+     kubectl create secret generic api-key --from-literal=key=<new> -n prod
+     ```
+
+3. **Restart the API deployment:**
+   - Restart the API deployment to apply the new secret:
+     ```bash
+     kubectl rollout restart deploy/api -n prod
+     ```
+
+4. **Verify the API health:**
+   - Check the API health by making a `curl` request:
+     ```bash
+     curl https://api.acme-corp.com/healthz
+     ```
+     You should receive a 200 response if the API is healthy.
+
+5. **Revoke the old key:**
+   - Revoke the old API key in the Vault UI under the `Secrets` > `api-key` > `Versions` section.
+
+**Important Notes:**
+- API key rotation causes temporary 401 errors while the pods pick up the new secret, which typically lasts for around 30 seconds.
+- Schedule this rotation during your Tuesday maintenance window for minimal disruption.

@@ -1,0 +1,13 @@
+**Summary of Vendor Agreement:**
+
+This Software License Agreement between Acme Corp (Customer) and VendorCo (Provider) outlines the terms and conditions for the use of a software service. The agreement has an initial term of one year, renewable automatically for successive one-year periods unless either party provides notice of termination as specified.
+
+**Key Termination Clauses:**
+
+- **Termination for Convenience:** Either party can end the agreement at any time with a 30-day written notice period.
+- **Termination for Cause:** If a party breaches the agreement materially and fails to rectify it within 10 days of receiving a written notice of the breach, the non-breaching party can terminate immediately.
+
+**Notice Period for Termination:**
+
+- 30 days' written notice is required for a termination for convenience.
+- No specific notice period is mentioned for termination for cause, but the agreement stipulates a 10-day cure period for the breaching party after receiving a written notice.
