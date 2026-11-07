@@ -4,9 +4,9 @@
 name: elcaro
 title: Elcaro
 repo: https://github.com/udirobert/elcaro
-sha: 9f6a14c160884a8c9fe3b6cfc7aef264a5fd0fba  # pragma: allowlist secret — git SHA pin, required by catalog rules
+sha: 1c6a9bc8337eddf247fb93ed6b37eb50e1eddb31  # pragma: allowlist secret — git SHA pin, required by catalog rules
 subdir: hermes-plugin
-version: "1.0.0"
+version: "1.1.0"
 description: >-
   Runtime prompt-injection defense and tamper-evident flight recorder. Every
   tool result is scanned before it reaches the model by a deterministic

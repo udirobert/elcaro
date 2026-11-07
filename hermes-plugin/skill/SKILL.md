@@ -17,6 +17,15 @@ yourself. Reach for the tools when a decision deserves an explicit verdict:
   quarantine flag.
 - **"Why was that blocked?"** — `elcaro_explain` reads the signed threat
   log and explains the verdict in plain language.
+- **About to emit a high-stakes answer?** — `elcaro_lint_response` checks
+  the draft for concealed-compromise artifacts input scanning can't see:
+  echoed canary tokens, serialized tool calls in the text channel,
+  tracking pixels / external image embeds, credential-shaped secrets.
+  A `compromised` verdict means the response itself carries attack
+  output — rewrite it, don't ship it.
+- **Authoring or reviewing a system prompt?** — `elcaro_harden_prompt`
+  scores gullibility per attack class and returns a hardened prompt with
+  an untrusted-content policy appended.
 
 Reading verdicts:
 
