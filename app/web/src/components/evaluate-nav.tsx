@@ -12,6 +12,7 @@ const TOOLS: { href: string; label: string }[] = [
   { href: "/evaluate/gauntlet", label: "Gauntlet" },
   { href: "/evaluate/redteam", label: "Red team" },
   { href: "/evaluate/audit", label: "Prompt audit" },
+  { href: "/evaluate/benchmark", label: "Benchmark" },
 ];
 
 export function EvaluateNav() {
