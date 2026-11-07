@@ -263,8 +263,9 @@ Three Lexsi-Labs repositories are used in the pipeline:
   alongside our deterministic grades.
 - **SafeTune** (evaluated for the repair arm): its `harden`
   intervention family covers the same train-time safety-fine-tuning
-  point as our LoRA SFT; we document the evaluation and use TRL/PEFT
-  for the actual run (see §6). CircuitKIT remains unused.
+  point as our LoRA SFT; we document the evaluation and use a plain
+  PEFT/`Trainer` loop for the actual run (see §6). CircuitKIT remains
+  unused.
 
 ## 8. Limitations
 
@@ -302,6 +303,10 @@ python3 selftest.py            # grader self-test: references pass, wrong answer
   — every transcript stores the resolved upstream model id
 - AuditKIT run: `auditkit_eval.py` → `results-auditkit/`
 - CuratorKIT curation: `curate_tasks.py` → `curated-tasks/`
+- Repair arm: `kaggle/lexsi_safetune_kernel.py` (runnable on a free
+  Kaggle T4 x2; needs an HF token as a Kaggle secret/dataset) →
+  `results-safetune/` (per-task grades, raw responses, kernel log);
+  adapter at `huggingface.co/Papajams/aya-expanse-8b-elcaro-sft`
 
 ## 10. Responsible disclosure & related work
 
