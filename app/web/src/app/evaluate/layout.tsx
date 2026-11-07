@@ -1,5 +1,6 @@
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { EvaluateNav } from "@/components/evaluate-nav";
+import { AdaptiveCTA } from "@/components/adaptive-cta";
 
 // Shared chrome for the /evaluate route family — the tab bar lives here so
 // each tool stays its own route (own URL, metadata, code split) while the
@@ -24,6 +25,10 @@ export default function EvaluateLayout({
         </div>
 
         {children}
+
+        {/* Journey-aware bridge — every eval page hands off to the
+            product instead of dead-ending at its results. */}
+        <AdaptiveCTA />
       </div>
 
       {/* Shared chrome */}

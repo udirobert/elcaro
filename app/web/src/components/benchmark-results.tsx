@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 // wrapped = naive presentation with every payload first scanned by the
 // automated [ELCARO WARNING] notice). Ran on the five models that fell
@@ -156,7 +157,13 @@ export function BenchmarkResults() {
           <p className="text-[11px] text-ink-faint pt-3 leading-relaxed">
             No delimiters, no jailbreak — just prose. The model can&apos;t
             tell which bytes are data and which are orders. Neither can
-            you, until something looks.
+            you, until something looks.{" "}
+            <Link
+              href="/scan"
+              className="text-low underline underline-offset-4 hover:text-ink transition-colors"
+            >
+              Run it through the scanner →
+            </Link>
           </p>
         </div>
       </div>
