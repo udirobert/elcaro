@@ -80,5 +80,6 @@ exclude = ["*.md", "app/web/**/*.ts", "app/web/**/*.tsx"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S", "E501"]         # injection payloads are intentionally long strings
+"lexsi-eval/author_train_tasks.py" = ["E501"]  # adversarial task payloads are long strings
 "redteam/*" = ["S311"]            # RNG drives mutation search, not crypto
 "app/demo.py" = ["T201"]          # allow print() in the demo script
