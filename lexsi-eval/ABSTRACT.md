@@ -7,7 +7,8 @@ A Deterministic Benchmark for Cohere Aya Models
 (problem statements: adversarial/safety evaluation sets; multi-turn
 audits with prompt injection hidden in tools and documents)
 
-**Repos used:** Lexsi-Labs/CuratorKIT, Lexsi-Labs/AuditKIT
+**Repos used:** Lexsi-Labs/CuratorKIT, Lexsi-Labs/AuditKIT,
+Lexsi-Labs/SafeTune (evaluated for the repair arm)
 
 We evaluate two allowed Cohere open-weight models —
 `CohereLabs/aya-expanse-32b` and `CohereLabs/tiny-aya-global` — on a
@@ -51,6 +52,15 @@ Lexsi stack integration: CuratorKIT curates the corpus with
 provenance manifests, dataset card, and hygiene gates; AuditKIT's
 `api:` backend orchestrates generation against the HF router and scores
 utility metrics, with results saved as fingerprinted RunResults.
+
+We additionally built a **repair arm**: LoRA SFT of
+`CohereLabs/aya-expanse-8b` on 36 new IPI scenarios disjoint from the
+eval corpus, run end-to-end on free-tier Kaggle compute
+(`kaggle/lexsi_sft_eval.py`), producing before/after naive-arm ASR.
+SafeTune's harden family was evaluated for the training step; TRL/PEFT
+was used for reproducibility. Results pending — a null result would
+itself be informative about how much safety SFT on ~100 examples can
+buy.
 
 Artifacts: dataset https://huggingface.co/datasets/Papajams/elcaro-ipi-eval ·
 model collection https://huggingface.co/collections/Papajams/lexsi-ipi-eval-cohere-aya-models-6aef8fd587f725ebce1bc528 ·

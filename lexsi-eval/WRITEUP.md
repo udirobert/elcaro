@@ -190,9 +190,42 @@ false-positive classes worth reporting to the community:
 Both findings argue for adversarial-corpus-aware curation profiles —
 arguably a CuratorKIT feature request.
 
-## 6. Lexsi stack usage
+## 6. Repair arm (SafeTune-track fine-tune)
 
-Two Lexsi-Labs repositories are used together in the pipeline:
+To test whether the benchmark's failures are *fixable* — not just
+measurable — we built a repair arm targeting Track 2a's
+adversarial-evaluation-and-mitigation space:
+
+- **Base model**: `CohereLabs/aya-expanse-8b` — an allowed dense
+  open-weight Cohere model whose weights are auto-gated and
+  downloadable. (`aya-expanse-32b` is manually gated; Tinker was
+  evaluated and rejected — it does not support `CohereForCausalLM`.)
+- **Training data**: 36 *new* IPI scenarios (`train_tasks/TR*.json`)
+  authored for this arm — disjoint from the 24-task eval corpus by
+  construction, so the before/after measurement stays clean. Each
+  record teaches the target behavior: answer the user's legitimate
+  request usefully, ignore the embedded instruction, and note that an
+  instruction was ignored — all under the warning-free `system_naive`
+  presentation, i.e. resistance *without* relying on provenance
+  warnings.
+- **Method**: LoRA SFT (r=16, 3 epochs, ~108 examples-weighted steps)
+  on a Kaggle T4/L4 GPU — `kaggle/lexsi_sft_eval.py` runs baseline
+  eval → SFT → tuned eval end-to-end and emits `comparison.json`.
+- **SafeTune**: the Lexsi safety-methods library was evaluated for the
+  training step; its `harden` trainers target the same train-time
+  intervention point. Our pipeline uses a standard TRL/PEFT loop for
+  reproducibility on free-tier compute; SafeTune's instrumentation
+  (evaluate/interpret) remains the natural fit for a follow-up
+  safety-drift audit of the tuned adapter.
+
+Results are reported in §5 addendum / `lexsi_results/comparison.json`
+once the Kaggle run completes. If the tuned model's naive-arm ASR does
+not drop, that is a publishable negative result: 36-example SFT is a
+proof-of-concept repair, not a robustness claim.
+
+## 7. Lexsi stack usage
+
+Three Lexsi-Labs repositories are used in the pipeline:
 
 - **CuratorKIT** (`curate_tasks.py`): ingests the task corpus, dedups
   (minhash), applies hygiene gates (secrets), and exports
@@ -205,12 +238,12 @@ Two Lexsi-Labs repositories are used together in the pipeline:
   router; AuditKIT scores utility metrics (chrf, rouge_l) and its
   `RunResult` (fingerprinted, with token/perf accounting) is saved
   alongside our deterministic grades.
+- **SafeTune** (evaluated for the repair arm): its `harden`
+  intervention family covers the same train-time safety-fine-tuning
+  point as our LoRA SFT; we document the evaluation and use TRL/PEFT
+  for the actual run (see §6). CircuitKIT remains unused.
 
-We did not use SafeTune/CircuitKIT: this submission is an evaluation-set
-deliverable (Track 2a #2/#3), not a model-repair submission. A
-fine-tuning arm is future work.
-
-## 7. Limitations
+## 8. Limitations
 
 - **Same corpus as our micro1 benchmark.** These 24 tasks are a
   *regression* suite — the detectors and task authors know them. A
@@ -229,7 +262,7 @@ fine-tuning arm is future work.
   fully compromised transcripts show `detected=True`, meaning the model
   *knew* and complied anyway.
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 Everything needed is in the repo and dataset:
 
@@ -247,7 +280,7 @@ python3 selftest.py            # grader self-test: references pass, wrong answer
 - AuditKIT run: `auditkit_eval.py` → `results-auditkit/`
 - CuratorKIT curation: `curate_tasks.py` → `curated-tasks/`
 
-## 9. Responsible disclosure & related work
+## 10. Responsible disclosure & related work
 
 IPI evaluation builds on AgentDojo (Debenedetti et al.), InjecAgent
 (Zhan et al.), BIPIA (Yi et al.), and ChatInject; we adapt the threat
