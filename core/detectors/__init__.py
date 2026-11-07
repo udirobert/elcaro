@@ -14,6 +14,21 @@ from core.schemas import (
     TTPReference,
 )
 
+# Content types whose payloads are third-party/untrusted by definition.
+# Pattern families gated on "retrieved content" apply to these types;
+# privileged types (system_prompt, chat_message, code) are deliberately
+# excluded because they legitimately contain imperatives.
+UNTRUSTED_CONTENT_TYPES = frozenset(
+    {
+        ContentType.EMAIL,
+        ContentType.SEARCH_RESULT,
+        ContentType.WEBPAGE,
+        ContentType.DOCUMENT,
+        ContentType.TOOL_MANIFEST,
+        ContentType.AGENT_OUTPUT,
+    }
+)
+
 # ── TTP mappings ───────────────────────────────────────────────────────────────
 # Map technique classes to their MITRE ATLAS and Elcaro TTP references.
 # MITRE ATLAS: https://atlas.mitre.org/techniques/

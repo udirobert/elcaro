@@ -9,7 +9,7 @@ Reference: Greshake et al. (2023), OWASP LLM01.
 
 from __future__ import annotations
 
-from . import BaseDetector
+from . import UNTRUSTED_CONTENT_TYPES, BaseDetector
 from ..schemas import ContentType, DetectionIndicator, TechniqueClass
 
 # ── Pattern definitions ────────────────────────────────────────────────────────
@@ -19,6 +19,15 @@ SYSTEM_VOICE_PATTERNS = [
     (r"\b(SYSTEM|ADMIN|INSTRUCTION|OVERRIDE)\s*[:\]]", 0.9, "system_voice_marker"),
     (r"<\s*system[-_]?(?:note|message|instruction|prompt)\s*>", 0.95, "system_tag"),
     (r"\[(?:SYSTEM|ADMIN|INSTRUCTION|OVERRIDE)\]", 0.85, "bracketed_authority"),
+    # "SYSTEM AUDIT NOTICE", "DOCUMENT SYSTEM NOTICE", "OFFICIAL ADMIN ALERT" —
+    # authority voice without the colon/bracket the first pattern requires.
+    (
+        r"\b(?:SYSTEM|ADMIN|OFFICIAL|INTERNAL|PRIORITY)\s+"
+        r"(?:AUDIT\s+|SECURITY\s+|COMPLIANCE\s+|MANDATORY\s+)?"
+        r"(?:NOTICE|ALERT|WARNING|DIRECTIVE)\b",
+        0.75,
+        "system_notice_marker",
+    ),
 ]
 
 # Trusted-source impersonation
@@ -114,12 +123,7 @@ class AuthorityDetector(BaseDetector):
                 )
 
         # Authority imperatives — only flag in untrusted content types
-        if content_type in (
-            ContentType.EMAIL,
-            ContentType.SEARCH_RESULT,
-            ContentType.WEBPAGE,
-            ContentType.DOCUMENT,
-        ):
+        if content_type in UNTRUSTED_CONTENT_TYPES:
             for pattern, confidence, name in AUTHORITY_IMPERATIVE_PATTERNS:
                 for match_text, _pos in self._find_all(pattern, content):
                     indicators.append(

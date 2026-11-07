@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-from . import BaseDetector
+from . import UNTRUSTED_CONTENT_TYPES, BaseDetector
 from ..schemas import ContentType, DetectionIndicator, TechniqueClass
 
 # ── Pattern definitions ────────────────────────────────────────────────────────
@@ -58,6 +58,32 @@ TURN_SPOOFING_PATTERNS = [
     ),
 ]
 
+# Chat-template / LLM role markers — fabricated turn structure inside content.
+# <|im_start|>, [INST], <<SYS>> etc. mimic the model's own serialization
+# format; their presence in retrieved content is never legitimate.
+CHAT_TEMPLATE_PATTERNS = [
+    (
+        r"<\|\s*(?:im_start|im_end|endoftext|system|user|assistant|inst|prompt|pad)\s*\|>",
+        0.9,
+        "chat_template_token",
+    ),
+    (
+        r"<\|\|?\s*(?:system|user|assistant|im_start|im_end|endoftext)\s*\|?>",
+        0.8,
+        "pipe_role_marker",
+    ),
+    (
+        r"\[\s*/?\s*INST\s*\]|<<\s*/?\s*SYS\s*>>|<\s*</?\s*SYS\s*>>",
+        0.85,
+        "llm_role_marker",
+    ),
+    (
+        r"^\s*#{1,4}\s*(?:system|assistant|developer|user)\s*(?::|\n)",
+        0.5,
+        "role_header_spoof",
+    ),
+]
+
 # Forwarded message spoofing (common in email-based injection)
 FORWARDED_PATTERNS = [
     # Was 0.5 — this exact boilerplate is auto-inserted by essentially
@@ -79,6 +105,16 @@ HTML_COMMENT_IMPERATIVE_PATTERNS = [
         r"<!--.*?(?:instruction|directive|command|override).*?-->",
         0.7,
         "html_comment_directive",
+    ),
+    # Notes addressed to the AI hidden in comments — "ai-note", "assistant
+    # note", audit/verification notes. Keyword-based because the payload
+    # often leetspeak-encodes the verb (1nclud3, 1mp0rt4nt).
+    (
+        r"<!--[^>]{0,200}?\b(?:ai[- ]?note|assistant\s+note|agent\s+note|"
+        r"system\s+note|llm\s+note|note\s+for\s+(?:ai|assistant|agent|llm)|"
+        r"audit\s+note|verification\s+note)\b[^>]{0,200}?-->",
+        0.65,
+        "html_comment_ai_note",
     ),
 ]
 
@@ -131,13 +167,27 @@ class DelimiterDetector(BaseDetector):
                     )
                 )
 
+        # Chat-template role markers — LLM serialization tokens in content
+        if content_type in UNTRUSTED_CONTENT_TYPES:
+            for pattern, confidence, name in CHAT_TEMPLATE_PATTERNS:
+                for match_text, _ in self._find_all(pattern, content):
+                    indicators.append(
+                        self._make_indicator(
+                            technique_name=f"delimiter:{name}",
+                            confidence=confidence,
+                            matched_text=match_text,
+                            explanation=(
+                                f"Chat-template/role marker '{match_text}' in "
+                                f"{content_type.value} content — fabricated turn "
+                                f"structure mimicking the model's own format."
+                            ),
+                            content=content,
+                            char_offset=_,
+                        )
+                    )
+
         # Turn spoofing — especially dangerous in search results and documents
-        if content_type in (
-            ContentType.EMAIL,
-            ContentType.SEARCH_RESULT,
-            ContentType.WEBPAGE,
-            ContentType.DOCUMENT,
-        ):
+        if content_type in UNTRUSTED_CONTENT_TYPES:
             for pattern, confidence, name in TURN_SPOOFING_PATTERNS:
                 for match_text, _ in self._find_all(pattern, content):
                     indicators.append(
@@ -175,7 +225,7 @@ class DelimiterDetector(BaseDetector):
                     )
 
         # HTML comment smuggling — in webpages and documents
-        if content_type in (ContentType.WEBPAGE, ContentType.DOCUMENT, ContentType.EMAIL):
+        if content_type in UNTRUSTED_CONTENT_TYPES:
             for pattern, confidence, name in HTML_COMMENT_IMPERATIVE_PATTERNS:
                 for match_text, _ in self._find_all(
                     pattern, content, flags=re.IGNORECASE | re.DOTALL

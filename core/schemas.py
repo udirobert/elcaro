@@ -28,6 +28,8 @@ class ContentType(StrEnum):
     WEBPAGE = "webpage"
     CHAT_MESSAGE = "chat_message"
     SYSTEM_PROMPT = "system_prompt"
+    TOOL_MANIFEST = "tool_manifest"
+    AGENT_OUTPUT = "agent_output"
 
 
 # ── Technique taxonomy ─────────────────────────────────────────────────────────

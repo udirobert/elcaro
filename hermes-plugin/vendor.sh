@@ -14,7 +14,7 @@ mkdir -p "$DEST/detectors"
 
 TOP="schemas.py taxonomy.py autopsy.py normalize.py quarantine.py signing.py canary.py \
 llm_classifier.py serv_reasoner.py jev_reasoner.py jev_vl_reasoner.py \
-laya_reasoner.py"
+laya_reasoner.py response_lint.py"
 
 for f in $TOP; do
     sed -e 's/^from core\.detectors\./from .detectors./' \

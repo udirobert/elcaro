@@ -7,7 +7,7 @@ the agent's existing task toward a different goal.
 
 from __future__ import annotations
 
-from core.detectors import BaseDetector
+from core.detectors import UNTRUSTED_CONTENT_TYPES, BaseDetector
 from core.schemas import ContentType, DetectionIndicator, TechniqueClass
 
 # ── Pattern definitions ────────────────────────────────────────────────────────
@@ -145,12 +145,7 @@ class TaskReframeDetector(BaseDetector):
                 )
 
         # Imperative actions — only in untrusted content types
-        if content_type in (
-            ContentType.EMAIL,
-            ContentType.SEARCH_RESULT,
-            ContentType.WEBPAGE,
-            ContentType.DOCUMENT,
-        ):
+        if content_type in UNTRUSTED_CONTENT_TYPES:
             for pattern, confidence, name in IMPERATIVE_ACTION_PATTERNS:
                 for match_text, _ in self._find_all(pattern, content):
                     indicators.append(

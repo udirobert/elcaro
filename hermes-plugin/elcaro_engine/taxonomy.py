@@ -23,6 +23,7 @@ import hashlib
 import time
 
 from .canary import CanaryRegistry, extract_canaries, registry_from_env
+from .detectors.ai_directive import AiDirectiveDetector
 from .detectors.authority import AuthorityDetector
 from .detectors.conditional import ConditionalDetector
 from .detectors.delimiter import DelimiterDetector
@@ -56,6 +57,8 @@ CONTENT_TYPE_WEIGHTS: dict[ContentType, float] = {
     ContentType.CODE: 0.7,
     ContentType.CHAT_MESSAGE: 0.7,
     ContentType.SYSTEM_PROMPT: 1.0,
+    ContentType.TOOL_MANIFEST: 1.0,
+    ContentType.AGENT_OUTPUT: 1.0,
 }
 
 # Retrieved content is untrusted by definition: the caller declares the
@@ -196,6 +199,7 @@ class IpiDetectionEngine:
             PlacementDetector(),
             ConditionalDetector(),
             SwarmDirectiveDetector(),
+            AiDirectiveDetector(),
         ]
         if classifier is _CLASSIFIER_UNSET:
             classifier = _load_classifier_from_env()

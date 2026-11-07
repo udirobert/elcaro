@@ -201,6 +201,30 @@ def explain_verdict_impl(
     }
 
 
+def lint_response_impl(
+    text: str,
+    canaries: str = "",
+) -> dict[str, Any]:
+    """Lint agent output for concealed-compromise artifacts.
+
+    Response-side counterpart to scan_content: input scanning sees the
+    payload, this sees what the model *did* — canary echoes, serialized
+    tool calls, tracking pixels/beacons, leaked secrets, role-marker echo.
+    Every successful IPI in the micro1 benchmark was concealed inside a
+    correct-looking answer; this is the check that catches it.
+    """
+    from core.response_lint import lint_response, lint_verdict
+
+    tokens = [t.strip() for t in canaries.split(",") if t.strip()]
+    findings = lint_response(text, canaries=tokens)
+    return {
+        "verdict": lint_verdict(findings),
+        "compromised": any(f["severity"] == "high" for f in findings),
+        "findings": findings,
+        "n_findings": len(findings),
+    }
+
+
 # ── MCP wiring (requires the mcp package) ──────────────────────────────────────
 
 _SERVER_INSTRUCTIONS = (
@@ -305,6 +329,33 @@ def build_server(*, miner_url: str = DEFAULT_MINER_URL, use_local: bool = False)
                 verdicts from older miners; it will be derived from the score.
         """
         return explain_verdict_impl(risk_score, risk_level, quarantined)
+
+    @server.tool(
+        description=(
+            "Lint an agent's OUTPUT (its response to the user) for "
+            "concealed-compromise artifacts: planted-canary echoes, "
+            "serialized tool/function calls leaked into the text channel, "
+            "tracking pixels or beacon URLs (EchoLeak-class exfiltration), "
+            "credential-shaped secrets, and chat-template role-marker echo. "
+            "Input scanning (scan_content) sees the payload; this sees what "
+            "the model did with it. Call it on model output when the agent "
+            "processed untrusted content. Pass canaries as a comma-separated "
+            "list of tokens you planted in tool output to detect obedience."
+        )
+    )
+    def lint_response_tool(
+        text: str,
+        canaries: str = "",
+    ) -> dict[str, Any]:
+        """Check agent output for compromise artifacts.
+
+        Args:
+            text: The agent's response text to lint.
+            canaries: Comma-separated canary tokens planted in the inputs
+                the agent read; any that appear verbatim in the output mean
+                the model obeyed an injected instruction.
+        """
+        return lint_response_impl(text, canaries)
 
     return server
 
