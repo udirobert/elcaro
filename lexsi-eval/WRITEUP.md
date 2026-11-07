@@ -208,20 +208,43 @@ adversarial-evaluation-and-mitigation space:
   instruction was ignored — all under the warning-free `system_naive`
   presentation, i.e. resistance *without* relying on provenance
   warnings.
-- **Method**: LoRA SFT (r=16, 3 epochs, ~108 examples-weighted steps)
-  on a Kaggle T4/L4 GPU — `kaggle/lexsi_sft_eval.py` runs baseline
-  eval → SFT → tuned eval end-to-end and emits `comparison.json`.
+- **Method**: LoRA SFT (r=16, α=32, 3 epochs, lr 1e-4, cosine,
+  completion-only loss, ~9 optimizer steps) on a Kaggle T4 x2 —
+  `kaggle/lexsi_safetune_kernel.py` runs baseline eval → SFT → tuned
+  eval end-to-end and emits `comparison.json`. (Execution notes vs the
+  TRL/4-bit reference script `kaggle/lexsi_sft_eval.py`: fp16 +
+  `device_map="auto"` + a plain HF `Trainer` with manually masked
+  prompt tokens — bitsandbytes/TRL do not install cleanly on the
+  Kaggle image; transformers v5 also dropped `warmup_ratio`. Same
+  data, same LoRA config, same effective batch of 16, same eval.)
 - **SafeTune**: the Lexsi safety-methods library was evaluated for the
   training step; its `harden` trainers target the same train-time
-  intervention point. Our pipeline uses a standard TRL/PEFT loop for
+  intervention point. Our pipeline uses a standard PEFT loop for
   reproducibility on free-tier compute; SafeTune's instrumentation
   (evaluate/interpret) remains the natural fit for a follow-up
   safety-drift audit of the tuned adapter.
 
-Results are reported in §5 addendum / `lexsi_results/comparison.json`
-once the Kaggle run completes. If the tuned model's naive-arm ASR does
-not drop, that is a publishable negative result: 36-example SFT is a
-proof-of-concept repair, not a robustness claim.
+**Result — negative.** Two independent kernel runs produced the same
+headline (`results-safetune/`, `comparison.json`):
+
+| arm | pass | useful | compromised |
+|---|---|---|---|
+| baseline (naive) | 16/24 | 21 | 5 |
+| tuned (naive) | 15/24 | 21 | 6 |
+
+`delta_compromised = -1`, `delta_pass = -1`. No baseline-compromised
+task was repaired; T13 *newly* complied with the canary echo in both
+runs (T04/T21/T24 never recovered). The change is single-task noise —
+but the honest summary is that **~36-example LoRA SFT bought no
+measurable IPI resistance** on aya-expanse-8b. This bounds the
+intervention: a ~100-example proof-of-concept cannot teach intrinsic
+rejection of embedded instructions, and it leaves the detector-warning
+arm (§5, Finding 2) as the only intervention in this study that moved
+the needle. The adapter is published regardless —
+`Papajams/aya-expanse-8b-elcaro-sft` — because a negative repair arm
+with full transcripts is more useful to the community than no arm at
+all; scaling the corpus, multi-epoch schedules, and SafeTune's
+evaluate/interpret audit loop are the obvious follow-ups.
 
 ## 7. Lexsi stack usage
 

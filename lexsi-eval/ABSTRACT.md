@@ -55,12 +55,15 @@ utility metrics, with results saved as fingerprinted RunResults.
 
 We additionally built a **repair arm**: LoRA SFT of
 `CohereLabs/aya-expanse-8b` on 36 new IPI scenarios disjoint from the
-eval corpus, run end-to-end on free-tier Kaggle compute
-(`kaggle/lexsi_sft_eval.py`), producing before/after naive-arm ASR.
-SafeTune's harden family was evaluated for the training step; TRL/PEFT
-was used for reproducibility. Results pending — a null result would
-itself be informative about how much safety SFT on ~100 examples can
-buy.
+eval corpus, run end-to-end on free-tier Kaggle compute (T4 x2;
+`kaggle/lexsi_safetune_kernel.py`), producing before/after naive-arm
+ASR. SafeTune's harden family was evaluated for the training step;
+a standard PEFT loop was used for reproducibility. **Result:
+negative** — compromised went 5/24 → 6/24 (pass 16→15), replicated
+across two runs: ~36-example SFT bought no measurable IPI resistance.
+The adapter and all transcripts are published
+(`Papajams/aya-expanse-8b-elcaro-sft`); the negative bounds how much
+safety a ~100-example repair can buy.
 
 Artifacts: dataset https://huggingface.co/datasets/Papajams/elcaro-ipi-eval ·
 model collection https://huggingface.co/collections/Papajams/lexsi-ipi-eval-cohere-aya-models-6aef8fd587f725ebce1bc528 ·

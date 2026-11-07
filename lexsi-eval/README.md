@@ -66,6 +66,9 @@ transcripts including the resolved upstream model id.
 - [x] Lexsi stack repos chained (2 required): **CuratorKIT**
       (`curate_tasks.py` → `curated-tasks/` provenance artifacts) and
       **AuditKIT** (`auditkit_eval.py` → `results-auditkit/` RunResult)
+- [x] SafeTune repair arm (negative result): `results-safetune/` +
+      adapter https://huggingface.co/Papajams/aya-expanse-8b-elcaro-sft
+      (in collection) — compromised 5/24 → 6/24
 - [x] Report/write-up: `WRITEUP.md`; form abstract: `ABSTRACT.md`
 - [ ] Submission form (Tally, live until Nov 14 23:59 AoE) — needs
       registered email + links above
