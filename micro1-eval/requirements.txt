@@ -1,0 +1,2 @@
+# No third-party dependencies — Python 3.9+ stdlib only.
+# The harness uses urllib for OpenAI-compatible chat completions.
