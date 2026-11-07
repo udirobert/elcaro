@@ -55,17 +55,20 @@ Results land in `results/` (labeled), `results-naive/`,
 `results-wrapped/`, each with `summary.json` + `summary.md` and raw
 transcripts including the resolved upstream model id.
 
-## Planned submission artifacts
+## Submission artifacts
 
-- [ ] Full three-arm run vs aya-expanse-32b (+ tiny-aya-* as second model)
-- [ ] HF dataset: task corpus + transcripts + grades
-- [ ] Report: naive vs wrapped ASR with >1 metric (ASR, pass, concealed,
-      useful, detector TPR/TNR) — the before/after pair Lexsi requires
-- [ ] Lexsi stack repos chained (≥2 required): CuratorKIT for dataset
-      curation/quality-gating, AuditKIT for evaluation/reporting;
-      SafeTune only if a repair arm is added
-- [ ] Abstract (<500 words), write-up, public repo link, model/dataset
-      HF collections
+- [x] Full three-arm run vs aya-expanse-32b + tiny-aya-global
+      (72 trials/cell; see `results*/summary.md`)
+- [x] HF dataset: https://huggingface.co/datasets/Papajams/elcaro-ipi-eval
+      (tasks + curated exports + all transcripts + graders)
+- [x] HF model collection:
+      https://huggingface.co/collections/Papajams/lexsi-ipi-eval-cohere-aya-models-6aef8fd587f725ebce1bc528
+- [x] Lexsi stack repos chained (2 required): **CuratorKIT**
+      (`curate_tasks.py` → `curated-tasks/` provenance artifacts) and
+      **AuditKIT** (`auditkit_eval.py` → `results-auditkit/` RunResult)
+- [x] Report/write-up: `WRITEUP.md`; form abstract: `ABSTRACT.md`
+- [ ] Submission form (Tally, live until Nov 14 23:59 AoE) — needs
+      registered email + links above
 
 ## Honest caveats
 
