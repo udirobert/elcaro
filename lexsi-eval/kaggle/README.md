@@ -52,7 +52,8 @@ SFT on 36 examples ×3 epochs (~10-20 min). Total well under an hour.
 
 Kernel: `papajams/lexsi-safetune` (script type, pushed via
 `kaggle kernels push`, `enable_gpu`, `machine_shape: NvidiaTeslaT4` = T4 x2,
-internet on, dataset source `papajams/lexsi-sft-v4` for `hf_token.txt`).
+internet on, dataset source `papajams/lexsi-sft-v4` for `hf_token.txt` —
+**keep that dataset private**; it exists precisely to hold the token).
 Executable in this repo: `kaggle/lexsi_safetune_kernel.py`.
 
 Deviations from `lexsi_sft_eval.py` (eval semantics unchanged — same 24
