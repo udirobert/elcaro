@@ -280,3 +280,54 @@ T24 compromised in 5-task sample). `aya-expanse-8b` is not on the HF
 router — using 32b as primary, tiny-aya-* as cheap second model.
 Registration form closed Nov 5 (+36h ext); submission Tally form is
 still live and asks only for a registered email.
+
+### Lexsi — competitive intel + finalist strategy (researched 2026-11-08)
+
+**Competition mechanics** (hackathon.lexsi.ai):
+Submit Nov 14 → judged Nov 15–16 → ~20 shortlisted → "prove your thesis"
+Nov 16–21 (+$200 HF credits/team) → live demo Nov 22 decides winners.
+Judges: industry + academia. Prizes are credits + interviews, no cash —
+the real prize is the Demo Day slot and the hire pipeline. Sample
+projects on the site (SafeScan dashboard, AlignFlow pipeline) are
+shallow single-repo chains — our multi-arm eval + deterministic grader
++ repair arm is materially deeper.
+
+**Meta-game is two stages:**
+1. *Shortlist* (done): complete public artifacts, >1 before/after
+   metric, ≥2 Lexsi repos — we have 3 (CuratorKIT, AuditKIT, SafeTune
+   evaluated). Probably sufficient already.
+2. *Finalist week* (the actual contest): a crisp, falsifiable thesis
+   plus a live demo. Our thesis: **"runtime detection at the
+   agent–tool boundary is the intervention that works; provenance
+   labels and light SFT don't."** We already hold both halves of the
+   evidence.
+
+**Field position (must cite in writeup §10):**
+- *Firewalls All You Need* (arXiv 2510.05244, Oct 2025): tool-input +
+  tool-output firewalls hit ~0% ASR on AgentDojo/InjecAgent/τ-Bench —
+  closest prior art to our wrapped arm; also warns benchmarks saturate
+  on weak attacks → we should show an adaptive attack against our own
+  detector.
+- *Critical Evaluation of PI Defenses* (arXiv 2505.18333): adaptive
+  attacks + FPR/FNR + defense-utility metrics — frame our metrics
+  against their checklist.
+- *InstructDetector* (EMNLP 2025): hidden-state detection, 0.03% ASR on
+  BIPIA — white-box alternative family; CircuitKIT steering is the
+  Lexsi-native version of this idea.
+- *BIPIA boundary-awareness fine-tune* (Microsoft): near-zero ASR —
+  explains WHY our naive SFT failed: it taught ignore-in-context on
+  unmarked content; boundary-aware training gives the model a
+  structural signal. That diagnosis turns our negative result into a
+  setup for a v2 repair arm.
+
+**Finalist-week playbook (pre-planned):**
+- Repair arm v2: boundary-aware SFT (BIPIA-style delimiters in training
+  data) OR SafeTune `steer`/ReSta refusal-direction steering on
+  aya-8b — either converts the negative into a diagnosed fix. Uses the
+  $200 credits; CircuitKIT/SafeTune steer would also be our 4th repo.
+- Held-out suite authored without detector access — closes our stated
+  limitation and answers the "regression suite" critique head-on.
+- Adaptive attack vs our own scanner (echo the firewall paper's
+  critique) — self-red-team is exactly what Track 2a rewards.
+- Demo: live scan of the poisoned invoice → warning → same content
+  through the tuned adapter failing → thesis lands in 60 seconds.
