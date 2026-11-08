@@ -331,3 +331,13 @@ shallow single-repo chains — our multi-arm eval + deterministic grader
   critique) — self-red-team is exactly what Track 2a rewards.
 - Demo: live scan of the poisoned invoice → warning → same content
   through the tuned adapter failing → thesis lands in 60 seconds.
+
+**Outcome (2026-11-12):** this arm completed end-to-end — 24-task
+deterministic benchmark across 10 models/3 arms, SafeTune repair arm
+executed on Kaggle (negative result, replicated: compromised 5→6/24),
+adapter + dataset + write-up public, benchmark page live at
+`/evaluate/benchmark`. **The Lexsi submission slot went to
+Control Tower** (positive held-out repair result, Track 2b — recorded
+in that repo's `docs/LEXSI_HACKATHON.md`). This project stands as the
+alternate/portfolio submission; nothing here should be treated as
+submitted.
