@@ -316,3 +316,29 @@ model, not the artifacts. Elcaro is a defensive tool; the benchmark
 exists to measure the problem honestly, including where defenses fail.
 AI coding assistance was used in building the harness; all payloads
 were human-reviewed.
+
+**Positioning against recent defenses.** Our wrapped arm belongs to the
+agent–tool boundary family that "Indirect Prompt Injections: Are
+Firewalls All You Need, or Stronger Benchmarks?" (arXiv:2510.05244)
+showed achieves near-zero ASR on AgentDojo/InjecAgent/τ-Bench — their
+tool-output sanitizer is the same intervention point as our warn-mode
+wrapper; we replicate the direction on Cohere models and add the
+caveat they emphasize: warn-mode residuals persist, and benchmarks
+saturate on non-adaptive attacks. *A Critical Evaluation of Defenses
+against Prompt Injection Attacks* (arXiv:2505.18333) argues defenses
+must be scored on adaptive attacks with FPR/FNR and utility metrics —
+our per-task compromised/useful/detected breakdown and control tasks
+follow that checklist; a dedicated adaptive-attack arm is future work.
+InstructDetector (EMNLP 2025) reaches 0.03% ASR on BIPIA using
+hidden-state features — a white-box detection family outside our
+runtime-API scope, but the natural CircuitKIT follow-up.
+
+**Why the repair arm failed — and what would fix it.** BIPIA's
+boundary-awareness fine-tuning (Yi et al., KDD 2025) reaches near-zero
+ASR by training on *structurally delimited* content. Our SFT taught
+ignore-in-context on unmarked bytes — the model gets no structural
+signal to bind "these bytes are data" to. The negative result is
+therefore consistent with the literature's mechanism, not a refutation
+of fine-tuning generally: a boundary-aware retrain (or SafeTune
+steer/ReSta refusal-direction interventions) is the diagnosed v2, not
+"more of the same data."
