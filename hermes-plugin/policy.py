@@ -55,6 +55,9 @@ _lock = threading.Lock()
 # shape (untrusted read → sensitive read → egress) — not only single calls.
 _chains: dict[str, list[tuple[float, str]]] = {}
 _CHAIN_MAX = 40
+# Both dicts are keyed by session but a gateway serves sessions forever —
+# stale entries evict on write once the cap is crossed.
+_STATE_MAX_SESSIONS = 256
 
 _UNTRUSTED = "untrusted_result"  # recorded by guard on a quarantined result
 _CLASS_BY_TOOL = {
@@ -66,13 +69,30 @@ _CLASS_BY_TOOL = {
 }
 
 
+def _evict_stale_locked(now: float) -> None:
+    """Drop dead sessions once past the cap. Caller holds _lock."""
+    if len(_chains) > _STATE_MAX_SESSIONS:
+        window = float(config.get_int("chain_window_seconds", 300))
+        for sid in [s for s, c in _chains.items() if now - c[-1][0] > window]:
+            _chains.pop(sid, None)
+        while len(_chains) > _STATE_MAX_SESSIONS:
+            _chains.pop(next(iter(_chains)))
+    if len(_tainted) > _STATE_MAX_SESSIONS:
+        for sid in [s for s, exp in _tainted.items() if exp <= now]:
+            _tainted.pop(sid, None)
+        while len(_tainted) > _STATE_MAX_SESSIONS:
+            _tainted.pop(next(iter(_tainted)))
+
+
 def record_event(session_id: str, cls: str) -> None:
     """Append an event to the session's kill-chain window."""
     key = session_id or ""
+    now = time.time()
     with _lock:
         chain = _chains.setdefault(key, [])
-        chain.append((time.time(), cls))
+        chain.append((now, cls))
         del chain[: max(0, len(chain) - _CHAIN_MAX)]
+        _evict_stale_locked(now)
 
 
 def _tool_class(tool_name: str, args: dict | None) -> str | None:
@@ -119,8 +139,10 @@ def mark_taint(session_id: str, ttl: float | None = None) -> None:
     ttl = ttl if ttl is not None else float(config.get_int("taint_ttl_seconds", 1800))
     if ttl <= 0:
         return
+    now = time.time()
     with _lock:
-        _tainted[session_id or ""] = time.time() + ttl
+        _tainted[session_id or ""] = now + ttl
+        _evict_stale_locked(now)
 
 
 def taint_remaining(session_id: str) -> float:
@@ -146,8 +168,10 @@ def clear(session_id: str | None = None) -> None:
     with _lock:
         if session_id is None:
             _tainted.clear()
+            _chains.clear()
         else:
             _tainted.pop(session_id, None)
+            _chains.pop(session_id, None)
 
 
 def _unwrap(tool_name: str, args: dict | None) -> tuple[str, dict]:

@@ -35,21 +35,17 @@ def get_engine():
                 # variables happen to be set — the plugin's contract is
                 # fully local scanning. The opt-in hosted lane (api_url)
                 # is the only network path.
-                _second_passes_off = {
-                    "classifier": None,
-                    "serv_reasoner": None,
-                    "jev_reasoner": None,
-                    "laya_reasoner": None,
-                    "jev_vl_reasoner": None,
-                }
-                try:
-                    _engine = IpiDetectionEngine(**_second_passes_off)
-                except RuntimeError:
-                    # If ELCARO_CANARY_DSN is set in the shell without psycopg[pool],
-                    # fall back cleanly to the in-memory CanaryRegistry.
-                    _engine = IpiDetectionEngine(
-                        canary_registry=CanaryRegistry(), **_second_passes_off
-                    )
+                _engine = IpiDetectionEngine(
+                    classifier=None,
+                    serv_reasoner=None,
+                    jev_reasoner=None,
+                    laya_reasoner=None,
+                    jev_vl_reasoner=None,
+                    # ELCARO_CANARY_DSN's Postgres registry is the same class
+                    # of env-driven egress — the plugin always keeps canary
+                    # issuance in process memory.
+                    canary_registry=CanaryRegistry(),
+                )
     return _engine
 
 

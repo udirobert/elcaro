@@ -12,11 +12,16 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
 _MAX_BYTES = 512 * 1024  # rotate to a single .1 backup beyond this
+_TAIL_CHUNK = 8192  # backward-read block for the last line
+# Serializes prev-hash reads and writes — concurrent appends racing a
+# shared tail would cross-link the hash chain.
+_append_lock = threading.Lock()
 
 
 def data_dir() -> Path:
@@ -61,11 +66,36 @@ def _entry_hash(entry: dict[str, Any]) -> str:
 
 
 def _prev_hash() -> str | None:
-    """Hash of the last log entry — links the chain; None on first write."""
-    tail = read_tail(1)
-    if not tail:
+    """Hash of the last log entry — links the chain; None on first write.
+
+    Tail-seeked in chunks, not a full read — appends happen on every scan.
+    An unparseable last line returns None: the next entry then chains to
+    nothing, which verify_chain reports as a break at exactly the corrupt
+    point (same contract as reading the whole file).
+    """
+    path = log_path()
+    try:
+        with path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            offset = f.tell()
+            buf = ""
+            while offset > 0:
+                step = min(_TAIL_CHUNK, offset)
+                offset -= step
+                f.seek(offset)
+                buf = f.read(step).decode("utf-8", errors="replace") + buf
+                if "\n" in buf[:-1] or offset == 0:
+                    break
+    except OSError:
         return None
-    return tail[-1].get("entry_hash")
+    for line in reversed(buf.splitlines()):
+        if not line.strip():
+            continue
+        try:
+            return json.loads(line).get("entry_hash")
+        except (json.JSONDecodeError, AttributeError):
+            return None
+    return None
 
 
 def verify_chain() -> dict[str, Any]:
@@ -132,8 +162,6 @@ def append(
     }
     if extra:
         entry.update(extra)
-    entry["prev_hash"] = _prev_hash()
-    entry["entry_hash"] = _entry_hash(entry)
     signer = _signer()
     if signer is not None:
         payload = canonical_verdict_payload(
@@ -151,13 +179,18 @@ def append(
 
     path = log_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        if path.exists() and path.stat().st_size > _MAX_BYTES:
-            path.replace(path.with_suffix(".1.jsonl"))
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, separators=(",", ":")) + "\n")
-    except OSError:
-        pass  # the log is a trail, never a failure surface
+    # prev-hash read and the write are one critical section — two appends
+    # racing the tail would both link to the same parent and break the chain.
+    with _append_lock:
+        entry["prev_hash"] = _prev_hash()
+        entry["entry_hash"] = _entry_hash(entry)
+        try:
+            if path.exists() and path.stat().st_size > _MAX_BYTES:
+                path.replace(path.with_suffix(".1.jsonl"))
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+        except OSError:
+            pass  # the log is a trail, never a failure surface
 
     # Live-update the Desktop threat-log pane (fire-and-forget; the plugin
     # event bus is a no-op when no desktop client is connected).

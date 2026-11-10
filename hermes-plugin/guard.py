@@ -86,23 +86,28 @@ def _extract_text(payload: Any) -> str:
     elif isinstance(payload, str):
         try:
             parsed = json.loads(payload)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, RecursionError):
             return payload
     else:
         return payload if isinstance(payload, str) else ""
 
     parts: list[str] = []
 
-    def walk(v: Any) -> None:
+    # Depth cap: attacker-chosen payloads can nest a JSON envelope deep
+    # enough to exhaust the interpreter stack — anything deeper is
+    # structure, not content.
+    def walk(v: Any, depth: int = 0) -> None:
+        if depth > 64:
+            return
         if isinstance(v, str):
             if v.strip():
                 parts.append(v)
         elif isinstance(v, dict):
             for val in v.values():
-                walk(val)
+                walk(val, depth + 1)
         elif isinstance(v, list):
             for item in v:
-                walk(item)
+                walk(item, depth + 1)
 
     walk(parsed)
     text = "\n".join(parts)
@@ -113,7 +118,7 @@ def _is_error_result(result: str) -> bool:
     """Tool-error envelopes ({"success": false, "error": ...}) aren't content."""
     try:
         parsed = json.loads(result)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         return False
     return isinstance(parsed, dict) and "error" in parsed and len(parsed) <= 3
 

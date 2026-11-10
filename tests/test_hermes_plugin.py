@@ -161,6 +161,90 @@ class GuardTests(unittest.TestCase):
         self.assertIsInstance(out, dict)
         self.assertIn("web_fetch", out["context"])
 
+    def test_engine_second_passes_stay_off_with_env_set(self):
+        """ELCARO_LLM_*/SERV_*/JEV_*/LAYA_* + ELCARO_CANARY_DSN in the shell
+        must not re-arm the vendored engine's network paths — scanned
+        content never leaves the box."""
+        saved = {}
+        for k in (
+            "ELCARO_LLM_API_KEY",
+            "SERV_ENABLED",
+            "SERV_API_KEY",
+            "JEV_ENABLED",
+            "JEV_API_KEY",
+            "LAYA_ENABLED",
+            "LAYA_API_KEY",
+            "JEV_VL_ENABLED",
+            "JEV_VL_API_KEY",
+            "ELCARO_CANARY_DSN",
+        ):
+            saved[k] = os.environ.get(k)
+            os.environ[k] = "postgresql://u:p@localhost/db" if "DSN" in k else "1"
+        try:
+            self.plugin.engine._engine = None  # force rebuild under the tainted env
+            e = self.plugin.engine.get_engine()
+            self.assertIsNone(e.classifier)
+            self.assertIsNone(e.serv_reasoner)
+            self.assertIsNone(e.jev_reasoner)
+            self.assertIsNone(e.laya_reasoner)
+            self.assertIsNone(e.jev_vl_reasoner)
+            self.assertEqual(type(e.canary_registry).__name__, "CanaryRegistry")
+        finally:
+            for k, v in saved.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
+    def test_get_secret_reads_env_when_hermes_absent(self):
+        fixture = "dummy-for-test"  # not a credential
+        os.environ["ELCARO_API_KEY"] = fixture  # pragma: allowlist secret — fixture
+        try:
+            self.plugin.config.bind_test({})
+            got = self.plugin.config.get_secret(
+                "api_key", "ELCARO_API_KEY"
+            )  # pragma: allowlist secret — fixture
+            self.assertEqual(got, fixture)
+        finally:
+            os.environ.pop("ELCARO_API_KEY", None)
+        # test settings still win, matching bind_test semantics
+        self.plugin.config.bind_test({"api_key": fixture})  # pragma: allowlist secret — fixture
+        got = self.plugin.config.get_secret(
+            "api_key", "ELCARO_API_KEY"
+        )  # pragma: allowlist secret — fixture
+        self.assertEqual(got, fixture)
+
+    def test_deep_json_result_does_not_raise(self):
+        """A 4000-deep JSON envelope must not crash the hook — it scans as
+        raw text instead."""
+        nested = '{"a":' * 4000 + "1" + "}" * 4000
+        out = self.plugin.guard.transform_tool_result(
+            tool_name="web_fetch",
+            args={},
+            result=nested,
+            task_id="deep1",
+            session_id="deep1",
+        )
+        self.assertIn(out.__class__, (str, type(None)))
+
+    def test_concurrent_appends_keep_chain_intact(self):
+        """Two appends racing the log tail must not cross-link prev_hash."""
+        import threading
+
+        tl = self.plugin.threatlog
+
+        def worker(i):
+            for j in range(10):
+                tl.append(tool_name="t", verdict=_FakeVerdict(), task_id=f"w{i}-{j}")
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        c = tl.verify_chain()
+        self.assertTrue(c["ok"], f"chain broken under concurrent appends: {c}")
+
     def test_args_scan_blocks_smuggled_payload(self):
         guard = self.plugin.guard
         out = guard.pre_tool_call(

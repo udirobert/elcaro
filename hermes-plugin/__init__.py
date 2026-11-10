@@ -1,13 +1,15 @@
 """Elcaro — runtime prompt-injection defense for Hermes.
 
-register(ctx) wires three hooks and three tools:
+register(ctx) wires four hooks and five tools:
 
     transform_tool_result  — scans every tool result before it enters
                              conversation; quarantined content is replaced
                              by the signed verdict notice in-place.
-    pre_tool_call          — scans args-carried payloads (write_file,
-                             terminal) for smuggled instructions.
-    pre_llm_call           — backstop summary of new quarantines.
+    pre_tool_call          — kernel gate + scans args-carried payloads
+                             (write_file, terminal) for smuggled instructions.
+    pre_llm_call           — session-scoped backstop summary of new
+                             quarantines.
+    subagent_start         — taint inheritance for spawned delegates.
     elcaro_scan / elcaro_quick_scan / elcaro_explain — on-demand tools.
     elcaro_lint_response — output-side lint for concealed compromises
     (canary echoes, text-channel tool calls, tracking pixels, secrets).
