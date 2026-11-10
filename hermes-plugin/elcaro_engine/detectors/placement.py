@@ -23,15 +23,17 @@ IMPERATIVE_VERB_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# Metadata-like patterns (YAML frontmatter, JSON fields, alt text, commit msgs)
+# YAML frontmatter (---…--- blocks) is matched by scanning delimiter lines
+# and keyword-testing each interior — the regex form
+# (`^---\s*\n.*?(?:kw).*?\n---\s*$` under DOTALL) backtracks quadratically
+# on adversarial input like a page of repeated `---` lines.
+_FRONTMATTER_RULE = re.compile(r"^---[^\S\r\n]*\r?$", re.MULTILINE)
+_FRONTMATTER_KEYWORD = re.compile(r"instruction|directive|command|override|system", re.IGNORECASE)
+
+# Metadata-like patterns (JSON fields, alt text, commit msgs). Lazy
+# segments carry explicit windows — these run on attacker-chosen content
+# inside transform_tool_result, so no segment may scan unbounded.
 METADATA_INJECTION_PATTERNS = [
-    # YAML frontmatter with instructions
-    (
-        r"^---\s*\n.*?(?:instruction|directive|command|override|system).*?\n---\s*$",
-        re.DOTALL | re.MULTILINE,
-        0.75,
-        "yaml_frontmatter_instruction",
-    ),
     # Alt text with imperatives
     (
         r'!\[[^\]]*\]\([^)]*\)|alt\s*=\s*"([^"]*(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)[^"]*)"',
@@ -41,21 +43,21 @@ METADATA_INJECTION_PATTERNS = [
     ),
     # Commit message with imperatives
     (
-        r"(?:commit|chore|fix|feat|refactor)\s*:.*?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
+        r"(?:commit|chore|fix|feat|refactor)\s*:.{0,160}?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
         re.IGNORECASE,
         0.65,
         "commit_msg_imperative",
     ),
     # Error string smuggling
     (
-        r"(?:error|exception|traceback|warning)\s*:.*?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
+        r"(?:error|exception|traceback|warning)\s*:.{0,200}?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
         re.IGNORECASE,
         0.7,
         "error_string_smuggling",
     ),
     # File metadata / EXIF-like fields
     (
-        r"(?:author|description|comment|note|title|subject)\s*[:=]\s*.*?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
+        r"(?:author|description|comment|note|title|subject)\s*[:=]\s*.{0,200}?(?:send|forward|exec|run|call|install|delete|reset|approve|grant|ignore|override)",
         re.IGNORECASE,
         0.65,
         "metadata_field_imperative",
@@ -79,6 +81,32 @@ class PlacementDetector(BaseDetector):
 
     def detect(self, content: str, content_type: ContentType) -> list[DetectionIndicator]:
         indicators: list[DetectionIndicator] = []
+
+        # YAML frontmatter / --- delimited blocks with instructions.
+        # Adjacent delimiter lines pair into blocks; a keyword anywhere in a
+        # pair's interior flags it. Keyword presence can't span a `---`
+        # line, so testing adjacent pairs covers every possible block.
+        rules = list(_FRONTMATTER_RULE.finditer(content))
+        for open_m, close_m in zip(rules, rules[1:], strict=False):
+            if not _FRONTMATTER_KEYWORD.search(content, open_m.end(), close_m.start()):
+                continue
+            match_text = content[open_m.start() : close_m.end()]
+            indicators.append(
+                self._make_indicator(
+                    technique_name="placement:yaml_frontmatter_instruction",
+                    confidence=0.75,
+                    matched_text=match_text[:150],
+                    explanation=(
+                        f"Imperative instruction found in a low-visibility "
+                        f"channel ({content_type.value}): '{match_text[:100]}'. "
+                        f"Instructions hidden in metadata/frontmatter "
+                        f"fields are a placement-based injection technique."
+                    ),
+                    location="metadata",
+                    content=content,
+                    char_offset=open_m.start(),
+                )
+            )
 
         # Metadata / low-visibility channel injection
         for pattern, flags, confidence, name in METADATA_INJECTION_PATTERNS:

@@ -3,5 +3,5 @@
   "label": "Elcaro",
   "description": "Runtime prompt-injection defense — threat log and verdicts",
   "api": "plugin_api.py",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

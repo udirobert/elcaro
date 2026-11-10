@@ -34,11 +34,11 @@ def log_path() -> Path:
 
 
 def _signer():
-    """Build the verdict signer from config or env; None = unsigned mode."""
+    """Build the verdict signer from the profile's secrets; None = unsigned mode."""
     from . import config
     from .elcaro_engine import VerdictSigner
 
-    key = config.get_str("signing_key") or os.environ.get("ELCARO_SIGNING_KEY", "")
+    key = config.get_secret("signing_key", "ELCARO_SIGNING_KEY")
     if not key:
         return None
     try:

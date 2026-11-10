@@ -129,13 +129,37 @@ class GuardTests(unittest.TestCase):
 
     def test_pending_quarantine_surfaces_in_pre_llm_call(self):
         guard = self.plugin.guard
-        guard.transform_tool_result(tool_name="web_fetch", args={}, result=INJECTION, task_id="t3")
-        out = guard.pre_llm_call(session_id="s1")
+        guard.transform_tool_result(
+            tool_name="web_fetch",
+            args={},
+            result=INJECTION,
+            task_id="t3",
+            session_id="spend1",
+        )
+        out = guard.pre_llm_call(session_id="spend1")
         self.assertIsInstance(out, dict)
         self.assertIn("ELCARO GUARD", out["context"])
         self.assertIn("web_fetch", out["context"])
         # cleared after reporting
-        self.assertIsNone(guard.pre_llm_call(session_id="s1"))
+        self.assertIsNone(guard.pre_llm_call(session_id="spend1"))
+
+    def test_pending_quarantine_is_session_scoped(self):
+        """A gateway serving several chats must not leak one session's
+        quarantine summary into another session's pre_llm_call."""
+        guard = self.plugin.guard
+        guard.transform_tool_result(
+            tool_name="web_fetch",
+            args={},
+            result=INJECTION,
+            task_id="iso1",
+            session_id="iso-a",
+        )
+        # a different session's next turn sees nothing
+        self.assertIsNone(guard.pre_llm_call(session_id="iso-b"))
+        # the owning session still gets its summary
+        out = guard.pre_llm_call(session_id="iso-a")
+        self.assertIsInstance(out, dict)
+        self.assertIn("web_fetch", out["context"])
 
     def test_args_scan_blocks_smuggled_payload(self):
         guard = self.plugin.guard

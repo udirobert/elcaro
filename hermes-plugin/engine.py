@@ -27,12 +27,29 @@ def get_engine():
                 from .elcaro_engine import IpiDetectionEngine
                 from .elcaro_engine.canary import CanaryRegistry
 
+                # Every second-pass reasoner is built explicitly disabled:
+                # the vendored engine's env-configured LLM passes
+                # (ELCARO_LLM_* → api.openai.com, SERV_* →
+                # inference-api.openserv.ai, JEV_*, LAYA_*, JEV_VL_*) would
+                # ship scanned content to third-party hosts whenever those
+                # variables happen to be set — the plugin's contract is
+                # fully local scanning. The opt-in hosted lane (api_url)
+                # is the only network path.
+                _second_passes_off = {
+                    "classifier": None,
+                    "serv_reasoner": None,
+                    "jev_reasoner": None,
+                    "laya_reasoner": None,
+                    "jev_vl_reasoner": None,
+                }
                 try:
-                    _engine = IpiDetectionEngine()
+                    _engine = IpiDetectionEngine(**_second_passes_off)
                 except RuntimeError:
                     # If ELCARO_CANARY_DSN is set in the shell without psycopg[pool],
                     # fall back cleanly to the in-memory CanaryRegistry.
-                    _engine = IpiDetectionEngine(canary_registry=CanaryRegistry())
+                    _engine = IpiDetectionEngine(
+                        canary_registry=CanaryRegistry(), **_second_passes_off
+                    )
     return _engine
 
 
@@ -73,7 +90,7 @@ def _hosted_scan(api_url: str, content: str, content_type: str, deep: bool):
         import httpx
 
         headers = {"Content-Type": "application/json"}
-        api_key = config.get_str("api_key")
+        api_key = config.get_secret("api_key", "ELCARO_API_KEY")
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         res = httpx.post(

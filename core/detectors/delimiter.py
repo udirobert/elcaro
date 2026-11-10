@@ -101,11 +101,6 @@ HTML_COMMENT_IMPERATIVE_PATTERNS = [
         0.8,
         "html_comment_imperative",
     ),
-    (
-        r"<!--.*?(?:instruction|directive|command|override).*?-->",
-        0.7,
-        "html_comment_directive",
-    ),
     # Notes addressed to the AI hidden in comments — "ai-note", "assistant
     # note", audit/verification notes. Keyword-based because the payload
     # often leetspeak-encodes the verb (1nclud3, 1mp0rt4nt).
@@ -117,6 +112,32 @@ HTML_COMMENT_IMPERATIVE_PATTERNS = [
         "html_comment_ai_note",
     ),
 ]
+
+# Directives anywhere inside a comment (was `<!--.*?kw.*?-->`): the regex
+# form backtracks quadratically on adversarial input like a page full of
+# unterminated `<!--`, and it runs inside transform_tool_result on content
+# an attacker chooses. Spans are found with a linear two-pointer scan and
+# keyword-tested one by one instead.
+_COMMENT_DIRECTIVE_KEYWORD = re.compile(r"instruction|directive|command|override", re.IGNORECASE)
+
+
+def _html_comment_spans(content: str):
+    """Yield (start, end) of each ``<!--…-->`` span in order.
+
+    ``str.find`` pairing keeps this linear even on repeated unterminated
+    ``<!--`` — the first missing ``-->`` ends the scan.
+    """
+    pos = 0
+    while True:
+        start = content.find("<!--", pos)
+        if start < 0:
+            return
+        end = content.find("-->", start + 4)
+        if end < 0:
+            return
+        yield start, end + 3
+        pos = end + 3
+
 
 # Fake code blocks that look like system config
 FAKE_CONFIG_PATTERNS = [
@@ -243,6 +264,23 @@ class DelimiterDetector(BaseDetector):
                             char_offset=_,
                         )
                     )
+            for start, end in _html_comment_spans(content):
+                if not _COMMENT_DIRECTIVE_KEYWORD.search(content, start + 4, end - 3):
+                    continue
+                match_text = content[start:end]
+                indicators.append(
+                    self._make_indicator(
+                        technique_name="delimiter:html_comment_directive",
+                        confidence=0.7,
+                        matched_text=match_text[:200],
+                        explanation=(
+                            f"Directive hidden in HTML comment: "
+                            f"'{match_text[:120]}' — comment smuggling."
+                        ),
+                        content=content,
+                        char_offset=start,
+                    )
+                )
 
         # Fake config blocks
         for pattern, confidence, name in FAKE_CONFIG_PATTERNS:

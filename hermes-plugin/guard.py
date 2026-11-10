@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from collections import deque
+from collections import OrderedDict, deque
 from typing import Any
 
 from . import config, engine, policy, threatlog
@@ -63,9 +63,14 @@ _MIN_RESULT_CHARS = 24
 _MIN_ARGS_CHARS = 64
 
 # Turn-level backstop state: verdicts quarantined since the last
-# pre_llm_call, so the guard summary reports only what's new.
+# pre_llm_call, keyed by session — a gateway process serves many chats,
+# and a process-wide deque would inject one session's quarantine summary
+# into whichever session runs pre_llm_call next. Bounded per session and
+# across sessions (least-recently-touched session evicted).
 _pending_lock = threading.Lock()
-_pending: deque[dict[str, Any]] = deque(maxlen=50)
+_pending: OrderedDict[str, deque[dict[str, Any]]] = OrderedDict()
+_PENDING_PER_SESSION = 50
+_PENDING_MAX_SESSIONS = 64
 
 
 def _extract_text(payload: Any) -> str:
@@ -250,7 +255,15 @@ def transform_tool_result(
         policy.mark_taint(_sid)
         policy.record_event(_sid, "untrusted_result")
         with _pending_lock:
-            _pending.append(
+            queue = _pending.get(_sid)
+            if queue is None:
+                if len(_pending) >= _PENDING_MAX_SESSIONS:
+                    _pending.popitem(last=False)
+                queue = deque(maxlen=_PENDING_PER_SESSION)
+                _pending[_sid] = queue
+            else:
+                _pending.move_to_end(_sid)
+            queue.append(
                 {
                     "tool_name": tool_name,
                     "risk_score": verdict.risk_score,
@@ -353,9 +366,10 @@ def pre_llm_call(
     **kwargs,
 ) -> dict | None:
     """Backstop: summarize new quarantines so the agent doesn't retry or work around them."""
+    sid = str(session_id or "")
     with _pending_lock:
-        pending = list(_pending)
-        _pending.clear()
+        queue = _pending.pop(sid, None)
+        pending = list(queue) if queue is not None else []
     if not pending:
         return None
     lines = [

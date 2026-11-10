@@ -3,10 +3,15 @@
 Thin wrapper over ctx.get_config so guard/tools read the same keys the
 manifest's config_schema declares. ctx is captured at register() time; a
 plain dict can be injected for tests.
+
+``type: secret`` settings never surface through get_config — Hermes keeps
+them in .env — so they resolve through agent.secret_scope, which is
+profile-scoped and fails closed under gateway multiplexing.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 _ctx: Any = None
@@ -39,6 +44,26 @@ def get(key: str, default: Any = None) -> Any:
 def get_str(key: str, default: str = "") -> str:
     v = get(key, default)
     return v if isinstance(v, str) else default
+
+
+def get_secret(key: str, env_name: str, default: str = "") -> str:
+    """Resolve a ``type: secret`` setting by its ``env:`` name.
+
+    ctx.get_config never returns secret values — Hermes stores them in the
+    profile's .env — so reads go through agent.secret_scope.get_secret,
+    which honors the active profile scope (and raises rather than leak
+    another profile's value under multiplexing). Outside Hermes, test
+    settings or the process env supply the value.
+    """
+    if _test_settings is not None and key in _test_settings:
+        v = _test_settings[key]
+        return v if isinstance(v, str) else default
+    try:
+        from agent.secret_scope import get_secret_str
+
+        return get_secret_str(env_name, default)
+    except ImportError:
+        return os.environ.get(env_name, default)
 
 
 def get_float(key: str, default: float) -> float:

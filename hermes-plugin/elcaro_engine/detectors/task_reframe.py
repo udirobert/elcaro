@@ -16,7 +16,7 @@ from ..schemas import ContentType, DetectionIndicator, TechniqueClass
 HIDDEN_STEP_PATTERNS = [
     (
         r"(?:before|prior to)\s+(?:answering|responding|completing|processing|"
-        r"finishing|replying|generating).*?,?\s*(?:first|you must|you need to|please|"
+        r"finishing|replying|generating).{0,120}?,?\s*(?:first|you must|you need to|please|"
         r"make sure|be sure)",
         0.75,
         "prepended_hidden_step",

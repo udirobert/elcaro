@@ -18,7 +18,7 @@ from ..schemas import ContentType, DetectionIndicator, TechniqueClass
 SUMMARIZE_TRIGGER_PATTERNS = [
     (
         r"when\s+(?:summariz|read|process|handl|respond|reply|answer|generat|"
-        r"complet|finish|review|analyz|pars|extract|search|fetch).*?"
+        r"complet|finish|review|analyz|pars|extract|search|fetch).{0,120}?"
         r",?\s*(?:also|additionally|make sure|be sure|ensure|you must|"
         r"you should|please|don'?t forget)",
         0.75,

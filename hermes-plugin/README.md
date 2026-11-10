@@ -77,7 +77,12 @@ the Desktop settings.
 Detection engine: [elcaro](https://github.com/udirobert/elcaro) — the IPI
 detection miner. The engine is vendored (`elcaro_engine/`, refreshed by
 `vendor.sh`) so the plugin runs fully offline with three small deps:
-`pydantic`, `cryptography`, `httpx`.
+`pydantic`, `cryptography`, `httpx`. Its env-configured LLM second passes
+(`ELCARO_LLM_*` → api.openai.com, `SERV_*` → inference-api.openserv.ai,
+`JEV_*`, `LAYA_*`, `JEV_VL_*`) are built disabled — scanned content never
+leaves the box. The only network path is the opt-in hosted `api_url`
+lane. `type: secret` settings (`api_key`, `signing_key`) resolve through
+Hermes's profile secret store (`.env`), not plugin config.
 
 ## Validation
 

@@ -3,7 +3,7 @@
 # vendored engine needs; upper bounds keep the shared env stable.
 [project]
 name = "hermes-plugin-elcaro"
-version = "1.0.0"
+version = "1.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0,<3",
