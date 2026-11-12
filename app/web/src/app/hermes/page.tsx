@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 export const metadata: Metadata = {
   title: "Elcaro for Hermes — the agent flight recorder",
   description:
-    "Runtime prompt-injection defense for Hermes agents: every tool result scanned before the model sees it, quarantined content replaced in place, and a hash-chained, signed threat log with canary provenance — a flight recorder no prompt could produce.",
+    "Live in the Hermes plugin catalog: runtime prompt-injection defense — every tool result scanned before the model sees it, quarantined content replaced in place, and a hash-chained, signed threat log with canary provenance. `hermes plugins install elcaro`.",
 };
 
 function HookStep({ name, role }: { name: string; role: string }) {
@@ -104,6 +104,27 @@ export default function HermesPage() {
             Ed25519-signed trail of every verdict. Detection is a feature;
             the trail is the product.
           </p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <a
+              href="https://github.com/NousResearch/hermes-agent/blob/main/plugin-catalog/elcaro.yaml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded border border-[#46a758] px-2 py-1 font-mono text-[11px] font-semibold text-[#46a758] hover:opacity-80 transition-opacity"
+            >
+              ● live in the Hermes plugin catalog
+            </a>
+            <code className="rounded border border-border px-2 py-1 font-mono text-[11px] text-ink">
+              hermes plugins install elcaro
+            </code>
+            <a
+              href="https://github.com/NousResearch/hermes-agent/pull/149503"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[11px] text-ink-faint underline underline-offset-2 hover:text-ink transition-colors"
+            >
+              PR #149503 → merged Nov 11 →
+            </a>
+          </div>
         </PageHeader>
 
         <section className="grid gap-10 lg:grid-cols-2 lg:items-start">
@@ -186,7 +207,8 @@ export default function HermesPage() {
           <p className="text-xs text-ink-faint">
             Fully local: deterministic engine, sub-10 ms verdicts, no network
             by default. Content never leaves the box — only its SHA-256 is
-            logged.{" "}
+            logged. Requires Hermes ≥0.22; the live catalog listing is served
+            to clients on v0.23.1+ (`hermes update`).{" "}
             <a
               href="https://github.com/udirobert/elcaro/tree/main/hermes-plugin"
               target="_blank"
