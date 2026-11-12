@@ -23,6 +23,12 @@ export default function HomePage() {
             <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
               IPI detection · miner 8848
               <span className="ml-2 text-violet/70">· now with SERV Reasoning</span>
+              <Link
+                href="/hermes"
+                className="ml-2 text-[#46a758] hover:underline underline-offset-2"
+              >
+                · live in the Hermes plugin catalog →
+              </Link>
             </p>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-ink">
               See what your
