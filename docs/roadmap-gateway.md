@@ -210,6 +210,20 @@ the task needs, so compromise alone is not enough.
 `python3 run_eval.py --presentation <arm> --model <id>`; `--regrade`
 re-scores offline.
 
+### 1.6 Result (2026-11-15): Outcome C
+900 trials from the tagged `prereg-v1` tree; details in
+`lexsi-eval/RESULTS-phase1.md`.
+- **Held-out:** `gateway_warn` cut compromised attack trials from 15 to 5
+  against `serv_guard_shadow`, but passes fell from 65 to 52, beyond the
+  tolerance of 3. That is **Outcome C**: no Gateway uplift copy.
+- **Exploratory, like for like against `serv_guard`:** the whole loss sits
+  on tasks Elcaro warned (48 → 35 passes). Elcaro's warning prefix triggers
+  SERV's Prompt Guard (guard blocks 6 → 18).
+- **Quarantine** deletes whole retrieved inboxes (18 of 108 pass).
+- **Next:** test three Gateway changes on a **new** held-out set (H is now
+  in-sample for these fixes): skip `serv_prompt_guard` on parts Elcaro
+  already handled, quarantine per segment, and rewrite the warn prefix.
+
 ---
 
 ## Phase 2 — Elcaro Gateway (the product)
