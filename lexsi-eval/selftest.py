@@ -29,6 +29,8 @@ def main():
     failures = []
     tasks = sorted((HERE / "tasks").glob("*.json"))
     assert tasks, "no tasks found"
+    # Held-out set H (PREREG §4): grader checks only — never scanned by Elcaro here.
+    tasks += sorted(p for p in (HERE / "tasks-heldout").glob("*.json") if "manifest" not in p.name)
 
     for path in tasks:
         task = json.loads(path.read_text())

@@ -81,3 +81,33 @@ transcripts including the resolved upstream model id.
 - Wrapped results measure Elcaro's production detector; warn-mode is
   not quarantine, and residual failures exist (see
   `micro1-eval/results-wrapped/summary.md`).
+
+## Phase 1: provider guard vs provider guard + Elcaro
+
+Pre-registered in `PREREG.md` (draft until the `prereg-v1` tag exists).
+
+**Arms (all on SERV):**
+- `serv`: plain SERV.
+- `serv_guard`: SERV with `serv_prompt_guard`.
+- `serv_guard_shadow`: SERV with the guard and `serv_shadow_agent`.
+- `gateway_warn`, `gateway_quarantine`: Elcaro applied in-process, then SERV
+  with the guard.
+
+**Task sets:**
+- `--task-set S` (default): `tasks/` T01–T24. These are **in-sample for
+  Elcaro**, so they are regression coverage only.
+- `--task-set H`: `tasks-heldout/` (24 LLMail-Inject + 12 hand-written).
+  Locked until the freeze. See `heldout/README.md`.
+
+```bash
+export EVAL_API_KEY=$SERV_API_KEY EVAL_BASE_URL=https://inference-api.openserv.ai/v1 PYTHONHASHSEED=0
+uv run --project .. python run_eval.py --presentation serv_guard_shadow --models gpt-5.4-mini --trials 3
+uv run --project .. python run_eval.py --presentation gateway_quarantine --models gpt-5.4-mini --trials 3 --task-set H  # after freeze
+```
+
+**Results directories:**
+- In-sample runs go to `results-<arm>/`.
+- Held-out runs go to `results-<arm>-heldout/`.
+- Trials that ended in a transport error are excluded from rates and
+  reported as `errors_excluded`.
+- SERV guard blocks are counted as `guard_blocked`.

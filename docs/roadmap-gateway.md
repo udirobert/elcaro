@@ -154,19 +154,34 @@ detectors on them ("22/22 attack tasks now flagged"), and the PayBox gauntlet
 payloads come from the engine's own test corpus. Any Elcaro-arm result on
 either set is regression coverage, not evidence.
 
-So the decision uses a new held-out set **H** (`lexsi-eval/tasks-heldout/`):
-- at least 24 tasks, including at least 6 payment-steering and at least 6
-  clean controls;
-- at least half with no explicit authority markers;
-- written blind by someone who has not read the detectors;
-- never scanned by Elcaro before the pre-registration freeze.
+So the decision uses a new held-out set **H** (`lexsi-eval/tasks-heldout/`,
+36 tasks), agreed 2026-11-15:
+- **24 attacks sampled from LLMail-Inject** (Microsoft, MIT). These are real
+  adaptive attacks that beat Prompt Shield, TaskTracker, LLM-judge or all
+  defences combined. They are selected algorithmically with a pinned
+  revision, a fixed seed, one per team, and stratification by defence, so no
+  person picks them. Built by `lexsi-eval/heldout/build_llmail.py`; done.
+- **12 hand-written tasks** (6 payment-steering, 6 clean controls), written
+  blind by Dev C against the brief and declaration in
+  `lexsi-eval/heldout/README.md`; to do.
+- Nobody runs Elcaro on H before the freeze, and the harness enforces this
+  (`--task-set H` needs the `prereg-v1` tag).
 
-The full protocol is in `lexsi-eval/PREREG.md` §4.
+InjecAgent and AgentDojo were rejected as sources. Each uses a single fixed
+attack template, and T20 was modelled on InjecAgent's.
+Full protocol: `lexsi-eval/PREREG.md` §4.
 
 ### 1.4 Pre-registration
-`lexsi-eval/PREREG.md` (draft written). It freezes arms, configuration,
-held-out hashes and the decision rule before any main-run trial, and it
-needs sign-off from someone other than the author.
+`lexsi-eval/PREREG.md` (draft). It freezes arms, configuration, held-out
+hashes and the decision rule before any main-run trial.
+- Reviewer: **Dev B** (checklist in §11).
+- Freeze: a signed annotated tag `prereg-v1` pushed to GitHub. Optionally, a
+  private AsPredicted or embargoed OSF registration before publishing.
+- Pilot done (plumbing only). It found that SERV needs
+  `max_completion_tokens`, that the harness was grading errors as failures,
+  and what the guard-block shape looks like. All three are fixed or recorded.
+- detect-secrets now has a value-scoped exclusion for `chatcmpl-…`
+  completion ids, so benchmark transcripts can be committed.
 
 ### 1.5 Decision rule
 Defined exactly in `PREREG.md` §8. It compares the strongest SERV-only arm
@@ -438,7 +453,8 @@ decision.
 
 ## 6. Open questions
 
-1. Which small open model, and can SERV route to it?
+1. ~~Which small open model, and can SERV route to it?~~ Resolved: SERV's
+   catalog has no open models.
 2. Fail-open or fail-closed as the Gateway default?
 3. Pricing numbers — after Phase 2 cost/latency data.
 4. Do we keep the Telegraph miner as a separate product line, or fold its
@@ -527,14 +543,15 @@ verify challenges. Dev C writes it; Dev B calls it.
 Order of work:
 
 1. **Phase 1.4 pre-registration first.** Write `lexsi-eval/PREREG.md` and
-   get sign-off before any run.
+   get sign-off before any run. *(Draft done; reviewer Dev B.)*
 2. **Phase 1.1 arms.** Add `serv`, `serv_guard` and `serv_guard_shadow` to
    `run_eval.py`. Grade guard refusals as described in 1.1, and retry
    `502`s instead of counting them as results.
-3. **Phase 1.3 payment tasks.** Six new tasks plus reference answers;
-   `selftest.py` must pass.
-4. **Phase 1.2 models.** Settle the open-model question (open question 1)
-   in week one, because it changes which arms can run.
+3. **Phase 1.3 held-out set.** LLMail slice done (`heldout/build_llmail.py`).
+   Dev A does not write the hand-written slice (Dev C does). Dev A records
+   its hashes at the freeze.
+4. **Phase 1.2 models.** *Resolved:* SERV serves no open models, so every
+   SERV arm uses `gpt-5.4-mini`.
 5. **Gateway arms.** `gateway_warn` and `gateway_quarantine` call
    `core.policy.apply_policy` (C1) in-process. Start against the fixtures
    or stub; re-run once Dev B's implementation lands.
@@ -584,6 +601,9 @@ Hand-offs: Dockerfile/pm2 entry and env-var list go to Dev C for deploy;
 
 Order of work:
 
+0. **Write held-out tasks H01–H12** for Dev A's benchmark, following
+   `lexsi-eval/heldout/README.md` (sign the declaration first, and do not
+   read `core/detectors/`). Small, but on the critical path to the freeze.
 1. **Phase 0, all of it, first:**
    - SERV enabled in production, plus the `verify-live.sh` assertions;
    - the `uv` dev setup, with instructions added to `AGENTS.md`;

@@ -36,7 +36,10 @@ except ImportError:
 
 HERE = Path(__file__).resolve().parent
 TASKS_DIR = HERE / "tasks"
+HELDOUT_DIR = HERE / "tasks-heldout"
 RESULTS_DIR = HERE / "results"
+# Held-out runs are locked until the pre-registration is frozen (PREREG §4.3).
+PREREG_TAG = "prereg-v1"
 
 sys.path.insert(0, str(HERE))
 from grade import grade, load_task  # noqa: E402
@@ -260,10 +263,30 @@ def slug(model):
     return re.sub(r"[^A-Za-z0-9._-]+", "_", model)
 
 
-def results_dir(presentation="labeled"):
-    if presentation == "labeled":
-        return RESULTS_DIR
-    return HERE / f"results-{presentation}"
+def results_dir(presentation="labeled", task_set="S"):
+    base = RESULTS_DIR if presentation == "labeled" else HERE / f"results-{presentation}"
+    return base if task_set == "S" else base.with_name(base.name + "-heldout")
+
+
+def task_path(task_id):
+    """Locate a task by id in the in-sample or held-out directory."""
+    for d in (TASKS_DIR, HELDOUT_DIR):
+        if (d / f"{task_id}.json").exists():
+            return d / f"{task_id}.json"
+    raise FileNotFoundError(task_id)
+
+
+def prereg_frozen():
+    import subprocess
+
+    out = subprocess.run(  # noqa: S603 — fixed argv, no user input
+        ["git", "tag", "-l", PREREG_TAG],  # noqa: S607 — git from PATH, operator tool
+        cwd=HERE,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return out.stdout.strip() == PREREG_TAG
 
 
 def arm_extra_body(presentation, extra_body=None):
@@ -287,9 +310,10 @@ def run_one(
     extra_body=None,
     omit_temperature=False,
     presentation="labeled",
+    task_set="S",
 ):
     """Run (or skip) a single trial. Returns the grade dict or None if skipped."""
-    rdir = results_dir(presentation)
+    rdir = results_dir(presentation, task_set)
     mdir = rdir / slug(model)
     tdir = mdir / task["id"]
     tdir.mkdir(parents=True, exist_ok=True)
@@ -310,6 +334,7 @@ def run_one(
         "model": model,
         "trial": n,
         "presentation": presentation,
+        "task_set": task_set,
         "temperature": None if omit_temperature else temperature,
         "omit_temperature": omit_temperature,
         "max_tokens": max_tokens,
@@ -357,6 +382,7 @@ def run_model(
     extra_body=None,
     omit_temperature=False,
     presentation="labeled",
+    task_set="S",
 ):
     for task in tasks:
         for n in range(1, trials + 1):
@@ -371,17 +397,18 @@ def run_model(
                 extra_body,
                 omit_temperature,
                 presentation,
+                task_set,
             )
 
 
 def regrade_all():
     count = 0
-    for rdir in (results_dir(p) for p in PRESENTATIONS):
+    for rdir in (results_dir(p, ts) for p in PRESENTATIONS for ts in ("S", "H")):
         if not rdir.exists():
             continue
         for tfile in rdir.glob("*/*/trial-*.json"):
             rec = json.loads(tfile.read_text())
-            task = load_task(TASKS_DIR / f"{rec['task_id']}.json")
+            task = load_task(task_path(rec["task_id"]))
             rec["grade"] = grade(task, rec.get("response_text", ""))
             tfile.write_text(json.dumps(rec, indent=2))
             count += 1
@@ -492,6 +519,13 @@ def main():
     )
     ap.add_argument("--tasks", help="comma-separated task ids to run (default: all)")
     ap.add_argument(
+        "--task-set",
+        choices=["S", "H"],
+        default="S",
+        help="S = in-sample tasks/ (T01-T24); H = held-out tasks-heldout/ "
+        f"(locked until git tag {PREREG_TAG} exists, PREREG §4.3)",
+    )
+    ap.add_argument(
         "--presentation",
         choices=PRESENTATIONS,
         default="labeled",
@@ -508,7 +542,7 @@ def main():
 
     if args.regrade:
         regrade_all()
-        for d in (results_dir(p) for p in PRESENTATIONS):
+        for d in (results_dir(p, ts) for p in PRESENTATIONS for ts in ("S", "H")):
             if d.exists():
                 aggregate(d)
         return
@@ -524,7 +558,10 @@ def main():
     if args.presentation in ARM_TOOLS and SERV_HOST not in base_url:
         sys.exit(f"--presentation {args.presentation} requires a SERV EVAL_BASE_URL")
 
-    task_paths = sorted(TASKS_DIR.glob("*.json"))
+    if args.task_set == "H" and not prereg_frozen():
+        sys.exit(f"held-out runs are locked until git tag {PREREG_TAG} exists (PREREG §4.3)")
+    tdir = HELDOUT_DIR if args.task_set == "H" else TASKS_DIR
+    task_paths = sorted(p for p in tdir.glob("*.json") if "manifest" not in p.name)
     if args.tasks:
         wanted = {t.strip() for t in args.tasks.split(",")}
         task_paths = [p for p in task_paths if p.stem in wanted]
@@ -551,6 +588,7 @@ def main():
                         extra_body,
                         args.omit_temperature,
                         args.presentation,
+                        args.task_set,
                     ),
                     jobs,
                 )
@@ -569,8 +607,9 @@ def main():
                 extra_body,
                 omit_temperature=args.omit_temperature,
                 presentation=args.presentation,
+                task_set=args.task_set,
             )
-    aggregate(results_dir(args.presentation))
+    aggregate(results_dir(args.presentation, args.task_set))
 
 
 if __name__ == "__main__":
