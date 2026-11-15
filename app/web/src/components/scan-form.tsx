@@ -140,6 +140,23 @@ export function ScanForm() {
   const shakeControls = useAnimation();
   const resultRef = useRef<ScanResponse | null>(null);
   const scanningRef = useRef(false);
+  // In-flight preset typing animation. The animation is cosmetic — it must
+  // never change what gets scanned or overwrite other content setters.
+  const typingRef = useRef<{
+    timer: ReturnType<typeof setInterval>;
+    full: string;
+    type: ContentType;
+  } | null>(null);
+
+  function cancelTyping() {
+    if (typingRef.current) {
+      clearInterval(typingRef.current.timer);
+      typingRef.current = null;
+    }
+  }
+
+  // Don't leak the typing timer if the form unmounts mid-animation.
+  useEffect(() => cancelTyping, []);
 
   // Keep the mutable ref in sync with the state value. The synchronous writes in
   // event handlers are for tool call chains; this effect covers shared-verdict
@@ -186,7 +203,11 @@ export function ScanForm() {
 
   // Side effect only — no setState. Runs after the verdict is adopted.
   useEffect(() => {
-    if (adoptedVerdict && window.location.hash.startsWith("#v=")) {
+    if (!adoptedVerdict) {
+      return;
+    }
+    cancelTyping(); // a shared verdict wins over in-flight preset typing
+    if (window.location.hash.startsWith("#v=")) {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, [adoptedVerdict]);
@@ -207,6 +228,7 @@ export function ScanForm() {
       setFetchUrlError(result.error);
       return;
     }
+    cancelTyping();
     setContent(result.content);
     setContentType("webpage");
     setFetchedFrom({ url: result.source_url, credits: result.credits_used });
@@ -266,6 +288,14 @@ export function ScanForm() {
   }
 
   async function handleScan() {
+    // A Scan click during preset typing must scan the FULL preset, not the
+    // partially typed prefix — the typing animation is cosmetic only.
+    const inFlight = typingRef.current;
+    if (inFlight) {
+      cancelTyping();
+      await runScanWith(inFlight.full, inFlight.type);
+      return;
+    }
     await runScanWith(content, contentType);
   }
 
@@ -284,6 +314,7 @@ export function ScanForm() {
     setError(null);
     setFetchedFrom(null);
     setFetchUrlError(null);
+    cancelTyping();
     setContent(example.content);
     setContentType(example.content_type);
     return {
@@ -322,6 +353,7 @@ export function ScanForm() {
     setError(null);
     setFetchedFrom(null);
     setFetchUrlError(null);
+    cancelTyping();
     setContent("");
     setContentType(example.content_type);
 
@@ -339,11 +371,14 @@ export function ScanForm() {
         i++;
       } else {
         clearInterval(interval);
+        typingRef.current = null;
       }
     }, 8);
+    typingRef.current = { timer: interval, full: chars, type: example.content_type };
   }
 
   function loadFromHistory(entry: import("@/lib/history").HistoryEntry) {
+    cancelTyping();
     setContent(entry.content);
     setContentType(entry.content_type);
     setResult(entry.response);
@@ -426,6 +461,7 @@ export function ScanForm() {
           name="content"
           value={content}
           onChange={(e) => {
+            cancelTyping();
             setContent(e.target.value);
             if (e.target.value.trim()) setDismissedOnboarding(true);
             // Stale once the user edits away from what was fetched.
