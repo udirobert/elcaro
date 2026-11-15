@@ -18,9 +18,21 @@ Endpoints (§2.2):
 
 Deploy configuration (env — Dev C's deploy lane wires these):
     ELCARO_SIGNING_KEY            Ed25519 key for x-elcaro-receipt (unsigned when unset)
-    ELCARO_GATEWAY_PRICE_USDC     per-request charge recorded in usage events (default 0)
+    ELCARO_GATEWAY_PRICE_USDC     per-request charge recorded in usage events (default 0);
+                                  when >0 it also sets the pay-per-call offer amount
     ELCARO_UPSTREAM_<NAME>_URL    add/override an upstream allowlist entry
     SERV_*                        same engine env as the miner (deep_analysis second pass)
+
+    x402 pay-per-call (C3, docs/x402-gateway.md) — armed only when a payTo
+    resolves AND a server-side upstream credential is configured:
+    X402_PAYTO / TELEGRAPH_X402_KEY   payTo resolution (explicit address wins)
+    X402_SCAN_AMOUNT                  atomic USDC per call (default 10000 = $0.01)
+    X402_FACILITATOR_URL              settlement endpoint (best-effort post-serve;
+                                      unset → verified_local, nothing settles)
+    ELCARO_PAYPERCALL_UPSTREAM        upstream for paid calls (default "serv")
+    ELCARO_PAYPERCALL_MODE            policy mode for paid calls (default quarantine)
+    ELCARO_UPSTREAM_KEY_<NAME>        server-held credential for paid calls
+                                      (SERV_API_KEY fallback when upstream=serv)
 
 Run:  uvicorn gateway.app:app
 """
@@ -43,11 +55,13 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from starlette.background import BackgroundTasks
 
+from core import x402
 from core.autopsy import summarize as summarize_autopsy
 from core.policy import FLAG_THRESHOLD, Mode, PartVerdict, PolicyResult, Provider, apply_policy
 from core.signing import VerdictSigner, canonical_verdict_payload, sha256_hex, verify_verdict
-from core.usage import UsageEvent, emit_usage, get_key
+from core.usage import KeyConfig, UsageEvent, emit_usage, get_key
 from gateway.blocks import anthropic_block_response, openai_block_response, provider_error
 from gateway.upstream import (
     ROUTE_PATHS,
@@ -277,6 +291,12 @@ def create_app(
     http_client_factory=None,
     price_per_request: Decimal | None = None,
     max_body_bytes: int = MAX_BODY_BYTES,
+    x402_offers: list[x402.Accept] | None = None,
+    x402_nonce_store: x402.NonceStore | None = None,
+    x402_facilitator: x402.FacilitatorClient | None = None,
+    paypercall_upstream: str | None = None,
+    paypercall_upstream_key: str | None = None,
+    paypercall_mode: Mode | None = None,
 ) -> FastAPI:
     """Build the Gateway app.
 
@@ -293,6 +313,19 @@ def create_app(
         price_per_request: Elcaro charge per proxied request; env
             ``ELCARO_GATEWAY_PRICE_USDC`` when unset.
         max_body_bytes: request body cap (§2.5).
+        x402_offers: accept list for the pay-per-call challenge; ``None``
+            resolves ``x402.offers()`` from env (``X402_PAYTO`` /
+            ``TELEGRAPH_X402_KEY`` + ``X402_SCAN_AMOUNT``), ``[]`` disables
+            the x402 lane outright.
+        x402_nonce_store: replay guard; default ``InMemoryNonceStore``.
+        x402_facilitator: settlement client override (tests); ``None`` →
+            ``X402_FACILITATOR_URL`` env, unset → ``verified_local``.
+        paypercall_upstream/paypercall_mode: upstream name and policy mode
+            for paid calls (env ``ELCARO_PAYPERCALL_UPSTREAM`` /
+            ``ELCARO_PAYPERCALL_MODE``; defaults ``serv`` / quarantine).
+        paypercall_upstream_key: server-held credential sent upstream on
+            paid calls; env ``ELCARO_UPSTREAM_KEY_<NAME>`` then
+            ``SERV_API_KEY`` when the upstream is serv.
     """
     upstream_map = upstreams if upstreams is not None else load_upstreams()
     resolved_signer = VerdictSigner.from_env() if signer is _SIGNER_ENV else signer
@@ -301,6 +334,33 @@ def create_app(
         if price_per_request is None
         else price_per_request
     )
+
+    # ── x402 pay-per-call resolution (C3) ─────────────────────────────
+    # The lane is armed only when it can issue offers AND serve paid calls:
+    # a resolvable payTo plus a server-held upstream credential. Otherwise
+    # unauthenticated callers keep getting the plain 401.
+    if x402_offers is not None:
+        x402_offer_list = x402_offers
+    else:
+        atomic = str(int(price * 1_000_000)) if price > 0 else None
+        x402_offer_list = x402.offers(amount=atomic)
+    ppc_upstream = paypercall_upstream or os.environ.get(
+        "ELCARO_PAYPERCALL_UPSTREAM", _SERV_UPSTREAM
+    )
+    ppc_upstream_key = (
+        paypercall_upstream_key
+        or os.environ.get(f"ELCARO_UPSTREAM_KEY_{ppc_upstream.upper()}")
+        or (os.environ.get("SERV_API_KEY") if ppc_upstream == _SERV_UPSTREAM else None)
+    )
+    if paypercall_mode is not None:
+        ppc_mode = paypercall_mode
+    else:
+        try:
+            ppc_mode = Mode(os.environ.get("ELCARO_PAYPERCALL_MODE", "quarantine"))
+        except ValueError:
+            ppc_mode = Mode.QUARANTINE
+    nonce_store = x402_nonce_store if x402_nonce_store is not None else x402.InMemoryNonceStore()
+    x402_ready = bool(x402_offer_list) and bool(ppc_upstream_key) and ppc_upstream in upstream_map
     client_factory = http_client_factory or (lambda: httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT))
     metrics = GatewayMetrics()
     incidents: OrderedDict[str, dict] = OrderedDict()  # id -> autopsy summary
@@ -404,13 +464,14 @@ def create_app(
         action: str,
         verdict: str | None,
         scanned: int,
+        cost: Decimal,
         receipt: dict | None,
         incident_url: str | None,
     ) -> dict[str, str]:
         headers = {
             "x-elcaro-action": action,
             "x-elcaro-scanned": str(scanned),
-            "x-elcaro-cost-usdc": str(price),
+            "x-elcaro-cost-usdc": str(cost),
         }
         if verdict is not None:
             headers["x-elcaro-verdict"] = verdict
@@ -450,6 +511,7 @@ def create_app(
         action: str,
         t_elcaro_ms: float,
         t_upstream_ms: float,
+        charge: Decimal,
     ) -> None:
         in_tok, out_tok = _serv_tokens(result.parts) if result else (None, None)
         emit_usage(
@@ -466,15 +528,94 @@ def create_app(
                 latency_ms_upstream=round(t_upstream_ms, 2),
                 serv_input_tokens=in_tok,
                 serv_output_tokens=out_tok,
-                charge_usdc=price,
+                charge_usdc=charge,
             )
         )
+
+    # ── x402 pay-per-call gate (C3, docs/x402-gateway.md) ─────────────
+    #
+    # A caller without an Elcaro key gets a 402 challenge instead of a 401
+    # when the lane is armed. A verified PAYMENT-SIGNATURE / X-PAYMENT is
+    # served on an ephemeral key config — upstream is Elcaro's own
+    # credential, the charge is what the payer actually authorized — and
+    # settlement is deferred to a background task after the response is
+    # built (route.ts order: verify -> serve -> settle).
+
+    def _x402_gate(request: Request, *, is_anthropic: bool):
+        """Return a 402/401 Response, or
+        (key_cfg, upstream_key, payment, charge, settle_task)."""
+        if not x402_ready:
+            return _err(
+                401,
+                "Missing Elcaro key — send it as x-elcaro-key.",
+                anthropic=is_anthropic,
+                err_type="authentication_error",
+            )
+        resource = {
+            "url": str(request.url),
+            "description": "Elcaro gateway pay-per-call",
+            "mimeType": "application/json",
+        }
+
+        def _challenge(error: str | None = None) -> JSONResponse:
+            challenge = x402.challenge_body(resource, x402_offer_list, error)
+            return JSONResponse(
+                status_code=402,
+                content=challenge,
+                headers={"PAYMENT-REQUIRED": x402.encode_challenge_header(challenge)},
+            )
+
+        raw = request.headers.get("payment-signature") or request.headers.get("x-payment")
+        if raw is None:
+            return _challenge()
+        payment = x402.decode_payment_header(raw)
+        if payment is None:
+            return _challenge("malformed payment payload")
+        result = x402.verify_payment(payment, x402_offer_list, nonce_store)
+        if not result.ok:
+            return _challenge(result.reason)
+
+        key_cfg = KeyConfig(
+            key_id=f"x402:{result.payer}",  # ephemeral id — no api_keys row
+            mode=ppc_mode,
+            upstream=ppc_upstream,
+        )
+        settle = BackgroundTasks()
+        settle.add_task(x402.settle_via_facilitator, payment, result.accept, x402_facilitator)
+        charge = Decimal(result.accept.amount) / Decimal(1_000_000)
+        return key_cfg, ppc_upstream_key, payment, charge, settle
 
     # ── The shared proxy path ─────────────────────────────────────────────
 
     async def _proxy(request: Request, *, provider: Provider, route_name: str) -> Response:
         is_anthropic = provider is Provider.ANTHROPIC
         route = f"/v1/{ROUTE_PATHS[route_name]}"
+
+        elcaro_key, upstream_key = extract_keys(request.headers)
+        settle_bg: BackgroundTasks | None = None
+        charge = price
+        if elcaro_key is not None:
+            key_cfg = key_lookup(elcaro_key)
+            if key_cfg is None:
+                return _err(
+                    401,
+                    "Unknown Elcaro key.",
+                    anthropic=is_anthropic,
+                    err_type="authentication_error",
+                )
+            if upstream_key is None:
+                return _err(
+                    401,
+                    "Missing upstream credential — Authorization: Bearer, "
+                    "x-upstream-key, or x-api-key.",
+                    anthropic=is_anthropic,
+                    err_type="authentication_error",
+                )
+        else:
+            gate = _x402_gate(request, is_anthropic=is_anthropic)
+            if isinstance(gate, Response):
+                return gate
+            key_cfg, upstream_key, _payment, charge, settle_bg = gate
 
         body_bytes = await request.body()
         if len(body_bytes) > max_body_bytes:
@@ -485,31 +626,6 @@ def create_app(
             return _err(400, "Request body is not valid JSON.", anthropic=is_anthropic)
         if not isinstance(body, dict):
             return _err(400, "Request body must be a JSON object.", anthropic=is_anthropic)
-
-        elcaro_key, upstream_key = extract_keys(request.headers)
-        if elcaro_key is None:
-            return _err(
-                401,
-                "Missing Elcaro key — send it as x-elcaro-key.",
-                anthropic=is_anthropic,
-                err_type="authentication_error",
-            )
-        key_cfg = key_lookup(elcaro_key)
-        if key_cfg is None:
-            return _err(
-                401,
-                "Unknown Elcaro key.",
-                anthropic=is_anthropic,
-                err_type="authentication_error",
-            )
-        if upstream_key is None:
-            return _err(
-                401,
-                "Missing upstream credential — Authorization: Bearer, "
-                "x-upstream-key, or x-api-key.",
-                anthropic=is_anthropic,
-                err_type="authentication_error",
-            )
 
         upstream_name = key_cfg.upstream
         base = resolve_upstream(upstream_name, upstream_map)
@@ -599,6 +715,7 @@ def create_app(
                 action=action,
                 verdict=_verdict_label(result),
                 scanned=len(result.parts),
+                cost=charge,
                 receipt=receipt,
                 incident_url=incident_url,
             )
@@ -619,10 +736,11 @@ def create_app(
                 action=action,
                 t_elcaro_ms=t_elcaro_ms,
                 t_upstream_ms=0.0,
+                charge=charge,
             )
             metrics.record(key_cfg.key_id, action, _verdict_label(result), len(result.parts))
             metrics.latencies_ms_elcaro.append(t_elcaro_ms)
-            return JSONResponse(content=refusal, headers=headers)
+            return JSONResponse(content=refusal, headers=headers, background=settle_bg)
 
         # ── Forward (rewritten or bypassed) ───────────────────────────
         if result is not None:
@@ -639,6 +757,7 @@ def create_app(
             action=action,
             verdict=verdict,
             scanned=len(result.parts) if result else 0,
+            cost=charge,
             receipt=receipt,
             incident_url=incident_url,
         )
@@ -668,6 +787,7 @@ def create_app(
                 action=action,
                 t_elcaro_ms=t_elcaro_ms,
                 t_upstream_ms=t_upstream_ms,
+                charge=charge,
             )
             metrics.record(key_cfg.key_id, action, verdict, len(result.parts) if result else 0)
             metrics.latencies_ms_elcaro.append(t_elcaro_ms)
@@ -695,6 +815,7 @@ def create_app(
                 media_type=upstream_resp.headers.get("content-type", "text/event-stream").split(
                     ";"
                 )[0],
+                background=settle_bg,
             )
 
         # Non-streaming: pass through upstream errors verbatim; on 2xx,
@@ -708,6 +829,7 @@ def create_app(
                 status_code=upstream_resp.status_code,
                 headers=headers,
                 media_type=content_type.split(";")[0] or None,
+                background=settle_bg,
             )
         try:
             upstream_json = json.loads(raw)
@@ -718,6 +840,7 @@ def create_app(
                 status_code=upstream_resp.status_code,
                 headers=headers,
                 media_type="application/json",
+                background=settle_bg,
             )
         if isinstance(upstream_json, dict) and result is not None:
             upstream_json["elcaro"] = _elcaro_object(
@@ -728,6 +851,7 @@ def create_app(
             content=upstream_json,
             status_code=upstream_resp.status_code,
             headers=headers,
+            background=settle_bg,
         )
 
     # ── Routes ────────────────────────────────────────────────────────────
@@ -787,6 +911,7 @@ def create_app(
             action="none",
             t_elcaro_ms=0.0,
             t_upstream_ms=(time.perf_counter() - t_up0) * 1000,
+            charge=price,
         )
         return Response(
             content=resp.content,

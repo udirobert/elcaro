@@ -13,6 +13,7 @@ import base64
 import json
 import sys
 import time
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -21,6 +22,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from core import x402  # noqa: E402
 from core.policy import Mode  # noqa: E402
 from core.schemas import RiskLevel, ScanResponse  # noqa: E402
 from core.signing import VerdictSigner, generate_key, verify_verdict  # noqa: E402
@@ -158,6 +160,10 @@ def _make_client(
     signer=None,
     engine=None,
     extra_keys: dict[str, KeyConfig] | None = None,
+    x402_offers=None,
+    x402_facilitator=None,
+    paypercall_upstream_key: str | None = None,
+    paypercall_mode: Mode | None = None,
 ) -> TestClient:
     keys = {ELCARO_KEY: key_cfg or KeyConfig(key_id="k1", upstream="serv")}
     keys.update(extra_keys or {})
@@ -167,6 +173,12 @@ def _make_client(
         upstreams=upstreams or {"serv": SERV_BASE, "anthropic": ANTHROPIC_BASE},
         signer=signer,
         http_client_factory=lambda: upstream.client(),
+        # x402 lane disabled unless a test arms it — keeps the missing-key
+        # contract (401) deterministic regardless of ambient env.
+        x402_offers=[] if x402_offers is None else x402_offers,
+        x402_facilitator=x402_facilitator,
+        paypercall_upstream_key=paypercall_upstream_key,
+        paypercall_mode=paypercall_mode,
     )
     return TestClient(app)
 
@@ -869,3 +881,181 @@ def test_fixture_serv_502_passthrough():
     resp = client.post("/v1/chat/completions", json=_openai_body(), headers=_headers())
     assert resp.status_code == fx["status"]
     assert resp.json() == fx["body"]
+
+
+# ── x402 pay-per-call (C3) ────────────────────────────────────────────────────
+
+X402_FIXTURES = Path(__file__).parent / "fixtures" / "x402"
+PPC_UPSTREAM_KEY = "ppc-server-key"
+
+
+def _x402_payment_header(name: str = "payment_valid_sepolia") -> str:
+    payment = json.loads((X402_FIXTURES / f"{name}.json").read_text())
+    return base64.b64encode(json.dumps(payment).encode()).decode()
+
+
+def _x402_offers() -> list:
+    """Offers matching the viem-generated fixtures' payTo."""
+    accepted = json.loads((X402_FIXTURES / "payment_valid_sepolia.json").read_text())["accepted"]
+    return x402.offers(pay_to_addr=accepted["payTo"])
+
+
+def _ppc_client(upstream: Upstream, **kwargs) -> TestClient:
+    return _make_client(
+        upstream,
+        x402_offers=_x402_offers(),
+        paypercall_upstream_key=PPC_UPSTREAM_KEY,
+        **kwargs,
+    )
+
+
+def test_paypercall_unauthenticated_returns_402_challenge():
+    client = _ppc_client(Upstream())
+    resp = client.post("/v1/chat/completions", json=_openai_body())
+    assert resp.status_code == 402
+    body = resp.json()
+    assert body["x402Version"] == 2
+    assert body["error"] == "payment required"
+    assert len(body["accepts"]) == 2  # base + base-sepolia offers
+    # The same challenge rides the v2 header, base64-encoded.
+    header_body = json.loads(base64.b64decode(resp.headers["PAYMENT-REQUIRED"]))
+    assert header_body == body
+
+
+def test_paypercall_challenge_before_body_parse():
+    """An unpaid caller gets 402 even with a malformed body — the challenge
+    gate runs before body work."""
+    client = _ppc_client(Upstream())
+    resp = client.post("/v1/chat/completions", content=b"not json")
+    assert resp.status_code == 402
+
+
+def test_paypercall_not_armed_falls_back_to_401():
+    """No offers (or no server upstream key) -> plain 401, never a 402 the
+    gateway couldn't honor."""
+    client = _make_client(Upstream())  # x402_offers=[] by default
+    resp = client.post("/v1/chat/completions", json=_openai_body())
+    assert resp.status_code == 401
+    # offers armed but no server-held upstream credential -> also 401
+    client = _make_client(Upstream(), x402_offers=_x402_offers())
+    resp = client.post("/v1/chat/completions", json=_openai_body())
+    assert resp.status_code == 401
+
+
+def test_paypercall_valid_payment_proxied(spy_sink):
+    upstream = Upstream()
+    client = _ppc_client(upstream)
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["choices"][0]["message"]["content"] == "summary here"
+    # The upstream saw the server-held credential, never anything caller-side.
+    assert upstream.requests[0].headers["authorization"] == f"Bearer {PPC_UPSTREAM_KEY}"
+    # Cost header + usage event reflect what the payer authorized.
+    assert resp.headers["x-elcaro-cost-usdc"] == "0.01"
+    event = spy_sink.events[-1]
+    assert event.key_id == "x402:0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    assert event.charge_usdc == Decimal("0.01")
+
+
+def test_paypercall_v1_x_payment_header():
+    client = _ppc_client(Upstream())
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"X-PAYMENT": _x402_payment_header()},
+    )
+    assert resp.status_code == 200
+
+
+def test_paypercall_replay_rejected():
+    """The nonce is spent at verify — a second request with the same
+    signature gets a fresh challenge, not a second serving."""
+    client = _ppc_client(Upstream())
+    headers = {"PAYMENT-SIGNATURE": _x402_payment_header()}
+    assert (
+        client.post("/v1/chat/completions", json=_openai_body(), headers=headers).status_code == 200
+    )
+    resp = client.post("/v1/chat/completions", json=_openai_body(), headers=headers)
+    assert resp.status_code == 402
+    assert resp.json()["error"] == "authorization nonce already spent"
+
+
+def test_paypercall_garbage_payment_header():
+    client = _ppc_client(Upstream())
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"PAYMENT-SIGNATURE": base64.b64encode(b"garbage").decode()},
+    )
+    assert resp.status_code == 402
+    assert resp.json()["error"] == "malformed payment payload"
+
+
+def test_paypercall_wrong_network_rejected():
+    payment = json.loads((X402_FIXTURES / "payment_valid_sepolia.json").read_text())
+    payment["accepted"]["network"] = "eip155:1"
+    payment["network"] = "eip155:1"
+    client = _ppc_client(Upstream())
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"PAYMENT-SIGNATURE": base64.b64encode(json.dumps(payment).encode()).decode()},
+    )
+    assert resp.status_code == 402
+    assert resp.json()["error"] == "no matching payment option for network"
+
+
+def test_paypercall_policy_still_applies():
+    """A paid call is a first-class scan: planted injection is quarantined
+    before the upstream sees it."""
+    upstream = Upstream()
+    client = _ppc_client(upstream)
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(injection=True),
+        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["x-elcaro-action"] == "quarantined"
+    tool_msg = upstream.last_json["messages"][2]
+    assert "Ignore all previous instructions" not in tool_msg["content"]
+
+
+def test_paypercall_block_mode_refusal():
+    upstream = Upstream()
+    client = _ppc_client(upstream, paypercall_mode=Mode.BLOCK)
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(injection=True),
+        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["choices"][0]["finish_reason"] == "content_filter"
+    assert len(upstream.requests) == 0
+
+
+def test_paypercall_settle_after_serve():
+    class SpyFacilitator:
+        def __init__(self):
+            self.calls = []
+
+        def verify_and_settle(self, payment, accept):
+            self.calls.append((payment, accept))
+            return x402.SettlementResult(settled=True, tx_hash="0xdead")
+
+    facilitator = SpyFacilitator()
+    client = _ppc_client(Upstream(), x402_facilitator=facilitator)
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+    )
+    assert resp.status_code == 200
+    assert len(facilitator.calls) == 1
+    payment, accept = facilitator.calls[0]
+    assert payment["payload"]["authorization"]["value"] == "10000"
+    assert accept.network == "eip155:84532"
