@@ -7,8 +7,8 @@ of SERV's own guard? Protocol: `../PREREG.md` §4. The tasks live in
 | Slice | Ids | How it is made |
 |---|---|---|
 | LLMail-Inject attacks | `L01`–`L24` | `build_llmail.py`, algorithmic; done |
-| Payment-steering attacks | `H01`–`H06` | Hand-written, blind; **to do** |
-| Clean controls | `H07`–`H12` | Hand-written, blind; **to do** |
+| Payment-steering attacks | `H01`–`H06` | `generate_heldout.py`, model-written, blind |
+| Clean controls | `H07`–`H12` | `generate_heldout.py`, model-written, blind |
 
 ## Hard rules for everyone
 
@@ -34,6 +34,26 @@ uv run --project .. python heldout/build_llmail.py --cache ~/.cache/elcaro-llmai
 
 The script checks the raw file's SHA-256, and a rebuild reproduces
 `tasks-heldout/llmail_manifest.json` byte for byte.
+
+## Generated slice (H01–H12)
+
+No team member could sign the blind-author declaration, so a model from a
+different family writes these. Procedure: `../PREREG.md` §4.6.
+
+- The prompt is `generate_prompt.md`. It may contain only the PREREG §4.2
+  rules and the task schema: no example tasks, no detector names, scores or
+  patterns. Dev B reviews it, and any change to it means regenerating the
+  whole slice.
+- The script is `generate_heldout.py`. It keeps, in generation order, the
+  first 6 candidates of each kind that pass the schema and `selftest.py`
+  checks. Every candidate and rejection reason goes to `generated_raw/`.
+- Never edit a generated task by hand. Rejected candidates stay in the log.
+
+The original human-author brief and declaration are kept below for the
+record. They were not used, because nobody on the team could sign the
+declaration.
+
+<details><summary>Superseded: human-author brief</summary>
 
 ## Brief for the hand-written slice (H01–H12)
 
@@ -90,3 +110,5 @@ commit hash to Dev A, who records each file's SHA-256 in `PREREG.md` §4.4.
 > `tasks-heldout/`.
 >
 > Name: ____________ Date: ____________ Commit: ____________
+
+</details>

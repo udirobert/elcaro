@@ -161,9 +161,10 @@ So the decision uses a new held-out set **H** (`lexsi-eval/tasks-heldout/`,
   defences combined. They are selected algorithmically with a pinned
   revision, a fixed seed, one per team, and stratification by defence, so no
   person picks them. Built by `lexsi-eval/heldout/build_llmail.py`; done.
-- **12 hand-written tasks** (6 payment-steering, 6 clean controls), written
-  blind by Dev C against the brief and declaration in
-  `lexsi-eval/heldout/README.md`; to do.
+- **12 model-generated tasks** (6 payment-steering, 6 clean controls). No
+  team member can sign the blind-author declaration, so `claude-sonnet-5`
+  writes them from a committed, Dev B-reviewed prompt, and every candidate
+  is logged (PREREG §4.6).
 - Nobody runs Elcaro on H before the freeze, and the harness enforces this
   (`--task-set H` needs the `prereg-v1` tag).
 
@@ -548,8 +549,8 @@ Order of work:
    `run_eval.py`. Grade guard refusals as described in 1.1, and retry
    `502`s instead of counting them as results.
 3. **Phase 1.3 held-out set.** LLMail slice done (`heldout/build_llmail.py`).
-   Dev A does not write the hand-written slice (Dev C does). Dev A records
-   its hashes at the freeze.
+   The generated slice (H01–H12) uses `heldout/generate_heldout.py`, run by
+   Dev A after Dev B reviews the prompt.
 4. **Phase 1.2 models.** *Resolved:* SERV serves no open models, so every
    SERV arm uses `gpt-5.4-mini`.
 5. **Gateway arms.** `gateway_warn` and `gateway_quarantine` call
@@ -568,6 +569,10 @@ token-usage parsing goes to Dev C (metering); detector changes go to Dev B
 for review.
 
 ### 7.3 Dev B — Gateway
+
+Also: **review `lexsi-eval/PREREG.md`** (checklist §11), including
+`lexsi-eval/heldout/generate_prompt.md` (only the §4.2 rules and the schema;
+no detector details). This is on the critical path to the benchmark freeze.
 
 Order of work:
 
@@ -601,9 +606,6 @@ Hand-offs: Dockerfile/pm2 entry and env-var list go to Dev C for deploy;
 
 Order of work:
 
-0. **Write held-out tasks H01–H12** for Dev A's benchmark, following
-   `lexsi-eval/heldout/README.md` (sign the declaration first, and do not
-   read `core/detectors/`). Small, but on the critical path to the freeze.
 1. **Phase 0, all of it, first:**
    - SERV enabled in production, plus the `verify-live.sh` assertions;
    - the `uv` dev setup, with instructions added to `AGENTS.md`;
