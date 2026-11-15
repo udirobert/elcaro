@@ -157,7 +157,19 @@ class NeonMetering:
                     "NeonMetering requires psycopg[pool] — "
                     "install with: pip install 'elcaro[miner]'"
                 ) from e
-            pool = ConnectionPool(dsn, min_size=1, max_size=4, open=True)
+            # Neon autosuspends idle compute (~5 min) and kills open
+            # connections with AdminShutdown. check= validates each
+            # connection at checkout and replaces dead ones;
+            # max_idle=240 recycles connections just before the suspend
+            # window so the pool rarely holds a corpse to begin with.
+            pool = ConnectionPool(
+                dsn,
+                min_size=1,
+                max_size=4,
+                open=True,
+                check=ConnectionPool.check_connection,
+                max_idle=240,
+            )
         self._pool = pool
         self._config_factory = config_factory or _default_key_config
         with self._pool.connection() as conn:  # boot validation — fails loud
@@ -167,6 +179,35 @@ class NeonMetering:
 
     def _conn(self):
         return self._pool.connection()
+
+    def _with_retry(self, fn: Callable[[Any], Any]) -> Any:
+        """Run ``fn(conn)`` on a pooled connection; retry exactly once on a
+        dead connection.
+
+        check=/max_idle shrink the window but can't close it — a request
+        arriving mid-suspend can still draw a connection Neon killed
+        (AdminShutdown, an OperationalError). One retry on a fresh
+        connection covers that; a second failure propagates (get() must
+        still fail closed).
+
+        Only for reads and idempotent writes — ``emit`` (INSERT; a retry
+        after an ambiguous commit could double-bill) and ``issue_key``
+        (caller retries) deliberately don't use this.
+        """
+        try:
+            import psycopg
+
+            retryable: tuple = (psycopg.OperationalError,)
+        except ImportError:  # fake-pool tests without psycopg installed
+            retryable = ()
+        for attempt in range(2):
+            try:
+                with self._conn() as conn:
+                    return fn(conn)
+            except retryable:
+                if attempt:
+                    raise
+        return None  # unreachable
 
     # ── UsageSink ──────────────────────────────────────────────────────────
 
@@ -192,13 +233,14 @@ class NeonMetering:
         """Raw key → KeyConfig, or None for unknown/revoked keys.
 
         Lookup errors PROPAGATE — the gateway fails the request closed."""
-        with self._conn() as conn:
-            row = conn.execute(
+        row = self._with_retry(
+            lambda conn: conn.execute(
                 "SELECT key_id, mode, upstream, scan_user_messages, deep_analysis,"
                 " serv_shadow_hint, retention_opt_in, fail_open"
                 " FROM api_keys WHERE key_hash = %s AND revoked_at IS NULL",
                 (hash_key(raw_key),),
             ).fetchone()
+        )
         if row is None:
             return None
         cols = (
@@ -256,21 +298,19 @@ class NeonMetering:
         return raw, key_id
 
     def revoke_key(self, key_id: str) -> bool:
-        """Soft-revoke — historical usage rows stay attributable."""
-        with self._conn() as conn:
-            cur = conn.execute(
-                "UPDATE api_keys SET revoked_at = now() WHERE key_id = %s AND revoked_at IS NULL",
-                (key_id,),
-            )
-            return cur.rowcount > 0
+        """Soft-revoke — historical usage rows stay attributable.
+        Idempotent UPDATE, so a dead-connection retry is safe."""
+        sql = "UPDATE api_keys SET revoked_at = now() WHERE key_id = %s AND revoked_at IS NULL"
+        return self._with_retry(lambda conn: conn.execute(sql, (key_id,)).rowcount > 0)
 
     def list_keys(self) -> list[dict]:
         """Key-management page rows: never hashes, never raw keys."""
-        with self._conn() as conn:
-            rows = conn.execute(
+        rows = self._with_retry(
+            lambda conn: conn.execute(
                 "SELECT key_id, key_prefix, label, mode, upstream, deep_analysis,"
                 " created_at, revoked_at FROM api_keys ORDER BY created_at DESC"
             ).fetchall()
+        )
         cols = (
             "key_id",
             "key_prefix",
@@ -288,9 +328,10 @@ class NeonMetering:
     def rollup_day(self, day: date) -> int:
         """Aggregate one day's events into usage_daily. Idempotent — safe
         to re-run for backfill or catch-up. Returns groups written."""
-        with self._conn() as conn:
-            cur = conn.execute(
-                """
+        return self._with_retry(
+            lambda conn: (
+                conn.execute(
+                    """
                 INSERT INTO usage_daily
                     (key_id, day, route, action, requests, parts_scanned,
                      serv_input_tokens, serv_output_tokens, charge_usdc,
@@ -312,14 +353,15 @@ class NeonMetering:
                     latency_ms_elcaro_total   = EXCLUDED.latency_ms_elcaro_total,
                     latency_ms_upstream_total = EXCLUDED.latency_ms_upstream_total
                 """,
-                (day, day, day),
+                    (day, day, day),
+                ).rowcount
             )
-            return cur.rowcount
+        )
 
     def key_usage(self, key_id: str, *, days: int = 30) -> dict:
         """Per-key totals for the management page, from usage_daily."""
-        with self._conn() as conn:
-            row = conn.execute(
+        row = self._with_retry(
+            lambda conn: conn.execute(
                 "SELECT coalesce(sum(requests), 0), coalesce(sum(parts_scanned), 0),"
                 " coalesce(sum(serv_input_tokens), 0),"
                 " coalesce(sum(serv_output_tokens), 0),"
@@ -328,6 +370,7 @@ class NeonMetering:
                 " WHERE key_id = %s AND day >= current_date - %s",
                 (key_id, days),
             ).fetchone()
+        )
         reqs, parts, si, so, charge = row
         return {
             "key_id": key_id,
@@ -341,7 +384,8 @@ class NeonMetering:
 
     def public_metrics(self, *, days: int = 30) -> dict:
         """Aggregated, non-identifying numbers for public /metrics."""
-        with self._conn() as conn:
+
+        def _query(conn):
             row = conn.execute(
                 "SELECT coalesce(sum(requests), 0), coalesce(sum(parts_scanned), 0),"
                 " count(DISTINCT key_id)"
@@ -353,6 +397,9 @@ class NeonMetering:
                 " WHERE day >= current_date - %s GROUP BY action",
                 (days,),
             ).fetchall()
+            return row, actions
+
+        row, actions = self._with_retry(_query)
         reqs, parts, keys = row
         return {
             "days": days,

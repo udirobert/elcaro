@@ -40,6 +40,9 @@ class _FakeConn:
         return False
 
     def execute(self, sql, params=None):
+        if self._pool.fail_times > 0:
+            self._pool.fail_times -= 1
+            raise self._pool.fail_exc
         if self._pool.fail:
             raise RuntimeError("db down")
         self._pool.queries.append((sql, params))
@@ -48,15 +51,23 @@ class _FakeConn:
 
 
 class _FakePool:
-    """Stand-in for psycopg_pool.ConnectionPool — records (sql, params)."""
+    """Stand-in for psycopg_pool.ConnectionPool — records (sql, params).
+
+    ``fail_times`` raises ``fail_exc`` on the next N execute() calls
+    (staged post-construction, like next_rows); ``acquisitions`` counts
+    pool.connection() checkouts for retry assertions."""
 
     def __init__(self, next_rows=None, fail=False, rowcount=1):
         self.queries = []
         self.next_rows = list(next_rows or [])
         self.fail = fail
         self.rowcount = rowcount
+        self.fail_times = 0
+        self.fail_exc = RuntimeError("db down")
+        self.acquisitions = 0
 
     def connection(self):
+        self.acquisitions += 1
         return _FakeConn(self)
 
 
@@ -260,6 +271,99 @@ def test_public_metrics_no_identifiers():
     }
     sql = " ".join(q for q, _ in pool.queries)
     assert "GROUP BY action" in sql
+
+
+# ── Idle-reconnect retry (Neon autosuspend) ─────────────────────────────────
+#
+# Neon suspends idle compute (~5 min) and kills pooled connections with
+# AdminShutdown — an OperationalError subclass. Read/idempotent paths retry
+# once on a fresh connection; emit (INSERT — ambiguous-commit double-bill
+# risk) and issue_key (caller retries) deliberately do not.
+
+
+def _op_error():
+    import psycopg
+
+    return psycopg.OperationalError("terminating connection due to administrator command")
+
+
+def test_get_retries_once_on_operational_error():
+    row = ("elkid_1", "quarantine", "serv", False, True, "shadow-x", False, False)
+    m, pool = _make(next_rows=[[row]])
+    pool.fail_times, pool.fail_exc = 1, _op_error()
+    before = pool.acquisitions
+    cfg = m.get("elk_abc")
+    assert cfg.key_id == "elkid_1"
+    assert pool.acquisitions - before == 2  # dead conn + fresh conn
+
+
+def test_get_propagates_when_both_attempts_fail():
+    """Fail closed still holds — a second failure must propagate."""
+    m, pool = _make()
+    pool.fail_times, pool.fail_exc = 2, _op_error()
+    before = pool.acquisitions
+    with pytest.raises(Exception, match="terminating connection"):
+        m.get("elk_any")
+    assert pool.acquisitions - before == 2  # retried once, then gave up
+
+
+def test_list_keys_retries_once():
+    row = ("elkid_1", "elk_AbCdEf12", "bench", "quarantine", "serv", True, "ts", None)
+    m, pool = _make(next_rows=[[row]])
+    pool.fail_times, pool.fail_exc = 1, _op_error()
+    keys = m.list_keys()
+    assert keys[0]["key_id"] == "elkid_1"
+
+
+def test_revoke_key_retries_once():
+    m, pool = _make()
+    pool.fail_times, pool.fail_exc = 1, _op_error()
+    assert m.revoke_key("elkid_1") is True
+
+
+def test_emit_never_retries_and_never_raises():
+    """INSERT retry could double-bill after an ambiguous commit — one try."""
+    m, pool = _make()
+    pool.fail_times, pool.fail_exc = 5, _op_error()
+    before = pool.acquisitions
+    m.emit(_event())
+    assert pool.acquisitions - before == 1
+
+
+def test_issue_key_never_retries():
+    """Caller-visible error — the user can retry; no silent re-INSERT."""
+    m, pool = _make()
+    pool.fail_times, pool.fail_exc = 5, _op_error()
+    before = pool.acquisitions
+    with pytest.raises(Exception, match="terminating connection"):
+        m.issue_key()
+    assert pool.acquisitions - before == 1
+
+
+def test_default_pool_health_check_and_idle_recycling(monkeypatch):
+    """Default ConnectionPool must check connections on checkout and close
+    them before Neon's ~5min autosuspend kills them."""
+    import psycopg_pool
+
+    captured = {}
+
+    class _RecPool:
+        check_connection = staticmethod(lambda conn: None)
+
+        def __init__(self, dsn, **kw):
+            captured.update(kw)
+            captured["dsn"] = dsn
+            self._fake = _FakePool()
+
+        def connection(self):
+            return self._fake.connection()
+
+    monkeypatch.setattr(psycopg_pool, "ConnectionPool", _RecPool)
+    NeonMetering("postgresql://x", config_factory=_factory)
+    assert captured["check"] is _RecPool.check_connection
+    assert captured["max_idle"] == 240
+    assert captured["min_size"] == 1 and captured["max_size"] == 4
+    assert captured["open"] is True
 
 
 # ── env wiring ──────────────────────────────────────────────────────────────

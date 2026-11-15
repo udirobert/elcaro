@@ -103,7 +103,13 @@ The steps below remain the reference for re-creating it (or the next service):
    touching nothing else.
 4. **Env**: the gateway reads `ELCARO_SIGNING_KEY`, `ELCARO_METERING_DSN`,
    `ELCARO_GATEWAY_PRICE_USDC` and `ELCARO_UPSTREAM_<NAME>_URL` from the same
-   `~/elcaro/.env` the ecosystem file already loads.
+   `~/elcaro/.env` the ecosystem file already loads. Optional x402
+   pay-per-call (armed only when a payTo resolves *and* a server-held
+   upstream credential is set): `X402_PAYTO` or `TELEGRAPH_X402_KEY`,
+   `X402_SCAN_AMOUNT`, `X402_FACILITATOR_URL`,
+   `ELCARO_PAYPERCALL_UPSTREAM` / `ELCARO_PAYPERCALL_MODE`,
+   `ELCARO_UPSTREAM_KEY_<NAME>` (`SERV_API_KEY` is the fallback when the
+   upstream is `serv`).
 5. **Boot**: `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`,
    then `GATEWAY_URL=https://gateway.elcaro.trustfall.xyz bash deploy/verify-live.sh`
    — the gateway checks assert `/health` and that keyless/bogus-key chat
@@ -116,10 +122,36 @@ itself works under the fallback cert; `curl -k` 200s). Fix is
 `sudo docker restart coolify-proxy`; the retry succeeds on the next
 handshake. Ordering DNS → route avoids it.
 
-The `elcaro-gateway` PM2 app runs `gateway.app:app` — merged and live. For
-metered operation it additionally needs `metering.install_from_env()` at
-boot (PR: platform/gateway-metering) plus `ELCARO_METERING_DSN` or the
-existing `ELCARO_CANARY_DSN` in `.env`, and at least one issued key.
+The `elcaro-gateway` PM2 app runs `gateway.app:app` — merged, deployed, and
+**metered**: `metering.install_from_env()` runs at boot and picks up
+`ELCARO_CANARY_DSN` from `.env` (fallback for `ELCARO_METERING_DSN`). Verified
+live: an `elk_*` key minted in Neon authenticates through the public
+gateway — the stubs would 401 "Unknown Elcaro key" instead of reaching the
+upstream-credential check.
+
+Provisioning a key (raw key prints once — store it immediately):
+
+```bash
+cd ~/elcaro && .venv/bin/python - <<'EOF'
+import os
+env = {}
+for raw in open(".env"):
+    line = raw.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, v = line.split("=", 1); v = v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+            v = v[1:-1]
+        env[k] = v
+from metering import NeonMetering
+m = NeonMetering(env.get("ELCARO_METERING_DSN") or env["ELCARO_CANARY_DSN"])
+print(m.issue_key(label="…"))   # (raw_key, key_id)
+EOF
+```
+
+`/api/keys` on the site is the self-service equivalent — it reads the same
+Neon tables once `ELCARO_CANARY_DSN` (or `ELCARO_METERING_DSN`) is set in
+Netlify env (done 2026-11-15, alongside `X402_FACILITATOR_URL` for on-chain
+settlement and `X402_TEST_PAYER_KEY`, the funded Sepolia test wallet).
 
 ### Prerequisites
 

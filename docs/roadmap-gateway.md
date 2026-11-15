@@ -22,7 +22,7 @@ Three concrete gaps found during review:
 |---|---|
 | Paid path has no business model | `docs/serv-reasoning.md`: "Elcaro takes no markup on the pass-through" |
 | Production does not run what the docs advertise | `GET https://api.elcaro.trustfall.xyz/config` → `"serv_available": false`; `/scan?serv=1` silently falls back to rules |
-| Payments are verified, not settled | `app/web/src/app/api/x402/scan/route.ts`: without `X402_FACILITATOR_URL` settlement is `"verified_local"` |
+| ~~Payments are verified, not settled~~ resolved 2026-11-15 — facilitator live, Sepolia tx settled (see §0.3) | `app/web/src/app/api/x402/scan/route.ts`: without `X402_FACILITATOR_URL` settlement is `"verified_local"` |
 | No proof Elcaro adds value over provider-side guards | SERV ships `serv_prompt_guard` (docs.openserv.ai/serv-reasoning/tools); we have never measured Elcaro against or alongside it |
 | Local test env broken | `pytest` fails: `pydantic_core` is arm64, interpreter is x86_64 |
 
@@ -97,6 +97,9 @@ Everything later depends on the deployed system matching the docs.
   `/metrics`, not as success.
 - **Done:** one paid scan on Base Sepolia with a settlement tx hash in the
   response; one on Base mainnet.
+- **Result (2026-11-15):** Sepolia half met — real external payment settled
+  on-chain, tx `0x0016c4…83e5` (block 59299949), `settlement: "onchain"` in
+  the response. Mainnet half open: needs funded mainnet USDC on the payer.
 
 ### 0.4 Clean working tree
 - The tree carries ~hundreds of modified `lexsi-eval/results-naive/**` JSON
@@ -184,20 +187,6 @@ hashes and the decision rule before any main-run trial.
 - detect-secrets now has a value-scoped exclusion for `chatcmpl-…`
   completion ids, so benchmark transcripts can be committed.
 
-### 1.6 Result (2026-11-15): Outcome C
-900 trials from the tagged `prereg-v1` tree; details in
-`lexsi-eval/RESULTS-phase1.md`.
-- **Held-out:** `gateway_warn` cut compromised attack trials from 15 to 5
-  against `serv_guard_shadow`, but passes fell from 65 to 52, beyond the
-  tolerance of 3. That is **Outcome C**: no Gateway uplift copy.
-- **Exploratory, like for like against `serv_guard`:** the whole loss sits
-  on tasks Elcaro warned (48 → 35 passes). Elcaro's warning prefix triggers
-  SERV's Prompt Guard (guard blocks 6 → 18).
-- **Quarantine** deletes whole retrieved inboxes (18 of 108 pass).
-- **Next:** test three Gateway changes on a **new** held-out set (H is now
-  in-sample for these fixes): skip `serv_prompt_guard` on parts Elcaro
-  already handled, quarantine per segment, and rewrite the warn prefix.
-
 ### 1.5 Decision rule
 Defined exactly in `PREREG.md` §8. It compares the strongest SERV-only arm
 (`serv_guard_shadow`) with the better gateway arm, **on the held-out set
@@ -220,6 +209,20 @@ the task needs, so compromise alone is not enough.
 `python3 selftest.py` OK; each arm reproducible via
 `python3 run_eval.py --presentation <arm> --model <id>`; `--regrade`
 re-scores offline.
+
+### 1.6 Result (2026-11-15): Outcome C
+900 trials from the tagged `prereg-v1` tree; details in
+`lexsi-eval/RESULTS-phase1.md`.
+- **Held-out:** `gateway_warn` cut compromised attack trials from 15 to 5
+  against `serv_guard_shadow`, but passes fell from 65 to 52, beyond the
+  tolerance of 3. That is **Outcome C**: no Gateway uplift copy.
+- **Exploratory, like for like against `serv_guard`:** the whole loss sits
+  on tasks Elcaro warned (48 → 35 passes). Elcaro's warning prefix triggers
+  SERV's Prompt Guard (guard blocks 6 → 18).
+- **Quarantine** deletes whole retrieved inboxes (18 of 108 pass).
+- **Next:** test three Gateway changes on a **new** held-out set (H is now
+  in-sample for these fixes): skip `serv_prompt_guard` on parts Elcaro
+  already handled, quarantine per segment, and rewrite the warn prefix.
 
 ---
 

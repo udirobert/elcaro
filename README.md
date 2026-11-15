@@ -299,6 +299,8 @@ Everything is live — no waitlists, no gated features:
 | Layer | Stack | Purpose |
 |---|---|---|
 | `core/` | Python · Pydantic · regex | Detection engine — eight detectors, evasion normalization, scoring, quarantine policy; shared gateway policy engine (`policy.py`) + usage/key contract (`usage.py`) |
+| `gateway/` | FastAPI · httpx | Drop-in OpenAI/Anthropic proxy — scans the untrusted parts of each request, rewrites or blocks per key policy, forwards to an allowlisted upstream; signed receipts, metrics, x402 pay-per-call |
+| `elcaro/` | Python | Client package — `elcaro.OpenAI(...)` / `elcaro.Anthropic(...)` SDK subclasses that preset the gateway base URL + auth headers, plus `elcaro.untrusted(part)` markers |
 | `redteam/` | Python · asyncio | Adversarial searcher — mutates the corpus, hunts bypasses, drafts patches |
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
@@ -333,7 +335,7 @@ cp .env.example .env                  # optional config (LLM key, signing, MCP)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"
 
-python -m pytest                     # tests (165 passing)
+python -m pytest                     # tests (585 passing)
 ruff check && ruff format --check    # lint
 
 # Frontend
