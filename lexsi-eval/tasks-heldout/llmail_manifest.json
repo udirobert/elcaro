@@ -1,0 +1,201 @@
+{
+  "dataset": "microsoft/llmail-inject-challenge",
+  "revision": "1063bdf01ec8762b812d5e06ee768a06faa5a6f7",
+  "raw_sha256": "a9207e1d893ccb74ca6f9cc5eecea433bc49c23a26bed88088afd385c7ab18b6",
+  "seed": 20261115,
+  "eligible_after_dedup": 220,
+  "tasks": [
+    {
+      "id": "L01",
+      "sha256": "d06f5035826f7491c92149389d49accca1dbe12b718fe21f0dbe28147cc48ce5",
+      "job_id": "dc080d44-77a0-4716-aaa4-d56ef047e2eb",
+      "level": "level1u",
+      "stratum": "all_defences",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L02",
+      "sha256": "f81e68ae7f26e9b1f57eb1711431a3952082c716b0dd365ecd4e2aa405941520",
+      "job_id": "0b7e3d68-449f-498d-8a31-645b5a00bc86",
+      "level": "level2u",
+      "stratum": "all_defences",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L03",
+      "sha256": "e62782d2f63ddb37cb18229d4621f22964f8a455f64b9f9cee289d7da967bced",
+      "job_id": "e83e414d-78c7-4003-be06-f0db0d430b1c",
+      "level": "level1u",
+      "stratum": "all_defences",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L04",
+      "sha256": "758513d460b0039c1d7012ad52b275a0d2a7fca1b33a710978c2a181cc3dba83",
+      "job_id": "9274d779-ccd8-4c24-b8c2-2b07e431b732",
+      "level": "level1t",
+      "stratum": "llm_judge",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L05",
+      "sha256": "125a87b00eedf80435574711ec69dea2245467e813c85e36806d898eccfd2c7a",
+      "job_id": "663c6cb9-8921-49e0-8f07-84d39ed90f49",
+      "level": "level2s",
+      "stratum": "llm_judge",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L06",
+      "sha256": "9fbde4428effdbe465d540afe16a3c275f5661e8fede72c65602bb08b7f70b34",
+      "job_id": "d00d6819-a10e-487a-8522-f3978b36e9bf",
+      "level": "level1s",
+      "stratum": "llm_judge",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L07",
+      "sha256": "3589ced178a3ec5f8f57bfc63a8ea8c2ed69828f06068b59c97014b906651902",
+      "job_id": "28d4fd54-08fd-4362-9859-d2ae70d543a2",
+      "level": "level1k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L08",
+      "sha256": "58c6c11f1792e6a2e88f59c9beb6823496577bfb57686589bbc880f0ed8b76ff",
+      "job_id": "b1571cf7-5292-4404-ad7d-e1fb99a195c1",
+      "level": "level2k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L09",
+      "sha256": "5e0212652f8ea4596b22320910b0709053ca25e04a5a2b8f974b9050df1fa9e5",
+      "job_id": "b4691b80-cc11-41eb-bf34-6c9f148d1216",
+      "level": "level1k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L10",
+      "sha256": "f5e5e8fedad81becd5754d2bddb1a2ede41d02d2c9fde553f1b8ffbd5f9640f5",
+      "job_id": "7120938e-8b0c-44a4-b98e-2bad1ccaab56",
+      "level": "level2k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L11",
+      "sha256": "1577e826bfca33f439915ec6ec151f024af714a5fa085441244d19fa5539dcf5",
+      "job_id": "55254613-6e45-4be1-a946-8ba270a6d55f",
+      "level": "level1k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L12",
+      "sha256": "6a5121812a188201039cd43fb675ad8ea028c55a06d7f0123c196fab3e096238",
+      "job_id": "c15fe623-4649-4ad1-9c2f-e973093eb520",
+      "level": "level2k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L13",
+      "sha256": "9d5f1bfc2c1ac25a81ae6b5a46ba602f157863b28c19b39cbb0c6a6e19b64d08",
+      "job_id": "e77c502d-2367-4416-b1f6-da5a5a072e2c",
+      "level": "level1q",
+      "stratum": "tasktracker",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L14",
+      "sha256": "0f2f98a435ee92575e54a73b7d06d174059e7f367d623b0b385b172d548b9668",
+      "job_id": "d97ce653-2ebf-48cf-bbfa-5f0ac543d4fd",
+      "level": "level2o",
+      "stratum": "tasktracker",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L15",
+      "sha256": "503f9245d93feb6414b243f9dcac0a850737c84c05a4e08111cb440ba948214e",
+      "job_id": "9568c85c-da2e-46e0-8dd9-0f9b41a7bcba",
+      "level": "level1o",
+      "stratum": "tasktracker",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L16",
+      "sha256": "349f12bcf6a727185f67e553343598d178e1c0ae0b14daa28836147446856cc1",
+      "job_id": "6de2a377-5861-471a-bbcb-350849e043ce",
+      "level": "level2n",
+      "stratum": "tasktracker",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L17",
+      "sha256": "ac6444d1a5b7d1e469149e2f0a41b9aed53cbb4f3ce15b5e8d5aa8fee70714a6",
+      "job_id": "006cda71-804d-485d-a216-e7168ca24662",
+      "level": "level1q",
+      "stratum": "tasktracker",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L18",
+      "sha256": "469942f838ff50452cf7d6c48512580c00842542bf9ec5990569e473cdc90ad9",
+      "job_id": "19e51942-d525-4eff-b291-a4e9581e9017",
+      "level": "level2n",
+      "stratum": "tasktracker",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L19",
+      "sha256": "2ac45c57603bf8553a75e2eb339ed00c411fe8a658b81d3d5b0be1c13f8a6900",
+      "job_id": "57d434d1-3de1-443d-9209-e5bcdfd1d5ff",
+      "level": "level1k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L20",
+      "sha256": "cdb9996e70c118c80dec965716dad26c789930841011ee8b027443242653c9e0",
+      "job_id": "b6756ce8-437e-41e8-be39-d1a292dc64ac",
+      "level": "level1n",
+      "stratum": "tasktracker",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L21",
+      "sha256": "4a3d23099d40b1b58ba4a9e68cb26e355c3f964d39ad4925175a70245405578a",
+      "job_id": "c25d837c-6618-483b-8a91-dc9a64232e6c",
+      "level": "level2k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L22",
+      "sha256": "c75fd9f67c200eb0b0d5711e9f63fd6a14e4296f2b75504a30a511432f0e53ae",
+      "job_id": "23305b09-4a9d-4f19-a71d-93ccd0f7d029",
+      "level": "level2o",
+      "stratum": "tasktracker",
+      "scenario": "scenario_2"
+    },
+    {
+      "id": "L23",
+      "sha256": "f393e948ebc0b8fecd8c849d1491e7568bbeeb7fed51a276ecfb9d4aff57e556",
+      "job_id": "0c6f5546-05ce-48cd-ae46-27a177725553",
+      "level": "level1k",
+      "stratum": "prompt_shield_v2",
+      "scenario": "scenario_1"
+    },
+    {
+      "id": "L24",
+      "sha256": "07097e661beb5dd814bdc6bf54a9ff58f7ff198044e9dd3112f9378018c95977",
+      "job_id": "22864fab-cdca-4580-b5ac-cae56a2bacac",
+      "level": "level1m",
+      "stratum": "tasktracker",
+      "scenario": "scenario_1"
+    }
+  ]
+}
