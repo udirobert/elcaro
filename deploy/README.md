@@ -122,10 +122,36 @@ itself works under the fallback cert; `curl -k` 200s). Fix is
 `sudo docker restart coolify-proxy`; the retry succeeds on the next
 handshake. Ordering DNS → route avoids it.
 
-The `elcaro-gateway` PM2 app runs `gateway.app:app` — merged and live. For
-metered operation it additionally needs `metering.install_from_env()` at
-boot (PR: platform/gateway-metering) plus `ELCARO_METERING_DSN` or the
-existing `ELCARO_CANARY_DSN` in `.env`, and at least one issued key.
+The `elcaro-gateway` PM2 app runs `gateway.app:app` — merged, deployed, and
+**metered**: `metering.install_from_env()` runs at boot and picks up
+`ELCARO_CANARY_DSN` from `.env` (fallback for `ELCARO_METERING_DSN`). Verified
+live: an `elk_*` key minted in Neon authenticates through the public
+gateway — the stubs would 401 "Unknown Elcaro key" instead of reaching the
+upstream-credential check.
+
+Provisioning a key (raw key prints once — store it immediately):
+
+```bash
+cd ~/elcaro && .venv/bin/python - <<'EOF'
+import os
+env = {}
+for raw in open(".env"):
+    line = raw.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, v = line.split("=", 1); v = v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+            v = v[1:-1]
+        env[k] = v
+from metering import NeonMetering
+m = NeonMetering(env.get("ELCARO_METERING_DSN") or env["ELCARO_CANARY_DSN"])
+print(m.issue_key(label="…"))   # (raw_key, key_id)
+EOF
+```
+
+`/api/keys` on the site is the self-service equivalent — it reads the same
+Neon tables once `ELCARO_CANARY_DSN` (or `ELCARO_METERING_DSN`) is set in
+Netlify env (done 2026-11-15, alongside `X402_FACILITATOR_URL` for on-chain
+settlement and `X402_TEST_PAYER_KEY`, the funded Sepolia test wallet).
 
 ### Prerequisites
 
