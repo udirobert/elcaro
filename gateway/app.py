@@ -318,6 +318,14 @@ def create_app(
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI):
+        # Dev C's Neon C2 store (contract C2): installs itself as the
+        # process-wide usage sink + key store when ELCARO_METERING_DSN (or
+        # ELCARO_CANARY_DSN) is set. No DSN → keep the in-memory stubs.
+        # A bad DSN raises here and fails the boot — a misconfigured paid
+        # lane must never silently run unmetered.
+        from metering import install_from_env
+
+        install_from_env()
         yield
         if _client is not None:
             await _client.aclose()
