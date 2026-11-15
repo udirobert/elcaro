@@ -91,7 +91,7 @@ export function PricingTiers({ elevatedServ = false }: PricingTiersProps) {
           <FeatureRow label="Setup" value="Set SERV_API_KEY + SERV_ENABLED=1" />
           <p className="mt-4 pt-4 border-t border-border text-[11px] text-ink-faint leading-relaxed">
             Pays SERV directly (gpt-5.4-mini, the cheapest model in their
-            catalog). No Elcaro markup — every scan returns
+            catalog). Every scan returns
             <code className="font-mono bg-surface border border-border px-1 rounded text-xs mx-1">
               serv_cost.total_usdc
             </code>
