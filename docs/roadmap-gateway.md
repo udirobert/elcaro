@@ -22,7 +22,7 @@ Three concrete gaps found during review:
 |---|---|
 | Paid path has no business model | `docs/serv-reasoning.md`: "Elcaro takes no markup on the pass-through" |
 | Production does not run what the docs advertise | `GET https://api.elcaro.trustfall.xyz/config` → `"serv_available": false`; `/scan?serv=1` silently falls back to rules |
-| Payments are verified, not settled | `app/web/src/app/api/x402/scan/route.ts`: without `X402_FACILITATOR_URL` settlement is `"verified_local"` |
+| ~~Payments are verified, not settled~~ resolved 2026-11-15 — facilitator live, Sepolia tx settled (see §0.3) | `app/web/src/app/api/x402/scan/route.ts`: without `X402_FACILITATOR_URL` settlement is `"verified_local"` |
 | No proof Elcaro adds value over provider-side guards | SERV ships `serv_prompt_guard` (docs.openserv.ai/serv-reasoning/tools); we have never measured Elcaro against or alongside it |
 | Local test env broken | `pytest` fails: `pydantic_core` is arm64, interpreter is x86_64 |
 
@@ -97,6 +97,9 @@ Everything later depends on the deployed system matching the docs.
   `/metrics`, not as success.
 - **Done:** one paid scan on Base Sepolia with a settlement tx hash in the
   response; one on Base mainnet.
+- **Result (2026-11-15):** Sepolia half met — real external payment settled
+  on-chain, tx `0x0016c4…83e5` (block 59299949), `settlement: "onchain"` in
+  the response. Mainnet half open: needs funded mainnet USDC on the payer.
 
 ### 0.4 Clean working tree
 - The tree carries ~hundreds of modified `lexsi-eval/results-naive/**` JSON

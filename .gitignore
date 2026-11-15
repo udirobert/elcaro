@@ -84,3 +84,6 @@ uv.lock
 redteam/runs/
 data/
 demo-serv/clips/
+
+# Local Netlify folder
+.netlify

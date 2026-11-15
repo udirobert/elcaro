@@ -7,6 +7,14 @@
 > web route present the same payment surface.
 >
 > Dev C owns this file and `core/x402.py`. Dev B calls it from `gateway/`.
+>
+> **Production status (2026-11-15):** live and settling on
+> `https://elcaro.trustfall.xyz/api/x402/scan`. `X402_FACILITATOR_URL` points
+> at PayAI; a real external payment verified + settled on Base Sepolia —
+> tx `0x0016c40353bebbf374c2aaf12294cfc4d818a6a7cca65979263ec24ab65983e5`
+> (block 59299949, 10,000 atomic USDC → `0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40`).
+> The Gateway's own pay-per-call lane is wired (`gateway/app.py`) but unarmed
+> until `X402_PAYTO` + `X402_FACILITATOR_URL` reach the VPS `.env`.
 
 ## Wire protocol (x402 v2, `exact` scheme)
 
