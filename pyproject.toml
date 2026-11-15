@@ -51,7 +51,7 @@ all = [
 ]
 
 [tool.setuptools]
-packages = ["core", "core.detectors", "redteam"]
+packages = ["core", "core.detectors", "redteam", "metering"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
