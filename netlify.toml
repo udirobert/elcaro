@@ -25,6 +25,15 @@
 #                             JWT auth this route does not implement — use a
 #                             keyless facilitator (e.g. facilitator.payai.network)
 #                             or add CDP auth before pointing mainnet at CDP.
+#                             Currently set: https://facilitator.payai.network
+#                             (Sepolia settlement verified 2026-11-15).
+#   X402_TEST_PAYER_KEY       funded Base Sepolia test wallet used to exercise
+#                             the paid lane end-to-end (secret; not read by code).
+#
+# Metering / self-service keys (/api/keys, /api/metrics):
+#   ELCARO_METERING_DSN       Neon Postgres DSN for api_keys + usage_events
+#   ELCARO_CANARY_DSN         fallback DSN — same DB the canary uses (currently
+#                             set; metering + /api/keys verified 2026-11-15).
 #
 # NOTE: `base` changes Netlify's working directory, so `command` and `publish`
 # are resolved RELATIVE TO `base` — do not prefix them with "app/web" again.
