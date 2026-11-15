@@ -1,0 +1,28 @@
+{
+  "x402Version": 2,
+  "scheme": "exact",
+  "network": "eip155:8453",
+  "accepted": {
+    "scheme": "exact",
+    "network": "eip155:8453",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "amount": "10000",
+    "payTo": "0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40",
+    "maxTimeoutSeconds": 300,
+    "extra": {
+      "name": "USD Coin",
+      "version": "2"
+    }
+  },
+  "payload": {
+    "signature": "0x7ea69274f2eb72ae009b5c7405f82d61e784fd3a7bc4ac5ca2c4bf11305eecef406b9f28d88d941df9e68d493a1b9d3f6e0d71e43e1714d33e7e6c0563e3e3b41c",
+    "authorization": {
+      "from": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "to": "0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40",
+      "value": "10000",
+      "validAfter": "0",
+      "validBefore": "4102444800",
+      "nonce": "0x0000000000000000000000000000000000000000000000000000000000000002"
+    }
+  }
+}

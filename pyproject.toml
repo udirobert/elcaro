@@ -33,6 +33,11 @@ sandbox = [
     # redteam/tenki_exec.py no-ops without TENKI_API_KEY + this package).
     "tenki>=1.0.0",
 ]
+gateway = [
+    # EIP-712 payment-signature verification for the x402 pay-per-call path
+    # (core/x402.py). Lazy-imported — the free /scan path never needs it.
+    "eth-account>=0.13.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
@@ -42,7 +47,7 @@ dev = [
     "detect-secrets>=1.5.0",
 ]
 all = [
-    "elcaro[miner,app,mcp,dev]",
+    "elcaro[miner,app,mcp,gateway,dev]",
 ]
 
 [tool.setuptools]
