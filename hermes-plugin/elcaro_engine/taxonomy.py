@@ -263,7 +263,7 @@ class IpiDetectionEngine:
         weighted_score = min(raw_score * weight, 1.0)
 
         # Determine flagged technique classes
-        flagged_classes = list({ind.technique_class for ind in all_indicators})
+        flagged_classes = list(dict.fromkeys(ind.technique_class for ind in all_indicators))
 
         # Apply risk multipliers
         weighted_score = self._apply_multipliers(weighted_score, flagged_classes, all_indicators)
@@ -279,7 +279,7 @@ class IpiDetectionEngine:
                 rescan.extend(detector.detect(scan_content, CANONICAL_UNTRUSTED_TYPE))
             if rescan:
                 rescan.extend(normalization_indicators(norm.applied))
-                rescan_classes = list({ind.technique_class for ind in rescan})
+                rescan_classes = list(dict.fromkeys(ind.technique_class for ind in rescan))
                 rescan_score = self._apply_multipliers(
                     min(self._compute_score(rescan), 1.0),
                     rescan_classes,
@@ -291,7 +291,9 @@ class IpiDetectionEngine:
                     all_indicators.extend(
                         i for i in rescan if (i.technique_name, i.evidence.matched_text) not in seen
                     )
-                    flagged_classes = list({ind.technique_class for ind in all_indicators})
+                    flagged_classes = list(
+                        dict.fromkeys(ind.technique_class for ind in all_indicators)
+                    )
 
         # Determine risk level
         risk_level = self._risk_level(weighted_score)
