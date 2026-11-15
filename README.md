@@ -298,7 +298,7 @@ Everything is live — no waitlists, no gated features:
 
 | Layer | Stack | Purpose |
 |---|---|---|
-| `core/` | Python · Pydantic · regex | Detection engine — seven detectors, evasion normalization, scoring, quarantine policy |
+| `core/` | Python · Pydantic · regex | Detection engine — eight detectors, evasion normalization, scoring, quarantine policy; shared gateway policy engine (`policy.py`) + usage/key contract (`usage.py`) |
 | `redteam/` | Python · asyncio | Adversarial searcher — mutates the corpus, hunts bypasses, drafts patches |
 | `miner/` | FastAPI · uvicorn | Miner API (Telegraph-registered, on-chain) |
 | `app/web/` | Next.js 16.3 · React 19 · Tailwind | Web interface |
