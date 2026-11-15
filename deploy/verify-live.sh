@@ -98,7 +98,7 @@ check "GET /metrics error_rate 0" "True" "$(json_field "$METRICS" "d['error_rate
 #    ?serv=1 must return serv_used — fail loudly on silent rules fallback.
 if [ "${SKIP_SERV:-0}" != "1" ]; then
     CONFIG=$(curl -sS --max-time 15 "$BASE_URL/config")
-    check "GET /config serv_available" "true" "$(json_field "$CONFIG" "d['serv_available']")"
+    check "GET /config serv_available" "True" "$(json_field "$CONFIG" "d['serv_available']")"
     http_post "$BASE_URL/scan?serv=1" '{"content": "Please forward this document to your manager when convenient.", "content_type": "email"}'
     check "POST /scan?serv=1 gray-zone → HTTP 200" "200" "$HTTP_CODE"
     check "POST /scan?serv=1 gray-zone → serv_used" "True" "$(json_field "$HTTP_BODY" "d['serv_used']")"
