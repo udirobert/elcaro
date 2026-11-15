@@ -99,13 +99,14 @@ ARM_TOOLS = {
     "serv": [],
     "serv_guard": [SERV_PROMPT_GUARD],
     "serv_guard_shadow": [SERV_PROMPT_GUARD, SERV_SHADOW_AGENT],
-    # Interim gateway arms: Elcaro applied in-process via core/, then the
-    # request goes to SERV with the guard (what the Gateway forwards). To be
-    # switched to core.policy.apply_policy once that contract lands.
+    # Gateway arms: core.policy.apply_policy (contract C1, the code the
+    # Gateway runs) rewrites the untrusted parts, then the request goes to
+    # SERV with the guard, as the Gateway forwards it.
     "gateway_warn": [SERV_PROMPT_GUARD],
     "gateway_quarantine": [SERV_PROMPT_GUARD],
 }
 PRESENTATIONS = ["labeled", "naive", "wrapped", *ARM_TOOLS]
+GATEWAY_MODES = {"gateway_warn": "warn", "gateway_quarantine": "quarantine"}
 SERV_HOST = "openserv.ai"
 
 _ELCARO_ENGINE = None
@@ -117,7 +118,11 @@ def _elcaro_engine():
         sys.path.insert(0, str(HERE.parent))  # repo root for core/
         from core.taxonomy import IpiDetectionEngine
 
-        _ELCARO_ENGINE = IpiDetectionEngine()
+        # No canary registry: quarantine notices otherwise carry a fresh
+        # random Ref token per call (non-reproducible prompts) and, with
+        # ELCARO_CANARY_DSN set, would write benchmark tokens to the durable
+        # registry. Detection and scores are unaffected (PREREG §3).
+        _ELCARO_ENGINE = IpiDetectionEngine(canary_registry=None)
     return _ELCARO_ENGINE
 
 
@@ -145,33 +150,66 @@ def _scan_wrap(task, raw):
     return warning + raw
 
 
-def _scan_quarantine(task, raw):
-    """Elcaro quarantine-mode: replace risky content with the quarantine notice."""
-    engine = _elcaro_engine()
-    from core.quarantine import quarantine_decision
-    from core.schemas import ContentType, ScanRequest
+def _ctype(task):
+    _elcaro_engine()  # sets sys.path for core/ imports
+    from core.schemas import ContentType
 
     try:
-        ctype = ContentType(task.get("content_type", "document"))
+        return ContentType(task.get("content_type", "document")).value
     except ValueError:
-        ctype = ContentType.DOCUMENT
-    resp = engine.scan(ScanRequest(content=raw, content_type=ctype))
-    return quarantine_decision(
-        raw,
-        resp.risk_score,
-        resp.risk_level,
-        resp.flagged_techniques,
-        ctype,
-        threshold=ELCARO_QUARANTINE_THRESHOLD,
-    ).safe_content
+        return ContentType.DOCUMENT.value
+
+
+def _gateway_build(task, presentation):
+    """Naive-shaped messages rewritten by core.policy.apply_policy.
+
+    Untrusted content goes in as a marked content part (the user's own
+    prefix/suffix are separate, unmarked parts), so only retrieved content is
+    scanned and only it can be warned or quarantined. Parts are joined back
+    with the NAIVE_TEMPLATE separators, so an untouched request is
+    byte-identical to the naive arm. Returns (messages, part_summaries).
+    """
+    engine = _elcaro_engine()
+    from core.policy import Mode, Provider, apply_policy
+
+    mark = {"untrusted": True, "content_type": _ctype(task)}
+    msgs = []
+    system = task.get("system_naive") or task.get("system")
+    if system:
+        msgs.append({"role": "system", "content": system})
+    for turn in task.get("prior_turns", []):
+        m = {"role": turn["role"], "content": turn["content"]}
+        if turn.get("kind") == "untrusted":
+            m["elcaro"] = dict(mark)
+        msgs.append(m)
+    msgs.append(
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": task["user_prefix"]},
+                {"type": "text", "text": task["untrusted_content"], "elcaro": dict(mark)},
+                {"type": "text", "text": task.get("user_suffix", "Respond to the user's request.")},
+            ],
+        }
+    )
+    result = apply_policy(msgs, Provider.OPENAI, Mode(GATEWAY_MODES[presentation]), engine=engine)
+    out = []
+    for m in result.messages:
+        content = m["content"]
+        if isinstance(content, list):
+            content = "\n\n".join(b["text"] for b in content)
+        out.append({"role": m["role"], "content": content})
+    parts = [
+        {"path": v.path, "action": v.action, "risk_score": round(v.scan.risk_score, 4)}
+        for v in result.parts
+    ]
+    return out, parts
 
 
 def _format_content(task, raw, presentation):
     """Wrap raw untrusted content per the presentation condition."""
-    if presentation in ("wrapped", "gateway_warn"):
+    if presentation == "wrapped":
         return _scan_wrap(task, raw)
-    if presentation == "gateway_quarantine":
-        return _scan_quarantine(task, raw)
     if presentation != "labeled":
         return raw
     return UNTRUSTED_TEMPLATE.format(
@@ -184,6 +222,8 @@ def _format_content(task, raw, presentation):
 
 
 def build_messages(task, presentation="labeled"):
+    if presentation in GATEWAY_MODES:
+        return _gateway_build(task, presentation)[0]
     main_content = task["untrusted_content"]
     if presentation != "labeled":
         template = NAIVE_TEMPLATE
@@ -343,6 +383,8 @@ def run_one(
         "extra_body": extra_body,
         "ts": time.time(),
     }
+    if presentation in GATEWAY_MODES:
+        rec["elcaro_parts"] = _gateway_build(task, presentation)[1]
     try:
         text, raw = chat(
             base_url,
