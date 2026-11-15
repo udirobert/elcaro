@@ -8,6 +8,11 @@ repos:
         args:
           - --baseline
           - .secrets.baseline
+          # OpenAI-style completion ids in lexsi-eval transcripts trip the
+          # Base64 entropy check. Value-scoped: real keys in those files are
+          # still caught (verified with a planted AWS key).
+          - --exclude-secrets
+          - '^chatcmpl-[A-Za-z0-9]{20,40}$'
         exclude: |
           (?x)^(
             \.secrets\.baseline|
