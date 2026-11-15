@@ -103,7 +103,13 @@ The steps below remain the reference for re-creating it (or the next service):
    touching nothing else.
 4. **Env**: the gateway reads `ELCARO_SIGNING_KEY`, `ELCARO_METERING_DSN`,
    `ELCARO_GATEWAY_PRICE_USDC` and `ELCARO_UPSTREAM_<NAME>_URL` from the same
-   `~/elcaro/.env` the ecosystem file already loads.
+   `~/elcaro/.env` the ecosystem file already loads. Optional x402
+   pay-per-call (armed only when a payTo resolves *and* a server-held
+   upstream credential is set): `X402_PAYTO` or `TELEGRAPH_X402_KEY`,
+   `X402_SCAN_AMOUNT`, `X402_FACILITATOR_URL`,
+   `ELCARO_PAYPERCALL_UPSTREAM` / `ELCARO_PAYPERCALL_MODE`,
+   `ELCARO_UPSTREAM_KEY_<NAME>` (`SERV_API_KEY` is the fallback when the
+   upstream is `serv`).
 5. **Boot**: `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`,
    then `GATEWAY_URL=https://gateway.elcaro.trustfall.xyz bash deploy/verify-live.sh`
    — the gateway checks assert `/health` and that keyless/bogus-key chat
