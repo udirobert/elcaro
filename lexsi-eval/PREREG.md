@@ -236,6 +236,13 @@ Checked on S (2026-11-15):
   and it is the intended Gateway behaviour, so it is what we measure.
 - Output is identical across `PYTHONHASHSEED` values.
 - The other arms are unchanged.
+- **Parity with production:** `check_gateway_parity.py` sent the same
+  marked requests for all 24 S tasks, in both modes, to the live Gateway
+  (`gateway.elcaro.trustfall.xyz`, main at `169b67d`). All 48 of 48 pairs
+  matched the in-process C1 across 50 parts (26 warned, 24 quarantined):
+  same content hash, risk score, action, quarantine decision and technique
+  set, and the `x-elcaro-action` header agreed. Report:
+  `gateway-parity.json`. H was not sent.
 
 ## 6. Pilot (plumbing only, discarded)
 

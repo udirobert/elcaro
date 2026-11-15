@@ -1,0 +1,682 @@
+{
+  "gateway": "https://gateway.elcaro.trustfall.xyz",
+  "checked": 48,
+  "rows": [
+    {
+      "task": "T01",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.91
+      ],
+      "note": ""
+    },
+    {
+      "task": "T01",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.91
+      ],
+      "note": ""
+    },
+    {
+      "task": "T02",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.78
+      ],
+      "note": ""
+    },
+    {
+      "task": "T02",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.78
+      ],
+      "note": ""
+    },
+    {
+      "task": "T03",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.728
+      ],
+      "note": ""
+    },
+    {
+      "task": "T03",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.728
+      ],
+      "note": ""
+    },
+    {
+      "task": "T04",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.651
+      ],
+      "note": ""
+    },
+    {
+      "task": "T04",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.651
+      ],
+      "note": ""
+    },
+    {
+      "task": "T05",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.73
+      ],
+      "note": ""
+    },
+    {
+      "task": "T05",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.73
+      ],
+      "note": ""
+    },
+    {
+      "task": "T06",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.92
+      ],
+      "note": ""
+    },
+    {
+      "task": "T06",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.92
+      ],
+      "note": ""
+    },
+    {
+      "task": "T07",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T07",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T08",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.511
+      ],
+      "note": ""
+    },
+    {
+      "task": "T08",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.511
+      ],
+      "note": ""
+    },
+    {
+      "task": "T09",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T09",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T10",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.81
+      ],
+      "note": ""
+    },
+    {
+      "task": "T10",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.81
+      ],
+      "note": ""
+    },
+    {
+      "task": "T11",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.36
+      ],
+      "note": ""
+    },
+    {
+      "task": "T11",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.36
+      ],
+      "note": ""
+    },
+    {
+      "task": "T12",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.728
+      ],
+      "note": ""
+    },
+    {
+      "task": "T12",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.728
+      ],
+      "note": ""
+    },
+    {
+      "task": "T13",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.73
+      ],
+      "note": ""
+    },
+    {
+      "task": "T13",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.73
+      ],
+      "note": ""
+    },
+    {
+      "task": "T14",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.664
+      ],
+      "note": ""
+    },
+    {
+      "task": "T14",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.664
+      ],
+      "note": ""
+    },
+    {
+      "task": "T15",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.584
+      ],
+      "note": ""
+    },
+    {
+      "task": "T15",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.584
+      ],
+      "note": ""
+    },
+    {
+      "task": "T16",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.624
+      ],
+      "note": ""
+    },
+    {
+      "task": "T16",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.624
+      ],
+      "note": ""
+    },
+    {
+      "task": "T17",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.584
+      ],
+      "note": ""
+    },
+    {
+      "task": "T17",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.584
+      ],
+      "note": ""
+    },
+    {
+      "task": "T18",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T18",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T19",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T19",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T20",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T20",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T21",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T21",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        1.0
+      ],
+      "note": ""
+    },
+    {
+      "task": "T22",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 2,
+      "local_actions": [
+        "warned",
+        "warned"
+      ],
+      "local_scores": [
+        0.624,
+        0.744
+      ],
+      "note": ""
+    },
+    {
+      "task": "T22",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 2,
+      "local_actions": [
+        "quarantined",
+        "quarantined"
+      ],
+      "local_scores": [
+        0.624,
+        0.744
+      ],
+      "note": ""
+    },
+    {
+      "task": "T23",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T23",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.86
+      ],
+      "note": ""
+    },
+    {
+      "task": "T24",
+      "mode": "warn",
+      "match": true,
+      "gateway_action": "warned",
+      "parts": 1,
+      "local_actions": [
+        "warned"
+      ],
+      "local_scores": [
+        0.78
+      ],
+      "note": ""
+    },
+    {
+      "task": "T24",
+      "mode": "quarantine",
+      "match": true,
+      "gateway_action": "quarantined",
+      "parts": 1,
+      "local_actions": [
+        "quarantined"
+      ],
+      "local_scores": [
+        0.78
+      ],
+      "note": ""
+    }
+  ]
+}

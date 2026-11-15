@@ -111,3 +111,9 @@ uv run --project .. python run_eval.py --presentation gateway_quarantine --model
 - Trials that ended in a transport error are excluded from rates and
   reported as `errors_excluded`.
 - SERV guard blocks are counted as `guard_blocked`.
+
+**Parity with the live Gateway.** `check_gateway_parity.py` sends the gateway
+arms' marked requests for the in-sample tasks to the deployed Gateway and
+checks that its per-part verdicts equal the in-process C1. It needs
+`ELCARO_GATEWAY_KEY` and `SERV_API_KEY`, and writes `gateway-parity.json`.
+It never sends held-out tasks.

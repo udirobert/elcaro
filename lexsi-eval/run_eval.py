@@ -172,6 +172,24 @@ def _gateway_build(task, presentation):
     engine = _elcaro_engine()
     from core.policy import Mode, Provider, apply_policy
 
+    msgs = gateway_request_messages(task)
+    result = apply_policy(msgs, Provider.OPENAI, Mode(GATEWAY_MODES[presentation]), engine=engine)
+    out = []
+    for m in result.messages:
+        content = m["content"]
+        if isinstance(content, list):
+            content = "\n\n".join(b["text"] for b in content)
+        out.append({"role": m["role"], "content": content})
+    parts = [
+        {"path": v.path, "action": v.action, "risk_score": round(v.scan.risk_score, 4)}
+        for v in result.parts
+    ]
+    return out, parts
+
+
+def gateway_request_messages(task):
+    """The naive request with retrieved content as marked elcaro parts —
+    exactly what a Gateway customer sends (also used by check_gateway_parity.py)."""
     mark = {"untrusted": True, "content_type": _ctype(task)}
     msgs = []
     system = task.get("system_naive") or task.get("system")
@@ -192,18 +210,7 @@ def _gateway_build(task, presentation):
             ],
         }
     )
-    result = apply_policy(msgs, Provider.OPENAI, Mode(GATEWAY_MODES[presentation]), engine=engine)
-    out = []
-    for m in result.messages:
-        content = m["content"]
-        if isinstance(content, list):
-            content = "\n\n".join(b["text"] for b in content)
-        out.append({"role": m["role"], "content": content})
-    parts = [
-        {"path": v.path, "action": v.action, "risk_score": round(v.scan.risk_score, 4)}
-        for v in result.parts
-    ]
-    return out, parts
+    return msgs
 
 
 def _format_content(task, raw, presentation):
