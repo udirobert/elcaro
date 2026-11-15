@@ -39,7 +39,7 @@ fi
 
 # 3. Dependencies
 echo "→ Installing dependencies..."
-.venv/bin/pip install -e ".[miner]" --quiet
+.venv/bin/pip install -e ".[miner,gateway]" --quiet
 
 # 4. Tests gate the restart — abort BEFORE touching the running process
 echo "→ Running test suite (must pass before restart)..."
