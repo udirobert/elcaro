@@ -82,11 +82,13 @@ Three pieces, mirroring how the other host-run apps on the box are wired:
 Traefik then requests the Let's Encrypt cert automatically over HTTP-01 and
 stores it in the shared `acme.json`.
 
-### Exposing the Gateway (Phase 2)
+### Exposing the Gateway (Phase 2) — LIVE 2026-11-15
 
-`gateway.elcaro.trustfall.xyz` mirrors the miner pattern on port **8849** —
-the `elcaro-gateway` PM2 app in `ecosystem.config.cjs` already binds
-`0.0.0.0:8849` (uvicorn `gateway.app:app`). To bring it live:
+`gateway.elcaro.trustfall.xyz` is live: DNS A → `144.202.117.160`, ufw
+8849→10.0.0.0/8, `elcaro-gateway.yaml` installed in the Traefik dynamic dir,
+cert issued, `verify-live.sh` 27/27 including `/health` + fail-closed 401s.
+
+The steps below remain the reference for re-creating it (or the next service):
 
 1. **DNS**: A record `gateway.elcaro.trustfall.xyz` → VPS public IP.
 2. **ufw**:
@@ -107,9 +109,17 @@ the `elcaro-gateway` PM2 app in `ecosystem.config.cjs` already binds
    — the gateway checks assert `/health` and that keyless/bogus-key chat
    requests fail closed (401).
 
-Note: until Dev B's `gateway/` package merges, the `elcaro-gateway` PM2 app
-has no code to run — it crash-loops briefly then idles (max_restarts=10);
-`pm2 delete elcaro-gateway` silences it if deployed early.
+**ACME gotcha (hit live):** if the route file is installed *before* DNS
+propagates, Let's Encrypt's first attempt fails NXDOMAIN and Traefik caches
+the failure in memory — subsequent requests don't retry it (the route
+itself works under the fallback cert; `curl -k` 200s). Fix is
+`sudo docker restart coolify-proxy`; the retry succeeds on the next
+handshake. Ordering DNS → route avoids it.
+
+The `elcaro-gateway` PM2 app runs `gateway.app:app` — merged and live. For
+metered operation it additionally needs `metering.install_from_env()` at
+boot (PR: platform/gateway-metering) plus `ELCARO_METERING_DSN` or the
+existing `ELCARO_CANARY_DSN` in `.env`, and at least one issued key.
 
 ### Prerequisites
 
