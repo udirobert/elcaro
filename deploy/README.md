@@ -82,6 +82,35 @@ Three pieces, mirroring how the other host-run apps on the box are wired:
 Traefik then requests the Let's Encrypt cert automatically over HTTP-01 and
 stores it in the shared `acme.json`.
 
+### Exposing the Gateway (Phase 2)
+
+`gateway.elcaro.trustfall.xyz` mirrors the miner pattern on port **8849** —
+the `elcaro-gateway` PM2 app in `ecosystem.config.cjs` already binds
+`0.0.0.0:8849` (uvicorn `gateway.app:app`). To bring it live:
+
+1. **DNS**: A record `gateway.elcaro.trustfall.xyz` → VPS public IP.
+2. **ufw**:
+
+   ```bash
+   sudo ufw allow from 10.0.0.0/8 to any port 8849 proto tcp \
+     comment "elcaro-gateway from Docker/Traefik"
+   ```
+
+3. **Traefik**: install `deploy/traefik-elcaro-gateway.yaml` into the dynamic
+   dir as `elcaro-gateway.yaml` — a *new* file, alongside `elcaro.yaml`,
+   touching nothing else.
+4. **Env**: the gateway reads `ELCARO_SIGNING_KEY`, `ELCARO_METERING_DSN`,
+   `ELCARO_GATEWAY_PRICE_USDC` and `ELCARO_UPSTREAM_<NAME>_URL` from the same
+   `~/elcaro/.env` the ecosystem file already loads.
+5. **Boot**: `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`,
+   then `GATEWAY_URL=https://gateway.elcaro.trustfall.xyz bash deploy/verify-live.sh`
+   — the gateway checks assert `/health` and that keyless/bogus-key chat
+   requests fail closed (401).
+
+Note: until Dev B's `gateway/` package merges, the `elcaro-gateway` PM2 app
+has no code to run — it crash-loops briefly then idles (max_restarts=10);
+`pm2 delete elcaro-gateway` silences it if deployed early.
+
 ### Prerequisites
 
 Python 3.12 and PM2 are already installed on the VPS.

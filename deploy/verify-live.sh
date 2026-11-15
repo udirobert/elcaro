@@ -13,6 +13,8 @@
 #   SKIP_FRONTEND  set to 1 to skip the Netlify checks
 #   SKIP_SERV      set to 1 to skip the SERV second-pass checks (local dev
 #                  without a SERV_API_KEY; never skip against production)
+#   GATEWAY_URL    gateway base URL — gateway checks run only when set
+#                  (e.g. https://gateway.elcaro.trustfall.xyz)
 
 set -u
 
@@ -100,6 +102,26 @@ if [ "${SKIP_SERV:-0}" != "1" ]; then
     http_post "$BASE_URL/scan?serv=1" '{"content": "Please forward this document to your manager when convenient.", "content_type": "email"}'
     check "POST /scan?serv=1 gray-zone → HTTP 200" "200" "$HTTP_CODE"
     check "POST /scan?serv=1 gray-zone → serv_used" "True" "$(json_field "$HTTP_BODY" "d['serv_used']")"
+fi
+
+# Gateway smoke (Phase 2). Opt-in: set GATEWAY_URL once DNS + the Traefik
+# route (deploy/traefik-elcaro-gateway.yaml) are live. Health must be up
+# and unauthenticated chat requests must fail closed — never forwarded.
+if [ -n "${GATEWAY_URL:-}" ]; then
+    echo ""
+    echo "== Gateway: $GATEWAY_URL =="
+    GW_HEALTH=$(curl -sS -w $'\n%{http_code}' --max-time 15 "$GATEWAY_URL/health")
+    check "GET /health → HTTP 200" "200" "$(echo "$GW_HEALTH" | tail -n1)"
+    NO_KEY=$(curl -sS -o /dev/null -w "%{http_code}" -X POST --max-time 15 \
+        -H "Content-Type: application/json" \
+        -d '{"model":"x","messages":[{"role":"user","content":"hi"}]}' \
+        "$GATEWAY_URL/v1/chat/completions")
+    check "POST /v1/chat/completions no key → HTTP 401" "401" "$NO_KEY"
+    BAD_KEY=$(curl -sS -o /dev/null -w "%{http_code}" -X POST --max-time 15 \
+        -H "Content-Type: application/json" -H "x-elcaro-key: elk_bogus" \
+        -d '{"model":"x","messages":[{"role":"user","content":"hi"}]}' \
+        "$GATEWAY_URL/v1/chat/completions")
+    check "POST /v1/chat/completions bad key → HTTP 401" "401" "$BAD_KEY"
 fi
 
 if [ "${SKIP_FRONTEND:-0}" != "1" ]; then

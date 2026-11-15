@@ -76,5 +76,30 @@ module.exports = {
       // Resource limits
       max_memory_restart: "512M",
     },
+    {
+      name: "elcaro-gateway",
+      script: ".venv/bin/uvicorn",
+      // Same ingress story as the miner: 0.0.0.0 for Traefik, ufw-restricted
+      // to Docker bridges (see deploy/traefik-elcaro-gateway.yaml).
+      // gateway.app lands with Dev B's gateway/service merge — this entry
+      // crash-loops (then backs off via max_restarts) if deployed early.
+      args: "gateway.app:app --host 0.0.0.0 --port 8849",
+      cwd: "/home/linuxuser/elcaro",
+      interpreter: "none",
+      env: {
+        ...fileEnv,
+        PORT: "8849",
+        PYTHONUNBUFFERED: "1",
+        SERV_ENABLED: "1",
+        SERV_MODEL: "gpt-5.4-mini",
+      },
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 3000,
+      error_file: "/home/linuxuser/.pm2/logs/elcaro-gateway-error.log",
+      out_file: "/home/linuxuser/.pm2/logs/elcaro-gateway-out.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      max_memory_restart: "512M",
+    },
   ],
 };
