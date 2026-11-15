@@ -6,13 +6,31 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { TelegraphRail } from "@/components/telegraph-rail";
 import { PageHeader } from "@/components/page-header";
 import { SpecimenMarquee } from "@/components/specimen-marquee";
-import { PricingTiers } from "@/components/pricing-tiers";
 
 export const metadata: Metadata = {
   title: "Integrate",
   description:
-    "Add Elcaro to your agent's retrieval pipeline. Direct API, MCP tools, WebMCP on /scan, Python middleware, or Telegraph routing.",
+    "Add Elcaro to your agent's retrieval pipeline. Gateway URL swap for OpenAI/Anthropic/Vercel SDKs, direct /scan API, MCP tools, WebMCP, or Telegraph routing.",
 };
+
+const CODE_GATEWAY = `npm i @elcaro/sdk openai    # or @anthropic-ai/sdk / ai + @ai-sdk/openai
+
+import { ElcaroOpenAI } from "@elcaro/sdk/openai";
+// import { ElcaroAnthropic } from "@elcaro/sdk/anthropic";
+// import { createElcaroOpenAI } from "@elcaro/sdk/vercel";
+
+const client = new ElcaroOpenAI({
+  elcaroKey: process.env.ELCARO_API_KEY,   // elk_… from /keys
+  upstreamKey: process.env.OPENAI_API_KEY, // forwarded untouched
+});
+
+// Identical surface to new OpenAI() — every tool result and tool_result
+// block is scanned before it reaches the model. Verdict metadata rides
+// the response headers: x-elcaro-verdict, -action, -receipt, -cost-usdc.
+const res = await client.chat.completions.create({
+  model: "gpt-5",
+  messages: [/* your messages — tool results are scanned automatically */],
+});`;
 
 const CODE_API = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\
   -H "Content-Type: application/json" \\
@@ -239,8 +257,36 @@ export default function IntegratePage() {
           </p>
         </div>
 
-        {/* Tiers — show the free vs SERV trade-off before the code */}
-        <PricingTiers elevatedServ={true} />
+        {/* 00 — the Gateway quickstart replaces the old tiers block (§2.9):
+            for agents that already call an LLM SDK, the whole integration
+            is a base-URL swap plus two keys. */}
+        <Section number="00" title="Gateway — URL swap (recommended)">
+          <p className="text-sm text-ink-muted leading-relaxed">
+            If your agent already calls OpenAI or Anthropic through an SDK,
+            you don&apos;t need a scan step at all — point the SDK at the
+            Elcaro Gateway and every retrieved part is scanned in-line,
+            before the model sees it. Injection verdicts ride back as
+            headers and signed receipts.
+          </p>
+          <CodeBlock code={CODE_GATEWAY} language="typescript" />
+          <p className="text-xs text-ink-faint leading-relaxed">
+            Get an{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              elk_
+            </code>{" "}
+            key on{" "}
+            <Link href="/keys" className="underline underline-offset-2 hover:text-ink">
+              /keys
+            </Link>
+            . Tool results, function calls, and Anthropic tool_result blocks
+            are scanned by default; mark anything else with{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              untrusted(part)
+            </code>
+            . Blocked requests return the provider&apos;s native error shape
+            — your client code needs no changes.
+          </p>
+        </Section>
 
         {/* Option 1 — Direct API */}
         <Section number="01" title="Direct API call">

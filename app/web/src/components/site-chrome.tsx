@@ -15,7 +15,8 @@ export type NavKey =
   | "supervise"
   | "paybox"
   | "hermes"
-  | "for-agents";
+  | "for-agents"
+  | "keys";
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: "scan", href: "/scan", label: "Scan" },
@@ -35,6 +36,7 @@ const FOOTER_LINKS: { key: NavKey; href: string; label: string }[] = [
   { key: "paybox", href: "/paybox", label: "PayBox gauntlet" },
   { key: "hermes", href: "/hermes", label: "Hermes plugin" },
   { key: "for-agents", href: "/for-agents", label: "For agents" },
+  { key: "keys", href: "/keys", label: "API keys" },
 ];
 
 export function SiteHeader({ active }: { active?: NavKey }) {
