@@ -283,17 +283,18 @@ def test_from_env_falls_back_to_canary_dsn(monkeypatch):
     assert isinstance(from_env(pool=_FakePool(), config_factory=_factory), NeonMetering)
 
 
-def test_install_registers_both_protocols():
-    """install() wires set_usage_sink + set_key_store — stubbed core.usage."""
+def test_install_registers_both_protocols(monkeypatch):
+    """install() wires set_usage_sink + set_key_store — stubbed core.usage.
+
+    The stub must REPLACE the real module: core/usage.py exists now, and
+    tests that ran earlier already imported it — setdefault() would no-op
+    and install() would register into the real globals."""
     calls = []
     stub = SimpleNamespace(
         set_usage_sink=lambda s: calls.append(("sink", s)),
         set_key_store=lambda s: calls.append(("store", s)),
     )
-    sys.modules.setdefault("core.usage", stub)
-    try:
-        m, _ = _make()
-        assert m.install() is m
-        assert calls == [("sink", m), ("store", m)]
-    finally:
-        sys.modules.pop("core.usage", None)
+    monkeypatch.setitem(sys.modules, "core.usage", stub)
+    m, _ = _make()
+    assert m.install() is m
+    assert calls == [("sink", m), ("store", m)]
