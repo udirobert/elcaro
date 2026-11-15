@@ -804,3 +804,68 @@ def test_elcaro_overhead_p95_under_budget():
     m = client.get("/metrics").json()
     p95 = m["latency_ms"]["elcaro"]["p99"]  # small sample: p99 ≈ worst case
     assert p95 < 15, f"Elcaro overhead p95 {p95}ms exceeds the 15ms budget"
+
+
+# ── Contract fixtures (§2.10): recorded upstream responses ───────────────────
+
+_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "gateway"
+
+
+def _load_upstream_fixture(name: str) -> dict:
+    return json.loads((_FIXTURE_DIR / f"{name}.json").read_text())["upstream"]
+
+
+def _fixture_responder(fixture: dict):
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(fixture["status"], json=fixture["body"], headers=fixture["headers"])
+
+    return respond
+
+
+def test_fixture_openai_chat_ok():
+    fx = _load_upstream_fixture("openai_chat_ok")
+    upstream = Upstream(responder=_fixture_responder(fx))
+    client = _make_client(upstream)
+    resp = client.post("/v1/chat/completions", json=_openai_body(), headers=_headers())
+    assert resp.status_code == 200
+    assert resp.json()["choices"] == fx["body"]["choices"]
+    assert "elcaro" in resp.json()
+
+
+def test_fixture_anthropic_message_ok():
+    fx = _load_upstream_fixture("anthropic_message_ok")
+    upstream = Upstream(responder=_fixture_responder(fx))
+    client = _anthropic_client(upstream)
+    resp = client.post(
+        "/v1/messages",
+        json=_anthropic_body(),
+        headers={"x-elcaro-key": ELCARO_KEY, "x-api-key": UPSTREAM_KEY},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["type"] == "message"
+    assert "elcaro" in resp.json()
+
+
+def test_fixture_serv_guard_refusal_passthrough():
+    """When SERV's own guard refuses, the body passes through untouched —
+    the caller sees the provider refusal plus our scan metadata."""
+    fx = _load_upstream_fixture("serv_guard_refusal")
+    upstream = Upstream(responder=_fixture_responder(fx))
+    client = _make_client(upstream)
+    resp = client.post(
+        "/v1/chat/completions", json=_openai_body(injection=True), headers=_headers()
+    )
+    assert resp.status_code == 200
+    assert resp.json()["choices"] == fx["body"]["choices"]  # verbatim
+    # quarantine mode replaced the tool content BEFORE upstream saw it —
+    # but upstream refused anyway; both layers' evidence is in the response
+    assert resp.headers["x-elcaro-action"] == "quarantined"
+
+
+def test_fixture_serv_502_passthrough():
+    fx = _load_upstream_fixture("serv_502")
+    upstream = Upstream(responder=_fixture_responder(fx))
+    client = _make_client(upstream)
+    resp = client.post("/v1/chat/completions", json=_openai_body(), headers=_headers())
+    assert resp.status_code == fx["status"]
+    assert resp.json() == fx["body"]

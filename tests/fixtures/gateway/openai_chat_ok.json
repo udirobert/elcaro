@@ -1,0 +1,22 @@
+{
+  "name": "openai_chat_ok",
+  "description": "OpenAI-compatible 200 chat.completion — the shape SERV, OpenAI, OpenRouter and HF all return on the /v1/chat/completions route.",
+  "upstream": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "body": {
+      "id": "chatcmpl-9x2KqL4mN8pR",
+      "object": "chat.completion",
+      "created": 1735689600,
+      "model": "serv-1",
+      "choices": [
+        {
+          "index": 0,
+          "message": {"role": "assistant", "content": "The quarterly report covers Q3 revenue."},
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {"prompt_tokens": 42, "completion_tokens": 11, "total_tokens": 53}
+    }
+  }
+}
