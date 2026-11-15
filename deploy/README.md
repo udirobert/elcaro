@@ -82,6 +82,35 @@ Three pieces, mirroring how the other host-run apps on the box are wired:
 Traefik then requests the Let's Encrypt cert automatically over HTTP-01 and
 stores it in the shared `acme.json`.
 
+### Exposing the Gateway (Phase 2)
+
+`gateway.elcaro.trustfall.xyz` mirrors the miner pattern on port **8849** —
+the `elcaro-gateway` PM2 app in `ecosystem.config.cjs` already binds
+`0.0.0.0:8849` (uvicorn `gateway.app:app`). To bring it live:
+
+1. **DNS**: A record `gateway.elcaro.trustfall.xyz` → VPS public IP.
+2. **ufw**:
+
+   ```bash
+   sudo ufw allow from 10.0.0.0/8 to any port 8849 proto tcp \
+     comment "elcaro-gateway from Docker/Traefik"
+   ```
+
+3. **Traefik**: install `deploy/traefik-elcaro-gateway.yaml` into the dynamic
+   dir as `elcaro-gateway.yaml` — a *new* file, alongside `elcaro.yaml`,
+   touching nothing else.
+4. **Env**: the gateway reads `ELCARO_SIGNING_KEY`, `ELCARO_METERING_DSN`,
+   `ELCARO_GATEWAY_PRICE_USDC` and `ELCARO_UPSTREAM_<NAME>_URL` from the same
+   `~/elcaro/.env` the ecosystem file already loads.
+5. **Boot**: `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`,
+   then `GATEWAY_URL=https://gateway.elcaro.trustfall.xyz bash deploy/verify-live.sh`
+   — the gateway checks assert `/health` and that keyless/bogus-key chat
+   requests fail closed (401).
+
+Note: until Dev B's `gateway/` package merges, the `elcaro-gateway` PM2 app
+has no code to run — it crash-loops briefly then idles (max_restarts=10);
+`pm2 delete elcaro-gateway` silences it if deployed early.
+
 ### Prerequisites
 
 Python 3.12 and PM2 are already installed on the VPS.
@@ -94,6 +123,37 @@ pm2 start deploy/ecosystem.config.cjs && pm2 save
 ```
 
 `pm2 save` matters: without it a reboot restores the old bind address.
+
+### Environment variables
+
+`deploy/ecosystem.config.cjs` loads `~/elcaro/.env` itself (plain
+`KEY=value` lines, `export` prefixes and quotes tolerated) and merges it
+into the app's env, so the file on the VPS is the single place secrets
+live — gitignored, mode `600`. The committed `env` block wins on a key
+conflict: it declares the deployment contract (e.g. `SERV_ENABLED=1`),
+`.env` carries secrets (`SERV_API_KEY`, `ELCARO_SIGNING_KEY`,
+`ELCARO_CANARY_DSN`, …) plus any var the block does not set.
+
+Two pm2 gotchas this file is written around:
+
+- `pm2 restart elcaro-miner` reuses the env frozen in pm2's dump and does
+  **not** re-evaluate the ecosystem file. To apply env/config changes use
+  `pm2 startOrRestart deploy/ecosystem.config.cjs` — `update.sh` does.
+- After any `startOrRestart`, `pm2 save` so `pm2 resurrect` restores the
+  new env, not the stale dump.
+
+### SERV in production (Phase 0.1)
+
+The miner advertises a SERV Reasoning second pass; it is armed by config,
+not by code changes:
+
+1. Put `SERV_API_KEY=<openserv key>` in `~/elcaro/.env` (console.openserv.ai;
+   `SERV_ENABLED`/`SERV_MODEL` are already committed in the ecosystem file).
+2. `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`
+3. `BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh`
+   — the SERV checks assert `serv_available: true` on `/config` and a live
+   `serv_used` verdict on a gray-zone `?serv=1` scan. They fail loudly on a
+   silent rules fallback.
 
 ### Update an existing deployment
 

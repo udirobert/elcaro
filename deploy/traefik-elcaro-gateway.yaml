@@ -1,0 +1,47 @@
+# Traefik dynamic configuration for the Elcaro Gateway (Phase 2).
+#
+# Same ingress story as the miner (deploy/traefik-elcaro.yaml): Traefik is
+# the only public :80/:443 process; uvicorn binds 0.0.0.0:8849 with ufw
+# restricting the port to the Docker bridge networks.
+#
+# Install to:  /data/coolify/proxy/dynamic/elcaro-gateway.yaml (root:root 0644)
+# — a NEW, additive file. Do not modify elcaro.yaml or any other project's
+# dynamic config; Traefik reads the whole directory.
+#
+# Prerequisites:
+#   1. uvicorn binds 0.0.0.0:8849 (see deploy/ecosystem.config.cjs) so the
+#      Traefik container can reach it via host.docker.internal.
+#   2. ufw allows :8849 from Docker bridges only:
+#        sudo ufw allow from 10.0.0.0/8 to any port 8849 proto tcp \
+#          comment "elcaro-gateway from Docker/Traefik"
+#   3. DNS A record gateway.elcaro.trustfall.xyz -> VPS public IP.
+#
+# Traefik then requests the Let's Encrypt cert automatically over HTTP-01.
+
+http:
+  routers:
+    elcaro-gateway-https:
+      rule: "Host(`gateway.elcaro.trustfall.xyz`)"
+      entryPoints:
+        - https
+      service: elcaro-gateway
+      tls:
+        certResolver: letsencrypt
+    elcaro-gateway-http:
+      rule: "Host(`gateway.elcaro.trustfall.xyz`)"
+      entryPoints:
+        - http
+      middlewares:
+        - elcaro-gateway-https-redirect
+      service: elcaro-gateway
+  middlewares:
+    elcaro-gateway-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    elcaro-gateway:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://host.docker.internal:8849"

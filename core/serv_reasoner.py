@@ -329,7 +329,8 @@ class ServReasoner:
                         {"role": "system", "content": self.SYSTEM_PROMPT},
                         {"role": "user", "content": user_message},
                     ],
-                    "temperature": 0,
+                    # No temperature: gpt-5.4-mini on SERV rejects any value
+                    # other than the provider default (400 "unsupported_value").
                     # Low reasoning effort — SERV docs say "default to low or
                     # medium for most production workloads" and "do not use
                     # maximum reasoning effort merely because a task is
@@ -381,7 +382,14 @@ class ServReasoner:
         try:
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            return None, f"provider HTTP error: {exc}", {}
+            # Include the provider's error body — its message names the exact
+            # offending param (e.g. unsupported temperature), which a bare
+            # status line never shows.
+            return (
+                None,
+                f"provider HTTP error: {exc} — {response.text[:200]}",
+                {},
+            )
 
         try:
             text = response.json()["choices"][0]["message"]["content"]

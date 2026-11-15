@@ -8,7 +8,9 @@
 #   3. pip install (locked extras)
 #   4. Run the test suite — a failure ABORTS before the restart, so a bad
 #      commit never reaches production
-#   5. pm2 restart
+#   5. pm2 startOrRestart — re-reads deploy/ecosystem.config.cjs, so env/config
+#      changes in the file take effect (a plain `pm2 restart` would keep the
+#      env frozen in pm2's dump)
 #   6. Smoke-check /health
 #
 # Rollback if anything goes wrong after a successful update:
@@ -51,9 +53,10 @@ if ! .venv/bin/python -m pytest tests/ -q --no-header > /tmp/elcaro-update-tests
 fi
 echo "✓ Tests pass ($(grep -oE '[0-9]+ passed' /tmp/elcaro-update-tests.log | tail -1))"
 
-# 5. Restart
+# 5. Restart — startOrRestart re-evaluates the ecosystem file (env included);
+#    a bare `pm2 restart elcaro-miner` would keep the env from pm2's dump.
 echo "→ Restarting elcaro-miner..."
-pm2 restart elcaro-miner
+pm2 startOrRestart deploy/ecosystem.config.cjs
 
 # 6. Smoke check — the process must come back healthy
 sleep 3
