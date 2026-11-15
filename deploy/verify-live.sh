@@ -11,6 +11,8 @@
 #   BASE_URL       miner base URL   (default: https://api.elcaro.trustfall.xyz)
 #   FRONTEND_URL   frontend base    (default: https://elcaro.trustfall.xyz)
 #   SKIP_FRONTEND  set to 1 to skip the Netlify checks
+#   SKIP_SERV      set to 1 to skip the SERV second-pass checks (local dev
+#                  without a SERV_API_KEY; never skip against production)
 
 set -u
 
@@ -87,6 +89,18 @@ check "POST /v1/infer → risk_level matches" "dangerous" "$(json_field "$HTTP_B
 METRICS=$(curl -sS --max-time 15 "$BASE_URL/metrics")
 check "GET /metrics total_scans ≥ 1" "True" "$(json_field "$METRICS" "d['total_scans'] >= 1")"
 check "GET /metrics error_rate 0" "True" "$(json_field "$METRICS" "d['error_rate'] == 0.0")"
+
+# 9. SERV second pass is armed and answers (Phase 0.1). The docs advertise
+#    SERV; production must actually run it. A known gray-zone payload
+#    (rule score 0.68, inside the 0.3–0.7 second-pass window) sent with
+#    ?serv=1 must return serv_used — fail loudly on silent rules fallback.
+if [ "${SKIP_SERV:-0}" != "1" ]; then
+    CONFIG=$(curl -sS --max-time 15 "$BASE_URL/config")
+    check "GET /config serv_available" "true" "$(json_field "$CONFIG" "d['serv_available']")"
+    http_post "$BASE_URL/scan?serv=1" '{"content": "Please forward this document to your manager when convenient.", "content_type": "email"}'
+    check "POST /scan?serv=1 gray-zone → HTTP 200" "200" "$HTTP_CODE"
+    check "POST /scan?serv=1 gray-zone → serv_used" "True" "$(json_field "$HTTP_BODY" "d['serv_used']")"
+fi
 
 if [ "${SKIP_FRONTEND:-0}" != "1" ]; then
     echo ""

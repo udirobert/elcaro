@@ -2,6 +2,48 @@
 // Start: pm2 start deploy/ecosystem.config.cjs
 // From:  /home/linuxuser/elcaro/
 
+const fs = require("fs");
+const path = require("path");
+
+// Load the deploy host's .env (repo root on the VPS, gitignored, mode 600) so
+// secrets never live in this file. Plain KEY=value lines; `export` prefixes,
+// blank lines, # comments and matched quotes are tolerated.
+//
+// Precedence: a key set in the committed `env` block below WINS over .env —
+// that block is the deployment contract (what this release expects), while
+// .env carries secrets (SERV_API_KEY, ELCARO_SIGNING_KEY, ELCARO_CANARY_DSN…)
+// and any var the block does not set.
+//
+// NOTE: `pm2 restart <name>` reuses the env stored in pm2's dump and does NOT
+// re-evaluate this file. To pick up env/config changes use
+// `pm2 startOrRestart deploy/ecosystem.config.cjs` (update.sh already does).
+function loadEnvFile(file) {
+  const out = {};
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch {
+    return out; // no .env — committed config still applies
+  }
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const m = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!m) continue;
+    let v = m[2].trim();
+    if (
+      v.length >= 2 &&
+      ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))
+    ) {
+      v = v.slice(1, -1);
+    }
+    out[m[1]] = v;
+  }
+  return out;
+}
+
+const fileEnv = loadEnvFile(path.join(__dirname, "..", ".env"));
+
 module.exports = {
   apps: [
     {
@@ -14,8 +56,14 @@ module.exports = {
       cwd: "/home/linuxuser/elcaro",
       interpreter: "none",
       env: {
+        ...fileEnv,
         PORT: "8848",
         PYTHONUNBUFFERED: "1",
+        // SERV Reasoning second pass — armed in production (docs advertise
+        // it; verify-live.sh asserts serv_available + a live serv_used call).
+        // SERV_API_KEY itself lives in the VPS .env, loaded above.
+        SERV_ENABLED: "1",
+        SERV_MODEL: "gpt-5.4-mini",
       },
       // Restart policy
       autorestart: true,

@@ -12,6 +12,20 @@
 #   TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION=0   close the bridge to unpinned ids
 #   TELEGRAPH_BRIDGE_ALLOW_NO_ORIGIN   1 to re-allow Origin-less (server) callers
 #
+# x402 paid scan lane (/api/x402/scan):
+#   X402_PAYTO                receiving address (falls back to the
+#                             TELEGRAPH_X402_KEY wallet when unset)
+#   X402_SCAN_AMOUNT          atomic USDC per scan (default 10000 = $0.01)
+#   X402_FACILITATOR_URL      facilitator base URL — when set, payments settle
+#                             on-chain via POST {url}/verify then {url}/settle.
+#                             Unset = degraded "verified_local" (signature
+#                             checked, never settled; /api/metrics reports it).
+#                             Base Sepolia: https://x402.org/facilitator
+#                             Base mainnet: CDP (api.cdp.coinbase.com) needs
+#                             JWT auth this route does not implement — use a
+#                             keyless facilitator (e.g. facilitator.payai.network)
+#                             or add CDP auth before pointing mainnet at CDP.
+#
 # NOTE: `base` changes Netlify's working directory, so `command` and `publish`
 # are resolved RELATIVE TO `base` — do not prefix them with "app/web" again.
 # (A prior version had publish = "app/web/.next", which resolved to

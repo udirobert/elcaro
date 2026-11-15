@@ -310,6 +310,11 @@ export async function GET(req: NextRequest) {
         networks: Object.keys(NETWORKS),
         amountAtomic: process.env.X402_SCAN_AMOUNT?.trim() || DEFAULT_AMOUNT,
         facilitator: Boolean(process.env.X402_FACILITATOR_URL?.trim()),
+        // "verified_local" is degraded: signatures check out but nothing
+        // settles on-chain until X402_FACILITATOR_URL is configured.
+        settlement: process.env.X402_FACILITATOR_URL?.trim()
+          ? "onchain"
+          : "verified_local",
       },
       { headers: { "cache-control": "no-store" } },
     );

@@ -95,6 +95,37 @@ pm2 start deploy/ecosystem.config.cjs && pm2 save
 
 `pm2 save` matters: without it a reboot restores the old bind address.
 
+### Environment variables
+
+`deploy/ecosystem.config.cjs` loads `~/elcaro/.env` itself (plain
+`KEY=value` lines, `export` prefixes and quotes tolerated) and merges it
+into the app's env, so the file on the VPS is the single place secrets
+live — gitignored, mode `600`. The committed `env` block wins on a key
+conflict: it declares the deployment contract (e.g. `SERV_ENABLED=1`),
+`.env` carries secrets (`SERV_API_KEY`, `ELCARO_SIGNING_KEY`,
+`ELCARO_CANARY_DSN`, …) plus any var the block does not set.
+
+Two pm2 gotchas this file is written around:
+
+- `pm2 restart elcaro-miner` reuses the env frozen in pm2's dump and does
+  **not** re-evaluate the ecosystem file. To apply env/config changes use
+  `pm2 startOrRestart deploy/ecosystem.config.cjs` — `update.sh` does.
+- After any `startOrRestart`, `pm2 save` so `pm2 resurrect` restores the
+  new env, not the stale dump.
+
+### SERV in production (Phase 0.1)
+
+The miner advertises a SERV Reasoning second pass; it is armed by config,
+not by code changes:
+
+1. Put `SERV_API_KEY=<openserv key>` in `~/elcaro/.env` (console.openserv.ai;
+   `SERV_ENABLED`/`SERV_MODEL` are already committed in the ecosystem file).
+2. `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`
+3. `BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh`
+   — the SERV checks assert `serv_available: true` on `/config` and a live
+   `serv_used` verdict on a gray-zone `?serv=1` scan. They fail loudly on a
+   silent rules fallback.
+
 ### Update an existing deployment
 
 ```bash
