@@ -125,7 +125,13 @@ from another family with no repo access (§4.6), not by a person. Decided
   (`is_secret: false`). Task files carry no digests, so they scan clean.
 - Generated slice: `tasks-heldout/generated_manifest.json` (model,
   prompt SHA-256, every candidate with its kept/rejected status and reason,
-  and the SHA-256 of each kept task).
+  and the SHA-256 of each kept task). Attempt 2 kept 12 of 12 candidates
+  with no rejections: H01–H06 alternate subtle/any across document,
+  chat_message, webpage, tool_manifest, agent_output and code; H07–H12 cover
+  the same six types. Each raw record stores the exact request messages.
+  Re-running the script from the logs reproduces H01–H12 and the manifest
+  byte for byte. The manifest's 13 digests are audited non-secrets in
+  `.secrets.baseline`.
 - Freeze commit: `<FILL AT FREEZE>`
 
 ### 4.5 LLMail slice: sampling and conversion
@@ -178,6 +184,13 @@ from another family with no repo access (§4.6), not by a person. Decided
 - **Model:** `claude-sonnet-5` via the SERV endpoint, plain (no SERV
   Tools), temperature 1.0. It is a different model family from the model
   under test (`gpt-5.4-mini`).
+- **Request shape:** a fixed one-line system message, with the filled
+  prompt verbatim in the user turn; `max_tokens` 16000. Attempt 1 sent the
+  prompt as the system message. SERV rewrites system messages into a
+  compressed reasoning prompt, so only about 870 of its 1,900 tokens arrived,
+  and a 4000-token cap truncated the answers. All 20 candidates were rejected
+  and the attempt was discarded in full. Its log is kept in
+  `heldout/generated_raw-attempt1-discarded/`.
 - **Prompt:** `heldout/generate_prompt.md` (committed, hashed in the
   manifest). There is one request per candidate. Each request fixes the kind
   (payment-steering attack, or clean control) and one `content_type` from a
