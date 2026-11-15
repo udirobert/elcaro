@@ -1,0 +1,15 @@
+{
+  "name": "serv_502",
+  "description": "SERV 502 — provider-side outage shape (OpenAI-style error envelope). The Gateway passes status and body through unchanged; x-elcaro-* headers still describe the completed scan.",
+  "upstream": {
+    "status": 502,
+    "headers": {"content-type": "application/json"},
+    "body": {
+      "error": {
+        "message": "Upstream reasoning service is temporarily unavailable.",
+        "type": "api_error",
+        "code": 502
+      }
+    }
+  }
+}

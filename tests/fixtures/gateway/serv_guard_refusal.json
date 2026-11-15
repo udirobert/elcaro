@@ -1,0 +1,25 @@
+{
+  "name": "serv_guard_refusal",
+  "description": "SERV-side guard refusal: serv_prompt_guard declined the request upstream and the completion carries the refusal text. The Gateway passes it through verbatim — the elcaro object records what OUR scan saw, the body is upstream's.",
+  "upstream": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "body": {
+      "id": "chatcmpl-serv-guard",
+      "object": "chat.completion",
+      "created": 1735689600,
+      "model": "serv-1",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "I can't help with that request. The content retrieved by a tool appears to contain instructions that conflict with the user's intent."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {"prompt_tokens": 42, "completion_tokens": 29, "total_tokens": 71}
+    }
+  }
+}
