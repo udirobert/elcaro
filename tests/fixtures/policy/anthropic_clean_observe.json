@@ -1,0 +1,78 @@
+{
+  "name": "anthropic_clean_observe",
+  "description": "Clean Anthropic tool_result under observe: scanned and reported, forwarded unchanged.",
+  "provider": "anthropic",
+  "mode": "observe",
+  "scan_user_messages": false,
+  "untrusted_paths": [],
+  "messages": [
+    {
+      "role": "user",
+      "content": "Read the file."
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_1",
+          "name": "read_file",
+          "input": {
+            "path": "notes.txt"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "toolu_1",
+          "content": "Meeting notes: budget approved, launch moved to Friday."
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "blocked": false,
+    "overall": "safe",
+    "parts": [
+      {
+        "path": "messages[2].content[0]",
+        "action": "none",
+        "content_type": "document",
+        "risk_level": "safe"
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Read the file."
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "read_file",
+            "input": {
+              "path": "notes.txt"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_1",
+            "content": "Meeting notes: budget approved, launch moved to Friday."
+          }
+        ]
+      }
+    ]
+  }
+}

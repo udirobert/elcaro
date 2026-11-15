@@ -1,0 +1,118 @@
+{
+  "name": "openai_content_type_inference",
+  "description": "Content type comes from the tool name via the prior assistant tool_calls: fetch_email->email, search_web->search_result, read_file (legacy function role)->document.",
+  "provider": "openai",
+  "mode": "observe",
+  "scan_user_messages": false,
+  "untrusted_paths": [],
+  "messages": [
+    {
+      "role": "user",
+      "content": "Gather my context for the day."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "fetch_email",
+            "arguments": "{}"
+          }
+        },
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "search_web",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_1",
+      "content": "Hi team, the quarterly review is next Thursday at 2pm."
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_2",
+      "content": "Lisbon weather: 21C, light rain after 6pm."
+    },
+    {
+      "role": "function",
+      "name": "read_file",
+      "content": "Meeting notes: budget approved, launch moved to Friday."
+    }
+  ],
+  "expect": {
+    "blocked": false,
+    "overall": "safe",
+    "parts": [
+      {
+        "path": "messages[2]",
+        "action": "none",
+        "content_type": "email",
+        "risk_level": "safe"
+      },
+      {
+        "path": "messages[3]",
+        "action": "none",
+        "content_type": "search_result",
+        "risk_level": "safe"
+      },
+      {
+        "path": "messages[4]",
+        "action": "none",
+        "content_type": "document",
+        "risk_level": "safe"
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Gather my context for the day."
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_1",
+            "type": "function",
+            "function": {
+              "name": "fetch_email",
+              "arguments": "{}"
+            }
+          },
+          {
+            "id": "call_2",
+            "type": "function",
+            "function": {
+              "name": "search_web",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_1",
+        "content": "Hi team, the quarterly review is next Thursday at 2pm."
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_2",
+        "content": "Lisbon weather: 21C, light rain after 6pm."
+      },
+      {
+        "role": "function",
+        "name": "read_file",
+        "content": "Meeting notes: budget approved, launch moved to Friday."
+      }
+    ]
+  }
+}

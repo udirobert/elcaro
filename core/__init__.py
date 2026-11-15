@@ -6,6 +6,7 @@ Public API:
     result = engine.scan(ScanRequest(content="...", content_type="email"))
 """
 
+from core.policy import Mode, PartVerdict, PolicyResult, Provider, apply_policy
 from core.schemas import (
     ContentType,
     DetectionIndicator,
@@ -27,4 +28,9 @@ __all__ = [
     "DetectionIndicator",
     "ServReasoner",
     "ServClassificationResult",
+    "apply_policy",
+    "Provider",
+    "Mode",
+    "PartVerdict",
+    "PolicyResult",
 ]
