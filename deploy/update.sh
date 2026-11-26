@@ -58,13 +58,23 @@ echo "✓ Tests pass ($(grep -oE '[0-9]+ passed' /tmp/elcaro-update-tests.log | 
 echo "→ Restarting elcaro-miner..."
 pm2 startOrRestart deploy/ecosystem.config.cjs
 
-# 6. Smoke check — the process must come back healthy
-sleep 3
-RESPONSE=$(curl -s --max-time 10 http://127.0.0.1:8848/health)
-if echo "$RESPONSE" | grep -q "healthy"; then
-    echo "✓ Health check passed"
-else
-    echo "✗ Health check FAILED after restart: $RESPONSE"
+# 6. Smoke check — the process must come back healthy. Retry, and swallow
+#    curl's own failure: a bare `RESPONSE=$(curl ...)` under `set -e` aborts
+#    the script when the port is not yet bound (curl exit 7), which skipped
+#    this assertion and everything after it — including the quota read-back
+#    below. That is how a restart could "succeed" while both checks stayed
+#    unrun.
+RESPONSE=""
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 2
+    RESPONSE=$(curl -s --max-time 5 http://127.0.0.1:8848/health || true)
+    if echo "$RESPONSE" | grep -q "healthy"; then
+        echo "✓ Health check passed (attempt $attempt)"
+        break
+    fi
+done
+if ! echo "$RESPONSE" | grep -q "healthy"; then
+    echo "✗ Health check FAILED after restart: ${RESPONSE:-<no response from :8848>}"
     echo "→ Roll back now: git checkout $PREV_COMMIT && pm2 restart elcaro-miner"
     exit 1
 fi
@@ -79,8 +89,8 @@ echo "=== Update complete: $PREV_COMMIT → $(git rev-parse --short HEAD) ==="
 #    from the process itself rather than trusting the file.
 QUOTA=$(curl -s -D - -o /dev/null --max-time 10 -X POST http://127.0.0.1:8848/scan \
     -H "Content-Type: application/json" \
-    -d '{"content": "deploy probe", "content_type": "email"}' \
-    | awk 'tolower($1)=="x-ratelimit-limit:" {print $2}' | tr -d '\r')
+    -d '{"content": "deploy probe", "content_type": "email"}' 2>/dev/null \
+    | awk 'tolower($1)=="x-ratelimit-limit:" {print $2}' | tr -d '\r') || QUOTA=""
 if [ -n "$QUOTA" ]; then
     echo "✓ Anonymous scan quota armed (x-ratelimit-limit: $QUOTA)"
 else
