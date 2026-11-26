@@ -110,7 +110,7 @@ x402 upgrade block; second anonymous `serv=1` in a minute → 429
 production; 429 body/headers carry the x402 hint; load test shows graceful
 degradation; SERV-enabled anonymous scans are tightly capped.
 
-### WS0d — Durable funnel instrumentation · implemented locally (commit `736cfe7`), pending production deploy
+### WS0d — Durable funnel instrumentation · ✅ DONE 2026-11-26, verified in production (commit `736cfe7`)
 
 **Problem:** a small analytics system exists (`app/web/src/lib/analytics.ts`,
 `/api/analytics`) but is audit-scoped, writes JSONL to local disk (ephemeral on
@@ -131,6 +131,19 @@ longer stored; the browser sends a daily rotating random session id and only
 its HMAC persists. Funnel events are emitted for landing/scan views, scan
 start, verdict/error, share/copy, integrate view, keys view, and key mint.
 Admin aggregate rollup is `GET /api/analytics` with `ANALYTICS_ADMIN_TOKEN`.
+
+**Production verification (2026-11-26):** deploy live as part of the
+scan-first conversion batch (`f169cb5` — the `736cfe7` build itself failed
+with exit 2 for undetermined reasons, but the successor build carrying the
+same analytics code went green; local `next build` passes). Probe event POST
+→ `{"ok":true,"flushed":1,"sink":"postgres"}`; unauthenticated GET → 401;
+admin rollup shows the probe `scan.verdict` AND a real organic
+`landing.viewed` — proving emission points (shipped in the conversion batch)
+reach durable storage end-to-end. `ANALYTICS_ADMIN_TOKEN` +
+`ELCARO_ANALYTICS_SALT` set in Netlify production. Residual abuse note: the
+write endpoint is unauthenticated by design (public beacon); payloads are
+strictly validated but there is no per-IP write throttle — revisit if
+`funnel_events` grows anomalously.
 
 **Done when:** events persist across deploys in production; the admin rollup
 can answer "what fraction of landing visitors reach a verdict" for a given
