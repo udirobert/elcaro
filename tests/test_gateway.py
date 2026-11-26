@@ -1088,3 +1088,34 @@ def test_paypercall_settle_after_serve():
     payment, accept = facilitator.calls[0]
     assert payment["payload"]["authorization"]["value"] == "10000"
     assert accept.network == "eip155:84532"
+
+
+def test_paypercall_upstream_selector_header():
+    """x-elcaro-upstream picks any allowlisted upstream in scan-only mode —
+    this is how SERV-keyed callers use the lane. Unknown names fall back to
+    the dialect default."""
+    upstream = Upstream()
+    client = _ppc_client(upstream)
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header(),
+            "authorization": "Bearer ppc-caller-key",
+            "x-elcaro-upstream": "serv",
+        },
+    )
+    assert resp.status_code == 200
+
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header("payment_valid_mainnet"),
+            "authorization": "Bearer ppc-caller-key",
+            "x-elcaro-upstream": "not-a-real-upstream",
+        },
+    )
+    # falls back to dialect default (openai, served by the mock) rather than
+    # erroring after payment was already verified
+    assert resp.status_code == 200

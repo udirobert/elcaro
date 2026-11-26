@@ -630,13 +630,20 @@ def create_app(
         if not result.ok:
             return _challenge(result.reason)
 
+        # Scan-only: the forward target is never a server-keyed upstream.
+        # Default is the provider matching the request dialect; the caller
+        # may pick any allowlisted upstream (e.g. serv) whose API matches
+        # their key via x-elcaro-upstream — unknown names fall to the
+        # dialect default rather than erroring, since the payment is already
+        # verified and the upstream call itself will reject a mismatched key.
+        upstream_name = (request.headers.get("x-elcaro-upstream") or "").strip().lower()
+        if upstream_name not in upstream_map:
+            upstream_name = "anthropic" if is_anthropic else "openai"
+
         key_cfg = KeyConfig(
             key_id=f"x402:{result.payer}",  # ephemeral id — no api_keys row
             mode=ppc_mode,
-            # Scan-only: the caller's key is a provider key, so the forward
-            # target is the provider matching the request dialect — never a
-            # server-keyed upstream. (SERV-flavored callers use keyed lanes.)
-            upstream="anthropic" if is_anthropic else "openai",
+            upstream=upstream_name,
         )
         # Correlation id shared by the usage row (emitted later in the
         # request) and the post-serve settlement update below.
