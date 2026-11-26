@@ -23,6 +23,16 @@ cd "$DEPLOY_DIR"
 
 echo "=== Elcaro Miner Update ==="
 
+# 0. Run from an immutable copy. `git pull` below rewrites this very file while
+#    bash is reading it, and the interpreter keeps a byte offset into content
+#    that just shifted — which is how a deploy could restart the miner and then
+#    die (exit 7) before its own health check. A copy outside the repo cannot be
+#    rewritten mid-run, so the rest of this script always executes as written.
+if [ "${ELCARO_UPDATE_FRESH:-0}" != "1" ]; then
+    cp "$0" /tmp/elcaro-update-run.sh
+    ELCARO_UPDATE_FRESH=1 exec bash /tmp/elcaro-update-run.sh "$@"
+fi
+
 # 1. Rollback anchor — the commit currently deployed. Carried through the
 #    hand-off below so a re-exec still reports the real anchor.
 PREV_COMMIT="${ELCARO_ROLLBACK_ANCHOR:-$(git rev-parse --short HEAD)}"
@@ -32,17 +42,17 @@ echo "→ Rollback anchor: $PREV_COMMIT (git checkout $PREV_COMMIT && pm2 restar
 echo "→ Pulling latest code..."
 git pull --ff-only
 
-# 2b. `git pull` can rewrite this very file while bash is reading it. The
-#     interpreter keeps its byte offset into a file whose contents just
-#     shifted, so it resumes in the middle of the new script instead of the
-#     old one — observed as the script exiting 7 with the post-restart health
-#     check and everything after it silently skipped. Hand off to the pulled
-#     copy instead of pretending to keep running the old one.
-if [ "${ELCARO_UPDATE_FRESH:-0}" != "1" ] \
+# 2b. Step 0 made the running copy immutable, so the rest of this script is
+#     always executed as written. What this adds: when the pulled commit
+#     changes the deploy script, run the *pulled* version, so a deploy uses the
+#     logic it is deploying. The anchor travels through the environment, so the
+#     rollback instruction stays the pre-deploy commit.
+if [ "${ELCARO_UPDATE_STAGE:-1}" = "1" ] \
     && [ -n "$(git diff --name-only "$PREV_COMMIT" HEAD -- deploy/update.sh || true)" ]; then
-    echo "→ This script changed in the pulled commit — re-executing the new one"
-    cp deploy/update.sh /tmp/elcaro-update-fresh.sh
-    ELCARO_UPDATE_FRESH=1 ELCARO_ROLLBACK_ANCHOR="$PREV_COMMIT" exec bash /tmp/elcaro-update-fresh.sh
+    echo "→ Deploy script changed in this commit — re-executing the pulled version"
+    cp deploy/update.sh /tmp/elcaro-update-new.sh
+    ELCARO_UPDATE_FRESH=1 ELCARO_UPDATE_STAGE=2 ELCARO_ROLLBACK_ANCHOR="$PREV_COMMIT" \
+        exec bash /tmp/elcaro-update-new.sh
 fi
 
 # Nothing to do if already current
