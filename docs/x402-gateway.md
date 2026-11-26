@@ -13,8 +13,18 @@
 > at PayAI; a real external payment verified + settled on Base Sepolia —
 > tx `0x0016c40353bebbf374c2aaf12294cfc4d818a6a7cca65979263ec24ab65983e5`
 > (block 59299949, 10,000 atomic USDC → `0x1e17B4FB12B29045b29475f74E536Db97Ddc5D40`).
-> The Gateway's own pay-per-call lane is wired (`gateway/app.py`) but unarmed
-> until `X402_PAYTO` + `X402_FACILITATOR_URL` reach the VPS `.env`.
+> The Gateway's own pay-per-call lane is **armed** (2026-11-26, WS4):
+> `X402_PAYTO` + `X402_FACILITATOR_URL` + `ELCARO_GATEWAY_PRICE_USDC=0.005`
+> live on the VPS, first payments settled end-to-end. Semantics are
+> **scan-only**: payment buys Elcaro's scan + signed verdict and the caller
+> always supplies their own upstream key — a flat per-request price can
+> never subsidize inference through a server-held credential. Forwarding
+> defaults to the provider matching the request dialect; callers pick any
+> allowlisted upstream with `x-elcaro-upstream` (SERV-keyed callers need
+> this). `ELCARO_PAYPERCALL_DAILY_CAP` (default 100) throttles each payer
+> across ALL settlement states — never-settling payers burn the same
+> budget as honest ones. Note: payment buys scan + forwarding, not
+> upstream success — an upstream 4xx after verification still settles.
 
 ## Wire protocol (x402 v2, `exact` scheme)
 

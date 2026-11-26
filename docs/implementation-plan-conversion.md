@@ -10,11 +10,11 @@ files touched, and a measurable done-when test.
 | Fact | Evidence | Consequence |
 |---|---|---|
 | ~~Gateway has never served a successful production request~~ **PROVEN 2026-11-26** | W5 smoke test: 200 + receipt + verify green | Keyed traffic is no longer a gate for WS4 |
-| `/api/x402/scan` paid scan lane is live and settling onchain | status: `paid: true, payToConfigured: true, settlement: onchain` | The 429 upsell should point here — not at the unproven gateway pay-per-call lane |
-| Free scan can invoke SERV-backed analysis | miner `/config`: `serv_available: true`; scan form/API pass `serv_enabled` | Direct cost exposure on the free path; rate limiting is P0, not week 2 |
+| `/api/x402/scan` paid scan lane is live and settling onchain; gateway pay-per-call armed scan-only (WS4, 2026-11-26) | both lanes proven end-to-end with settled txs | Both lanes now valid upsell targets; scan lane remains the casual-$0.01 path |
+| ~~Free scan can invoke SERV-backed analysis unbounded~~ **CAPPED 2026-11-26 (WS0c)** | premium rails: 3/day + 1/min anonymous, enforced at the miner edge | Residual exposure bounded; trusted-proxy lanes have separate quotas |
 | ~~Extension bridge payer key is malformed~~ **FIXED 2026-11-26** | `payerAddress` now resolves | — |
 | ~~Extension bridge accepts ANY chrome-extension origin~~ **CLOSED 2026-11-26** | `allowAnyExtension: false`, fake origin → 403 | Reopen per WS0b instructions when dev resumes |
-| Miner API is directly reachable, bypassing the web proxy | `api.elcaro.trustfall.xyz` serves `/scan` without the Netlify edge | Rate limiting only at Netlify is insufficient |
+| ~~Miner API is directly reachable, bypassing the web proxy~~ **LIMITED 2026-11-26 (WS0c/fdc3b62)** | quotas live at the miner itself; direct-ingress burst → 429 verified | Direct access is now rate-limited the same as proxied access |
 | Phase 1 was Outcome C | `lexsi-eval/RESULTS-phase1.md` | No uplift claims; the benchmark is not a willingness-to-pay unlock |
 
 ---
@@ -353,10 +353,10 @@ marketing win and must not be framed as one. Link from `/evaluate/benchmark`.
 |---|---|---|
 | P0 (now) | WS0a launch verification, WS0b bridge holes, WS0c free-path defense, WS0d instrumentation | none — start immediately |
 | P1 | WS1 + WS2 conversion batch, deployed together | WS0d (so the change is measurable) |
-| P1/P2 | WS3 attribution schema + migrations | none, but precedes WS4 |
-| P2 | WS4 price + arm paid lanes | WS0a (proven keyed traffic) AND WS3 (attribution) |
-| P2 | WS5 extension | WS0b |
-| P3 | WS6a/b/c | WS6c gated on WS3/WS4 usage data; WS6a/b independent |
+| ~~P1/P2~~ ✅ | ~~WS3 attribution schema + migrations~~ DONE 2026-11-26 | — |
+| ~~P2~~ ✅ core | ~~WS4 price + arm paid lanes~~ scan-only lane armed + proven 2026-11-26 | tail: CDP facilitator JWT for mainnet settlement robustness |
+| P2 | WS5 extension | WS0b ✅ — unblocked, next up |
+| P3 | WS6a/b/c | WS6c gated on WS3/WS4 usage data (now collecting); WS6a/b independent |
 
 ## Explicitly out of scope for now
 
