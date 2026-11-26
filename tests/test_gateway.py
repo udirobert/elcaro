@@ -905,6 +905,9 @@ def _ppc_client(upstream: Upstream, **kwargs) -> TestClient:
         upstream,
         x402_offers=_x402_offers(),
         paypercall_upstream_key=PPC_UPSTREAM_KEY,
+        # Scan-only forwarding is provider-native: openai dialect -> "openai",
+        # anthropic dialect -> "anthropic". The mock serves both here.
+        upstreams={"serv": SERV_BASE, "anthropic": ANTHROPIC_BASE, "openai": SERV_BASE},
         **kwargs,
     )
 
@@ -931,15 +934,25 @@ def test_paypercall_challenge_before_body_parse():
 
 
 def test_paypercall_not_armed_falls_back_to_401():
-    """No offers (or no server upstream key) -> plain 401, never a 402 the
-    gateway couldn't honor."""
+    """No offers -> plain 401, never a 402 the gateway couldn't honor.
+    Scan-only arming needs offers alone — no server upstream key exists."""
     client = _make_client(Upstream())  # x402_offers=[] by default
     resp = client.post("/v1/chat/completions", json=_openai_body())
     assert resp.status_code == 401
-    # offers armed but no server-held upstream credential -> also 401
-    client = _make_client(Upstream(), x402_offers=_x402_offers())
-    resp = client.post("/v1/chat/completions", json=_openai_body())
+
+
+def test_paypercall_scan_only_requires_caller_upstream_key():
+    """A verified payment without a caller-supplied upstream key gets a clear
+    401 — there is nothing to scan-then-forward to, and Elcaro never lends
+    its own credential."""
+    client = _ppc_client(Upstream())
+    resp = client.post(
+        "/v1/chat/completions",
+        json=_openai_body(),
+        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+    )
     assert resp.status_code == 401
+    assert "scan-only" in resp.json()["error"]["message"]
 
 
 def test_paypercall_valid_payment_proxied(spy_sink):
@@ -948,12 +961,16 @@ def test_paypercall_valid_payment_proxied(spy_sink):
     resp = client.post(
         "/v1/chat/completions",
         json=_openai_body(),
-        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header(),
+            "authorization": "Bearer ppc-caller-key",
+        },
     )
     assert resp.status_code == 200
     assert resp.json()["choices"][0]["message"]["content"] == "summary here"
-    # The upstream saw the server-held credential, never anything caller-side.
-    assert upstream.requests[0].headers["authorization"] == f"Bearer {PPC_UPSTREAM_KEY}"
+    # Scan-only (WS4): the upstream sees the CALLER's credential — payment
+    # buys the scan, never Elcaro-subsidized inference.
+    assert upstream.requests[0].headers["authorization"] == "Bearer ppc-caller-key"
     # Cost header + usage event reflect what the payer authorized.
     assert resp.headers["x-elcaro-cost-usdc"] == "0.01"
     event = spy_sink.events[-1]
@@ -966,7 +983,7 @@ def test_paypercall_v1_x_payment_header():
     resp = client.post(
         "/v1/chat/completions",
         json=_openai_body(),
-        headers={"X-PAYMENT": _x402_payment_header()},
+        headers={"X-PAYMENT": _x402_payment_header(), "authorization": "Bearer ppc-caller-key"},
     )
     assert resp.status_code == 200
 
@@ -975,7 +992,10 @@ def test_paypercall_replay_rejected():
     """The nonce is spent at verify — a second request with the same
     signature gets a fresh challenge, not a second serving."""
     client = _ppc_client(Upstream())
-    headers = {"PAYMENT-SIGNATURE": _x402_payment_header()}
+    headers = {
+        "PAYMENT-SIGNATURE": _x402_payment_header(),
+        "authorization": "Bearer ppc-caller-key",
+    }
     assert (
         client.post("/v1/chat/completions", json=_openai_body(), headers=headers).status_code == 200
     )
@@ -1017,7 +1037,10 @@ def test_paypercall_policy_still_applies():
     resp = client.post(
         "/v1/chat/completions",
         json=_openai_body(injection=True),
-        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header(),
+            "authorization": "Bearer ppc-caller-key",
+        },
     )
     assert resp.status_code == 200
     assert resp.headers["x-elcaro-action"] == "quarantined"
@@ -1031,7 +1054,10 @@ def test_paypercall_block_mode_refusal():
     resp = client.post(
         "/v1/chat/completions",
         json=_openai_body(injection=True),
-        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header(),
+            "authorization": "Bearer ppc-caller-key",
+        },
     )
     assert resp.status_code == 200
     assert resp.json()["choices"][0]["finish_reason"] == "content_filter"
@@ -1052,7 +1078,10 @@ def test_paypercall_settle_after_serve():
     resp = client.post(
         "/v1/chat/completions",
         json=_openai_body(),
-        headers={"PAYMENT-SIGNATURE": _x402_payment_header()},
+        headers={
+            "PAYMENT-SIGNATURE": _x402_payment_header(),
+            "authorization": "Bearer ppc-caller-key",
+        },
     )
     assert resp.status_code == 200
     assert len(facilitator.calls) == 1

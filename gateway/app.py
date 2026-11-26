@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import time
@@ -71,6 +72,8 @@ from gateway.upstream import (
     resolve_upstream,
     upstream_headers,
 )
+
+log = logging.getLogger(__name__)
 
 # ── Bounds & defaults ─────────────────────────────────────────────────────────
 
@@ -345,14 +348,13 @@ def create_app(
     else:
         atomic = str(int(price * 1_000_000)) if price > 0 else None
         x402_offer_list = x402.offers(amount=atomic)
-    ppc_upstream = paypercall_upstream or os.environ.get(
-        "ELCARO_PAYPERCALL_UPSTREAM", _SERV_UPSTREAM
-    )
-    ppc_upstream_key = (
-        paypercall_upstream_key
-        or os.environ.get(f"ELCARO_UPSTREAM_KEY_{ppc_upstream.upper()}")
-        or (os.environ.get("SERV_API_KEY") if ppc_upstream == _SERV_UPSTREAM else None)
-    )
+    # Legacy no-op (scan-only forwards provider-natively); names kept so
+    # existing deploy env doesn't warn as unexpected.
+    _ = (paypercall_upstream, os.environ.get("ELCARO_PAYPERCALL_UPSTREAM"), _SERV_UPSTREAM)
+    # WS4 scan-only: the pay-per-call lane never uses a server-held upstream
+    # credential — paypercall_upstream_key / ELCARO_UPSTREAM_KEY_* are legacy
+    # no-ops kept in the signature for caller compatibility.
+    _ = paypercall_upstream_key
     if paypercall_mode is not None:
         ppc_mode = paypercall_mode
     else:
@@ -361,7 +363,10 @@ def create_app(
         except ValueError:
             ppc_mode = Mode.QUARANTINE
     nonce_store = x402_nonce_store if x402_nonce_store is not None else x402.InMemoryNonceStore()
-    x402_ready = bool(x402_offer_list) and bool(ppc_upstream_key) and ppc_upstream in upstream_map
+    # Scan-only arming: the lane needs offers (a resolvable payTo) and nothing
+    # else — there is no server-held upstream credential in the paid path, so
+    # ppc_upstream_key is intentionally absent from the readiness condition.
+    x402_ready = bool(x402_offer_list)
     client_factory = http_client_factory or (lambda: httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT))
     metrics = GatewayMetrics()
     incidents: OrderedDict[str, dict] = OrderedDict()  # id -> autopsy summary
@@ -564,9 +569,36 @@ def create_app(
     # settlement is deferred to a background task after the response is
     # built (route.ts order: verify -> serve -> settle).
 
-    def _x402_gate(request: Request, *, is_anthropic: bool):
+    ppc_daily_cap = int(os.environ.get("ELCARO_PAYPERCALL_DAILY_CAP", "100"))
+
+    def payer_over_daily_cap(payer: str) -> tuple[bool, int]:
+        """True when the payer already used today's pay-per-call budget.
+
+        Counts every attribution row for the payer regardless of settlement
+        status — that is the point: never-settling payers are throttled by
+        the same budget as honest ones. Fail-open on metering outage: the
+        scan-only cost of a missed check is bounded and every row is still
+        visible in the revenue rollup."""
+        try:
+            from core.usage import _sink  # process-wide sink installed at boot
+
+            counter = getattr(_sink, "count_payer_events_today", None)
+            if counter is None:
+                return False, ppc_daily_cap
+            return counter(payer) >= ppc_daily_cap, ppc_daily_cap
+        except Exception:
+            log.exception("payer cap check failed open")
+            return False, ppc_daily_cap
+
+    def _x402_gate(request: Request, *, is_anthropic: bool, caller_upstream_key: str | None):
         """Return a 402/401 Response, or
-        (key_cfg, upstream_key, payment, charge, settle_task)."""
+        (key_cfg, upstream_key, payment, charge, settle_task, payment_meta).
+
+        Scan-only pricing (WS4): payment buys Elcaro's scan and the signed
+        verdict. The upstream credential is ALWAYS the caller's own — a
+        fixed per-request price can then never subsidize arbitrary LLM
+        inference through a server-held key, and unsigned-value freeloading
+        is bounded by the per-payer daily cap below."""
         if not x402_ready:
             return _err(
                 401,
@@ -601,7 +633,10 @@ def create_app(
         key_cfg = KeyConfig(
             key_id=f"x402:{result.payer}",  # ephemeral id — no api_keys row
             mode=ppc_mode,
-            upstream=ppc_upstream,
+            # Scan-only: the caller's key is a provider key, so the forward
+            # target is the provider matching the request dialect — never a
+            # server-keyed upstream. (SERV-flavored callers use keyed lanes.)
+            upstream="anthropic" if is_anthropic else "openai",
         )
         # Correlation id shared by the usage row (emitted later in the
         # request) and the post-serve settlement update below.
@@ -625,7 +660,30 @@ def create_app(
             "payer": result.payer,
             "network": result.accept.network,
         }
-        return key_cfg, ppc_upstream_key, payment, charge, settle, payment_meta
+        # Scan-only means the caller must bring their own upstream key —
+        # without one there is nothing to scan-then-forward to.
+        if not caller_upstream_key:
+            return _err(
+                401,
+                "Pay-per-call is scan-only: send your own upstream key "
+                "(authorization / x-api-key) alongside the payment.",
+                anthropic=is_anthropic,
+                err_type="authentication_error",
+            )
+
+        # Per-payer daily cap, counted across ALL settlement states — a
+        # payer whose payments never settle still burns scan compute, so
+        # pending and failed rows throttle exactly like settled ones.
+        over_cap, cap = payer_over_daily_cap(result.payer)
+        if over_cap:
+            return _err(
+                429,
+                f"pay-per-call daily cap ({cap}/day) exceeded for this payer",
+                anthropic=is_anthropic,
+                err_type="rate_limit_error",
+            )
+
+        return key_cfg, caller_upstream_key, payment, charge, settle, payment_meta
 
     # ── The shared proxy path ─────────────────────────────────────────────
 
@@ -655,7 +713,7 @@ def create_app(
                     err_type="authentication_error",
                 )
         else:
-            gate = _x402_gate(request, is_anthropic=is_anthropic)
+            gate = _x402_gate(request, is_anthropic=is_anthropic, caller_upstream_key=upstream_key)
             if isinstance(gate, Response):
                 return gate
             key_cfg, upstream_key, _payment, charge, settle_bg, payment_meta = gate

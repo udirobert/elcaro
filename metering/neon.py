@@ -268,6 +268,20 @@ class NeonMetering:
         except Exception:
             log.exception("settlement update dropped — row stays pending, request unaffected")
 
+    def count_payer_events_today(self, payer: str) -> int:
+        """Attribution rows for this payer since midnight UTC, all settlement
+        states — the WS4 pay-per-call daily cap counts freeloaders too."""
+
+        def _query(conn):
+            row = conn.execute(
+                "SELECT count(*) FROM usage_events"
+                " WHERE payer_address = %s AND ts >= date_trunc('day', now() at time zone 'utc')",
+                (payer,),
+            ).fetchone()
+            return int(row[0]) if row else 0
+
+        return self._with_retry(_query)
+
     # ── KeyStore ───────────────────────────────────────────────────────────
 
     def get(self, raw_key: str) -> Any | None:
