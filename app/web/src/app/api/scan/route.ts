@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  minerForwardHeaders,
+  rateLimitPassthroughHeaders,
+} from "@/lib/miner-proxy";
 
 const MINER_URL = process.env.ELCARO_MINER_URL || "http://localhost:8000";
 
@@ -39,7 +43,7 @@ export async function POST(request: Request) {
 
     const minerResponse = await fetch(`${MINER_URL}/scan`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: minerForwardHeaders(request, { premium: false }),
       body: JSON.stringify({
         content: body.content,
         content_type: body.content_type || "document",
@@ -56,6 +60,19 @@ export async function POST(request: Request) {
     });
 
     if (!minerResponse.ok) {
+      // The miner's 429 is already a client-actionable upsell payload. Pass it
+      // through unchanged (including Retry-After/rate-limit headers) instead
+      // of burying it inside a generic proxy error.
+      if (minerResponse.status === 429) {
+        const rateLimitBody = await minerResponse.json().catch(() => ({
+          error: "free_scan_rate_limited",
+          message: "Free scan limit reached.",
+        }));
+        return NextResponse.json(rateLimitBody, {
+          status: 429,
+          headers: rateLimitPassthroughHeaders(minerResponse),
+        });
+      }
       const errorText = await minerResponse.text();
       return NextResponse.json(
         { error: "Miner error", detail: errorText },

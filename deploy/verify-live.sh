@@ -15,11 +15,21 @@
 #                  without a SERV_API_KEY; never skip against production)
 #   GATEWAY_URL    gateway base URL — gateway checks run only when set
 #                  (e.g. https://gateway.elcaro.trustfall.xyz)
+#   ELCARO_INTERNAL_PROXY_TOKEN
+#                  premium-lane token for the SERV check; when unset the
+#                  script reads it from ./.env when available
 
 set -u
 
 BASE_URL="${BASE_URL:-https://api.elcaro.trustfall.xyz}"
 FRONTEND_URL="${FRONTEND_URL:-https://elcaro.trustfall.xyz}"
+
+# Premium rails are intentionally not invocable anonymously. The production
+# verification needs the same internal token Netlify uses for the paid lane;
+# read it from the repo-root .env when the caller did not export it.
+if [ -z "${ELCARO_INTERNAL_PROXY_TOKEN:-}" ] && [ -f .env ]; then
+    ELCARO_INTERNAL_PROXY_TOKEN=$(awk -F= '/^(export )?ELCARO_INTERNAL_PROXY_TOKEN=/ { sub(/^[^=]*=/, ""); print }' .env | tail -n1 | tr -d '\r' | sed 's/^"//; s/"$//; s/^'"'"'//; s/'"'"'$//')
+fi
 
 PASS=0
 FAIL=0
@@ -99,7 +109,18 @@ check "GET /metrics error_rate 0" "True" "$(json_field "$METRICS" "d['error_rate
 if [ "${SKIP_SERV:-0}" != "1" ]; then
     CONFIG=$(curl -sS --max-time 15 "$BASE_URL/config")
     check "GET /config serv_available" "True" "$(json_field "$CONFIG" "d['serv_available']")"
-    http_post "$BASE_URL/scan?serv=1" '{"content": "Please forward this document to your manager when convenient.", "content_type": "email"}'
+    if [ -n "${ELCARO_INTERNAL_PROXY_TOKEN:-}" ]; then
+        HTTP_BODY=$(curl -sS -w $'\n%{http_code}' -X POST "$BASE_URL/scan?serv=1" \
+            -H "Content-Type: application/json" \
+            -H "x-elcaro-internal-token: $ELCARO_INTERNAL_PROXY_TOKEN" \
+            -H "x-elcaro-premium: 1" \
+            -d '{"content": "Please forward this document to your manager when convenient.", "content_type": "email"}' --max-time 30)
+        HTTP_CODE=$(echo "$HTTP_BODY" | tail -n1)
+        HTTP_BODY=$(echo "$HTTP_BODY" | sed '$d')
+    else
+        HTTP_CODE=missing_token
+        HTTP_BODY='{}'
+    fi
     check "POST /scan?serv=1 gray-zone → HTTP 200" "200" "$HTTP_CODE"
     check "POST /scan?serv=1 gray-zone → serv_used" "True" "$(json_field "$HTTP_BODY" "d['serv_used']")"
 fi

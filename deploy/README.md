@@ -184,6 +184,78 @@ Two pm2 gotchas this file is written around:
 - After any `startOrRestart`, `pm2 save` so `pm2 resurrect` restores the
   new env, not the stale dump.
 
+### Free-scan abuse controls and premium authorization
+
+Production now rate-limits the expensive second-opinion rails (SERV, Jev,
+Laya, JEV-VL, and deep analysis) separately from the ordinary rule-based scan.
+Anonymous callers can still try them, but only inside a small durable quota;
+the paid x402 lane bypasses that free quota. Enforcement lives at the miner
+edge, so callers cannot avoid it by bypassing Netlify and hitting the miner
+directly.
+
+The committed miner contract enables durable fixed-window quotas:
+
+- `ELCARO_SCAN_RATE_LIMIT_PER_MINUTE=6`
+- `ELCARO_SCAN_RATE_LIMIT_PER_DAY=30`
+- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE=1`
+- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY=3`
+
+When `ELCARO_CANARY_DSN`/`ELCARO_METERING_DSN` is present, the counters live in
+Neon table `scan_rate_windows` and survive restarts/multiple workers. Stored
+keys are HMACs of client IPs, not raw IPs. Set `ELCARO_RATE_LIMIT_SALT` in
+`.env` for a dedicated pepper; otherwise existing deployment secrets are used
+as fallback key material.
+
+Generate one shared internal token and configure it in both places:
+
+```bash
+openssl rand -hex 32
+```
+
+- VPS `~/elcaro/.env`: `ELCARO_INTERNAL_PROXY_TOKEN=<token>`
+- Netlify env: `ELCARO_INTERNAL_PROXY_TOKEN=<token>`
+
+The token does two separate things:
+
+1. lets Netlify assert the end-user IP (`x-elcaro-client-ip`) so free quotas
+   are per visitor rather than grouped under Netlify egress IPs;
+2. lets only the paid `/api/x402/scan` route set `x-elcaro-premium: 1`, which
+   bypasses the anonymous free quotas after payment verification.
+
+The ordinary `/api/scan` browser lane sends the token but sets
+`x-elcaro-premium: 0`, so it remains inside the free quotas. If the token is
+missing in either environment, paid-lane quota bypass fails closed and free
+quota attribution is degraded. For local development only,
+`ELCARO_ALLOW_ANONYMOUS_PREMIUM=1` bypasses the quotas.
+
+### Durable funnel analytics
+
+The web tier writes conversion events to Neon table `funnel_events` when any
+of `ELCARO_ANALYTICS_DSN`, `ELCARO_METERING_DSN`, or `ELCARO_CANARY_DSN` is
+present in Netlify. In the current deployment `ELCARO_CANARY_DSN` is enough —
+no additional database is needed. Without a DSN the route falls back to local
+JSONL only for development and reports `sink: "local_file"`.
+
+Privacy contract: no raw IP, no user-agent, no scanned content, and no bearer
+material. The browser sends a daily rotating random session id; the server
+stores only its HMAC. Set these Netlify vars for production operations:
+
+- `ELCARO_ANALYTICS_SALT` — dedicated HMAC key for session hashes
+- `ANALYTICS_ADMIN_TOKEN` — token required for `GET /api/analytics`
+
+Admin rollup example:
+
+```bash
+curl -H "x-admin-token: $ANALYTICS_ADMIN_TOKEN" \
+  https://elcaro.trustfall.xyz/api/analytics
+```
+
+The response is aggregate-only (`events_tracked`, plus per-event event/session
+counts for the last 30 days). Funnel events currently emitted:
+`landing.viewed`, `scan.viewed`, `scan.started`, `scan.verdict`, `scan.error`,
+`scan.shared`, `scan.copied`, `integrate.viewed`, `keys.viewed`, and
+`key.minted`.
+
 ### SERV in production (Phase 0.1)
 
 The miner advertises a SERV Reasoning second pass; it is armed by config,
@@ -191,8 +263,10 @@ not by code changes:
 
 1. Put `SERV_API_KEY=<openserv key>` in `~/elcaro/.env` (console.openserv.ai;
    `SERV_ENABLED`/`SERV_MODEL` are already committed in the ecosystem file).
-2. `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`
-3. `BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh`
+2. Configure `ELCARO_INTERNAL_PROXY_TOKEN` as described above — verify-live
+   uses it to keep its SERV probe outside the tiny anonymous premium quota.
+3. `pm2 startOrRestart deploy/ecosystem.config.cjs && pm2 save`
+4. `BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh`
    — the SERV checks assert `serv_available: true` on `/config` and a live
    `serv_used` verdict on a gray-zone `?serv=1` scan. They fail loudly on a
    silent rules fallback.

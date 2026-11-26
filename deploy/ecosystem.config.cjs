@@ -64,6 +64,14 @@ module.exports = {
         // SERV_API_KEY itself lives in the VPS .env, loaded above.
         SERV_ENABLED: "1",
         SERV_MODEL: "gpt-5.4-mini",
+        // Anonymous free-scan cost controls. These are deliberately committed
+        // (the deployment contract); ELCARO_INTERNAL_PROXY_TOKEN stays secret
+        // in .env and is shared with Netlify so proxied users are quota-keyed
+        // by their own IP and the paid x402 lane can bypass free quotas.
+        ELCARO_SCAN_RATE_LIMIT_PER_DAY: "30",
+        ELCARO_SCAN_RATE_LIMIT_PER_MINUTE: "6",
+        ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY: "3",
+        ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE: "1",
       },
       // Restart policy
       autorestart: true,

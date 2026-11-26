@@ -25,6 +25,8 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
+import ipaddress
 import json
 import os
 import time
@@ -34,7 +36,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from core import IpiDetectionEngine, ScanRequest, ScanResponse
@@ -42,6 +44,7 @@ from core.canary import TOKEN_RE
 from core.jev_reasoner import JevReasoner
 from core.jev_vl_reasoner import JevVlReasoner
 from core.laya_reasoner import LayaReasoner
+from core.rate_limit import scan_rate_limiters_from_env
 from core.sandbox import (
     SandboxConfig,
     run_sandbox,
@@ -87,6 +90,8 @@ class Metrics:
     total_errors: int = 0
     total_scans: int = 0
     serv_calls: int = 0  # second-pass calls that actually contributed to a verdict
+    rate_limited_scans: int = 0
+    rate_limited_premium_scans: int = 0
     serv_cost_total_usdc: float = (
         0.0  # cumulative SERV cost in USDC (approximate, from char counts)
     )
@@ -150,6 +155,8 @@ class Metrics:
             "total_errors": self.total_errors,
             "serv_calls": self.serv_calls,
             "serv_cost_total_usdc": round(self.serv_cost_total_usdc, 6),
+            "rate_limited_scans": self.rate_limited_scans,
+            "rate_limited_premium_scans": self.rate_limited_premium_scans,
             "error_rate": (
                 round(self.total_errors / self.total_requests, 4)
                 if self.total_requests > 0
@@ -175,6 +182,141 @@ class Metrics:
 
 
 _metrics = Metrics()
+
+
+# ── Free-scan cost protection ─────────────────────────────────────────────────
+#
+# The miner itself is publicly reachable, so protecting only the Netlify proxy
+# leaves a direct-API bypass. Two controls live here at the miner edge:
+#
+# 1. Optional durable fixed-window scan quotas keyed by HMAC(client IP). They
+#    are disabled unless the corresponding env limit is set, because local
+#    development and the offline test suite intentionally scan repeatedly.
+# 2. Expensive second-opinion rails get a much smaller anonymous quota than
+#    the ordinary rule-only path. A deployment-internal token lets the paid
+#    x402 lane bypass those free quotas; the public browser lane uses the same
+#    token only to assert the end-user IP, not to bypass quotas.
+
+try:
+    _scan_rate_limiter, _premium_scan_rate_limiter = scan_rate_limiters_from_env()
+except Exception as exc:  # boot-time config failure must be loud, not silent
+    raise RuntimeError(f"scan rate limiting is enabled but could not initialize: {exc}") from exc
+
+_PREMIUM_SCAN_FIELDS = (
+    "deep_analysis",
+    "serv_enabled",
+    "jev_enabled",
+    "laya_enabled",
+    "jev_vl_enabled",
+)
+
+
+def _valid_internal_token(http_request: Request) -> bool:
+    expected = os.environ.get("ELCARO_INTERNAL_PROXY_TOKEN", "")
+    if not expected:
+        return False
+    presented = http_request.headers.get("x-elcaro-internal-token", "")
+    return bool(presented) and hmac.compare_digest(presented, expected)
+
+
+def _premium_scan_authorized(http_request: Request) -> bool:
+    # Explicit local-development escape hatch. Production should instead use
+    # ELCARO_INTERNAL_PROXY_TOKEN + x-elcaro-premium: 1 from the paid lane.
+    # This controls quota bypass, not whether the rails exist at all.
+    if os.environ.get("ELCARO_ALLOW_ANONYMOUS_PREMIUM") == "1":
+        return True
+    return _valid_internal_token(http_request) and (
+        http_request.headers.get("x-elcaro-premium") == "1"
+    )
+
+
+def _client_ip(http_request: Request) -> str:
+    # The web proxy can assert the browser/client IP only when it proves it is
+    # our proxy. Without that proof the header is just caller-controlled input.
+    if _valid_internal_token(http_request):
+        asserted = http_request.headers.get("x-elcaro-client-ip", "").strip()
+        try:
+            if asserted:
+                return str(ipaddress.ip_address(asserted))
+        except ValueError:
+            pass
+
+    # Traefik appends the immediate client IP to X-Forwarded-For. Use the
+    # right-most value rather than the left-most, which is trivially spoofable
+    # when a caller supplies its own XFF header.
+    xff = http_request.headers.get("x-forwarded-for", "")
+    candidates = [part.strip() for part in xff.split(",") if part.strip()]
+    for candidate in reversed(candidates):
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            continue
+    if http_request.client and http_request.client.host:
+        return http_request.client.host
+    return "unknown"
+
+
+def _rate_limit_response(decision, *, premium: bool = False) -> JSONResponse:
+    retry = max(1, decision.retry_after_seconds)
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "free_premium_scan_rate_limited" if premium else "free_scan_rate_limited",
+            "message": (
+                "Free second-opinion scan limit reached. Use the paid x402 scan lane "
+                "for continued SERV/comparison scans without an account."
+                if premium
+                else "Free scan limit reached. Use the paid x402 scan lane for "
+                "continued scanning without an account."
+            ),
+            "retry_after_seconds": retry,
+            "upgrade": {
+                "type": "x402",
+                "endpoint": "/api/x402/scan",
+                "price_usdc": os.environ.get("ELCARO_X402_SCAN_PRICE_USDC", "0.01"),
+                "description": "Pay per scan; no signup or API key required.",
+            },
+        },
+        headers={
+            "Retry-After": str(retry),
+            "X-RateLimit-Limit": str(decision.limit),
+            "X-RateLimit-Remaining": str(decision.remaining),
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _guard_scan_request(
+    http_request: Request, request: ScanRequest
+) -> tuple[ScanRequest, JSONResponse | None]:
+    """Apply free-tier cost controls and return a safe request.
+
+    Returns (possibly-sanitized request, response). A non-None response means
+    the scan must not run.
+    """
+    premium_authorized = _premium_scan_authorized(http_request)
+    if premium_authorized:
+        return request, None
+
+    premium_requested = any(getattr(request, name) for name in _PREMIUM_SCAN_FIELDS)
+    client_ip = _client_ip(http_request)
+
+    # Premium rails (SERV and comparison models) consume upstream inference
+    # budget, so anonymous use gets a smaller quota than the rule-only path.
+    if premium_requested and _premium_scan_rate_limiter is not None:
+        decision = _premium_scan_rate_limiter.check(client_ip)
+        if not decision.allowed:
+            _metrics.rate_limited_premium_scans += 1
+            return request, _rate_limit_response(decision, premium=True)
+
+    # Every anonymous scan consumes the ordinary free quota as well. Paid
+    # premium traffic returned above and bypasses both free buckets.
+    if _scan_rate_limiter is not None:
+        decision = _scan_rate_limiter.check(client_ip)
+        if not decision.allowed:
+            _metrics.rate_limited_scans += 1
+            return request, _rate_limit_response(decision)
+    return request, None
 
 
 # ── Request counting middleware ─────────────────────────────────────────────────
@@ -372,7 +514,9 @@ async def metrics():
 
 
 @app.post("/scan", response_model=ScanResponse)
-async def scan(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
+async def scan(
+    request: ScanRequest, http_request: Request, serv: bool | None = None
+) -> ScanResponse | JSONResponse:
     """Scan content for indirect prompt injection.
 
     Accepts content and content type, returns risk score, flagged techniques,
@@ -389,6 +533,9 @@ async def scan(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
+    request, limited_response = _guard_scan_request(http_request, request)
+    if limited_response is not None:
+        return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:
@@ -397,7 +544,9 @@ async def scan(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
 
 
 @app.post("/v1/infer", response_model=ScanResponse)
-async def infer(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
+async def infer(
+    request: ScanRequest, http_request: Request, serv: bool | None = None
+) -> ScanResponse | JSONResponse:
     """Telegraph-compatible inference endpoint.
 
     Some Telegraph miners expose /v1/infer as the standard inference endpoint.
@@ -405,6 +554,9 @@ async def infer(request: ScanRequest, serv: bool | None = None) -> ScanResponse:
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
+    request, limited_response = _guard_scan_request(http_request, request)
+    if limited_response is not None:
+        return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:

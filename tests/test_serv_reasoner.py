@@ -439,7 +439,12 @@ def test_serv_query_param_zero_forces_off(client):
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # These API-level tests exercise the local-development premium escape
+    # hatch so quota behavior cannot interfere with the pass-through contract.
+    # Cost-control quotas are covered separately in
+    # tests/test_scan_cost_controls.py.
+    monkeypatch.setenv("ELCARO_ALLOW_ANONYMOUS_PREMIUM", "1")
     from fastapi.testclient import TestClient
 
     from miner.api import app

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAddress, recoverTypedDataAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { minerForwardHeaders } from "@/lib/miner-proxy";
 
 /**
  * x402-paid scan — the PayBox marketplace lane for Elcaro.
@@ -29,8 +30,8 @@ import { privateKeyToAccount } from "viem/accounts";
  * For a $0.01-per-scan resource that is a deliberate trade-off: a signed
  * authorization IS the payment instrument; settlement can batch later.
  *
- * The free path (/scan on the miner, /api/scan here) is untouched — this
- * lane is additive, gated by the client choosing to pay.
+ * The free path (/scan on the miner, /api/scan here) remains available but
+ * rate-limited; this paid lane receives the miner's quota-bypass authorization.
  */
 
 export const runtime = "nodejs"; // viem crypto needs Node, not edge
@@ -365,12 +366,15 @@ export async function POST(req: NextRequest) {
   try {
     minerResponse = await fetch(`${MINER_URL}/scan`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: minerForwardHeaders(req, { premium: true }),
       body: JSON.stringify({
         content: body.content,
         content_type: body.content_type || "document",
         deep_analysis: body.deep_analysis || false,
         serv_enabled: body.serv_enabled || false,
+        jev_enabled: body.jev_enabled || false,
+        laya_enabled: body.laya_enabled || false,
+        jev_vl_enabled: body.jev_vl_enabled || false,
       }),
       signal: AbortSignal.timeout(MINER_TIMEOUT_MS),
     });
