@@ -60,15 +60,25 @@ const CODE_TRYIT = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\
     "content_type": "email"
   }'`;
 
-const OUTPUT_TRYIT = `{
-  "risk_score": 1.0,
-  "risk_level": "dangerous",
-  "flagged_techniques": [
-    "authority_framing",
-    "delimiter_confusion",
-    ...
-  ]
-}`;
+// Verbatim prefix of the real response — the body is ~7 KB on one line, so it
+// is cut at a field boundary with a visible marker, never prettified or
+// invented. The full body carries one indicators[] entry per matched
+// technique, a plain-language human_summary, and the safe_content the agent
+// receives in place of the payload.
+const OUTPUT_TRYIT = `{"risk_score":1.0,"risk_level":"dangerous","flagged_techniques":["authority_framing","delimiter_confusion","placement_salience","task_reframing"],"indicators":[{"technique_class":"authority_framing", …`;
+
+const CODE_VERIFY = `# The six fields the scan returned, plus the content you scanned.
+curl -s -X POST https://api.elcaro.trustfall.xyz/verify \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "content": "<the exact content you scanned>",
+    "risk_score": 1.0,
+    "risk_level": "dangerous",
+    "quarantined": true,
+    "flagged_techniques": ["authority_framing", "delimiter_confusion", "placement_salience", "task_reframing"],
+    "scanned_at": 1795730164,
+    "signature": "<the signature field from the scan response>"
+  }'`;
 
 const CODE_MIDDLEWARE = `# NOTE: the Python SDK isn't on PyPI yet — these imports assume
 # you've cloned the repo so app/ and core/ are importable from your
@@ -246,10 +256,11 @@ export default function IntegratePage() {
         <div className="space-y-4">
           <PageHeader eyebrow="Gateway · SERV-powered" title="Add Elcaro to your agent">
             <p className="text-base text-ink-muted leading-relaxed max-w-lg">
-              Point your existing OpenAI or Anthropic SDK at the gateway and
-              every retrieved part is scanned before the model sees it. Prefer
-              a single call? The scan API needs no key. Under 2ms for the
-              rules path.
+              One unauthenticated POST scans whatever your agent just
+              retrieved and tells you what it found — no key, no account, under
+              2ms for the rules path. Already calling OpenAI or Anthropic
+              through an SDK? Path 01 points that SDK at the gateway instead,
+              and every retrieved part is scanned in-line.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <a
@@ -289,14 +300,34 @@ export default function IntegratePage() {
             </p>
             <CodeBlock code={CODE_TRYIT} language="bash" />
             <p className="text-sm text-ink-muted leading-relaxed mt-4 mb-2 max-w-2xl">
-              What comes back:
+              What comes back: <span className="font-mono text-ink">dangerous</span>{" "}
+              at risk 1.00, four techniques flagged, and one{" "}
+              <span className="font-mono">indicators</span> entry per technique
+              with the matched text, a MITRE ATLAS mapping and a remediation.
+              Two fields do the work in production —{" "}
+              <span className="font-mono">human_summary</span>, a sentence your
+              agent can say out loud, and{" "}
+              <span className="font-mono">safe_content</span>, the quarantine
+              notice it receives in place of the payload.
             </p>
             <CodeBlock code={OUTPUT_TRYIT} language="json" />
             <p className="text-xs text-ink-faint leading-relaxed mt-4 max-w-2xl">
-              The free scan is rate-limited per IP and shared — enough to
-              evaluate, not to run a fleet. When you want this inside your
-              agent&apos;s retrieval path, that&apos;s what keys are for —
-              everything below, in order of commitment.
+              Every verdict is signed. The response carries a{" "}
+              <span className="font-mono">signature</span> and the{" "}
+              <span className="font-mono">key_id</span> that produced it, and{" "}
+              <span className="font-mono">
+                curl https://api.elcaro.trustfall.xyz/pubkey
+              </span>{" "}
+              returns that id with the Ed25519 public key — enough to check a
+              verdict offline without trusting our API. Path 00 shows the round
+              trip.
+            </p>
+            <p className="text-xs text-ink-faint leading-relaxed mt-2 max-w-2xl">
+              It costs nothing and carries no quota of yours, which also means
+              it is best-effort and shared: evaluate with it freely, but
+              don&apos;t put production traffic or a crawler through it.
+              Scanning inside your agent&apos;s retrieval path is what the two
+              paths below are for — and the first one still needs no key.
             </p>
           </section>
         </div>
@@ -329,11 +360,69 @@ export default function IntegratePage() {
           </p>
         </div>
 
-        {/* 00 — the Gateway quickstart replaces the old tiers block (§2.9):
-            for agents that already call an LLM SDK, the whole integration
-            is a base-URL swap plus two keys. */}
+        {/* 00 — the no-key path leads the ladder: same call as the section
+            above, without the specimen. Everything that needs a key or a
+            provider credential comes after it. */}
+        <Section number="00" title="Direct API call — no key">
+          <p className="text-sm text-ink-muted leading-relaxed">
+            No SDK, no signup. POST the content your agent just retrieved and
+            get a structured verdict back. Works from any language or runtime.
+          </p>
+          <CodeBlock code={CODE_API} language="bash" />
+          <p className="text-xs text-ink-faint leading-relaxed">
+            Returns{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              risk_score
+            </code>
+            ,{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              risk_level
+            </code>
+            ,{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              flagged_techniques
+            </code>
+            , and a full{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              indicators
+            </code>{" "}
+            array with matched text, confidence, MITRE TTPs, and
+            remediation. Structured for machine consumption — log it or act on
+            it.
+          </p>
+          <p className="text-sm font-semibold text-ink pt-2">
+            Verify the verdict
+          </p>
+          <p className="text-sm text-ink-muted leading-relaxed">
+            The verdict is Ed25519-signed over a canonical payload: content
+            hash, score, level, quarantine flag, techniques, timestamp. Hand
+            those six fields back with the signature and the miner re-derives
+            the payload and checks it — or verify offline against{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              GET /pubkey
+            </code>{" "}
+            with any Ed25519 library, so you never have to trust our API to
+            trust our answer.
+          </p>
+          <CodeBlock code={CODE_VERIFY} language="bash" />
+          <p className="text-xs text-ink-faint leading-relaxed">
+            Returns{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              {`{"valid":true,"key_id":"3383cee92fdbdf2f", …}`}
+            </code>
+            . Alter one character of the content or the score and it flips to{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              valid: false
+            </code>{" "}
+            — the verdict is unaltered, or it isn&apos;t.
+          </p>
+        </Section>
+
+        {/* 01 — the Gateway quickstart (was §2.9). Deliberately second:
+            in-line scanning needs an elk_ key AND the caller's own
+            upstream credential, so it cannot be a first-run step. */}
         <div id="gateway" className="scroll-mt-24">
-          <Section number="00" title="Gateway — URL swap (recommended)">
+          <Section number="01" title="Gateway — URL swap (needs a key)">
             <p className="text-sm text-ink-muted leading-relaxed">
               If your agent already calls OpenAI or Anthropic through an SDK,
               you don&apos;t need a scan step at all — point the SDK at the
@@ -455,36 +544,6 @@ export default function IntegratePage() {
             </aside>
           </Section>
         </div>
-
-        {/* Option 1 — Direct API */}
-        <Section number="01" title="Direct API call">
-          <p className="text-sm text-ink-muted leading-relaxed">
-            No SDK, no signup. POST the content your agent just retrieved and
-            get a structured verdict back. Works from any language or runtime.
-          </p>
-          <CodeBlock code={CODE_API} language="bash" />
-          <p className="text-xs text-ink-faint leading-relaxed">
-            Returns{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              risk_score
-            </code>
-            ,{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              risk_level
-            </code>
-            ,{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              flagged_techniques
-            </code>
-            , and a full{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              indicators
-            </code>{" "}
-            array with matched text, confidence, MITRE TTPs, and
-            remediation. Structured for machine consumption — log it or act on
-            it.
-          </p>
-        </Section>
 
         <p className="text-[11px] font-mono text-ink-faint -mt-8">
           Other paths — python middleware, telegraph, mcp, webmcp — are
