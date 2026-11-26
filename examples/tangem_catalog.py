@@ -84,14 +84,33 @@ def _catalog_size(tools: list[dict[str, str]]) -> int:
     return len(json.dumps(tools, ensure_ascii=True).encode("utf-8"))
 
 
-def _append_checked(tools: list[dict[str, str]], seen: set[str], tool: Any) -> None:
+def _append_checked(
+    tools: list[dict[str, str]], seen: set[str], tool: Any, *, review: bool = False
+) -> None:
     name = getattr(tool, "name", "") or ""
     if not name:
         raise CatalogError("tool entry with empty name")
     if name in seen:
         raise CatalogError("duplicate tool name in catalog")
     seen.add(name)
-    tools.append({"name": name, "description": getattr(tool, "description", "") or ""})
+    descriptor = {"name": name, "description": getattr(tool, "description", "") or ""}
+    if review:
+        # Server-declared annotations only — a hint, never authorization.
+        # The MCP SDK parses the camelCase wire names into snake_case
+        # attributes; accept either spelling.
+        annotations = getattr(tool, "annotations", None)
+        read_only = getattr(
+            annotations, "read_only_hint", getattr(annotations, "readOnlyHint", None)
+        )
+        destructive = getattr(
+            annotations,
+            "destructive_hint",
+            getattr(annotations, "destructiveHint", None),
+        )
+        descriptor["read_only_hint"] = (
+            "true" if read_only is True and destructive is not True else "unconfirmed"
+        )
+    tools.append(descriptor)
     if len(tools) > _MAX_TOOLS:
         raise CatalogError("catalog exceeds tool bound")
     if _catalog_size(tools) > MAX_CATALOG_BYTES:
@@ -107,7 +126,7 @@ def _server_params() -> Any:
     )
 
 
-async def _read(params: Any) -> list[dict[str, str]]:
+async def _read(params: Any, *, review: bool = False) -> list[dict[str, str]]:
     """initialize + tools/list against ``params`` — never tools/call.
 
     ``params`` is injectable so tests can point the real SDK stdio client at
@@ -132,7 +151,7 @@ async def _read(params: Any) -> list[dict[str, str]]:
                             params=PaginatedRequestParams(cursor=cursor)
                         )
                         for tool in result.tools:
-                            _append_checked(tools, seen, tool)
+                            _append_checked(tools, seen, tool, review=review)
                         cursor = result.next_cursor
                         if not cursor:
                             break
@@ -150,14 +169,17 @@ async def _read(params: Any) -> list[dict[str, str]]:
     return tools
 
 
-def read_tangem_catalog() -> list[dict[str, str]]:
+def read_tangem_catalog(*, review: bool = False) -> list[dict[str, str]]:
     """Return the live Tangem tool catalog as ``[{name, description}]``.
 
-    Blocking, ~120s bound. Raises :class:`CatalogError` on any failure —
-    pairing refusal, duplicates, empty or oversize catalog. Never partial.
+    With ``review=True`` each descriptor also carries ``read_only_hint``
+    (``'true'`` only when the server declares ``readOnlyHint`` and no
+    ``destructiveHint``) — an annotation, never authorization. Blocking,
+    ~120s bound. Raises :class:`CatalogError` on any failure — pairing
+    refusal, duplicates, empty or oversize catalog. Never partial.
     """
     try:
-        return asyncio.run(asyncio.wait_for(_read(_server_params()), _TIMEOUT_S))
+        return asyncio.run(asyncio.wait_for(_read(_server_params(), review=review), _TIMEOUT_S))
     except CatalogError:
         raise
     except Exception as exc:

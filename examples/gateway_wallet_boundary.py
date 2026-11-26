@@ -26,7 +26,9 @@ Exits non-zero if any rehearsal expectation fails (fail closed).
 from __future__ import annotations
 
 import argparse
+import functools
 import json
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -215,11 +217,18 @@ def _print_turn_header(turn: str, instruction: str, note_label: str) -> None:
     print(f"  retrieved note   : {note_label}")
 
 
-def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> int:
+def run(
+    auto: bool = False,
+    *,
+    catalog_reader: CatalogReader | None = None,
+    review_catalog: bool = False,
+) -> int:
     """Drive the rehearsal; returns 0 on success.
 
     ``catalog_reader`` is injectable for offline tests; ``--tangem-catalog``
     wires it to ``examples.tangem_catalog.read_tangem_catalog``.
+    ``review_catalog`` only adds read-only candidate NAMES to the verified
+    clean-catalog branch — never descriptions, wallet values or tool calls.
     """
     set_usage_sink(NullUsageSink())  # keep the demo free of env-backed logging
 
@@ -262,21 +271,27 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
         dispatch_completed += 1 if result is not None else 0
         return result
 
-    print("Gateway ↔ wallet boundary rehearsal")
+    print("What reaches the signer — a guided two-scan rehearsal")
+    print(
+        "A document tries to instruct the agent. Scan 1 stops it. "
+        "Scan 2 shows the clean version pass."
+    )
     print(
         "REAL: local Elcaro Gateway + scan + receipt | SIMULATED: model | "
         "NOT CONNECTED: Tangem signing"
     )
     if live:
         print(
-            "LIVE LEG: capability catalog only — metadata discovery, no "
-            "tools/call, no wallet writes"
+            "LIVE LEG: ask Tangem which tools exist — metadata discovery only, "
+            "no tools/call, no wallet writes"
         )
+    else:
+        print("Tangem MCP not contacted in offline mode.")
     interactive = not auto and sys.stdin.isatty()
 
     # ── Turn 1: flagged tool result ──────────────────────────────────────
     if interactive:
-        input("\n[turn 1 — flagged note] press Enter to send the request")
+        input("\n1. Scan the marked note — press Enter")
     _print_turn_header("TURN 1 — flagged note", instruction, repr(FLAGGED))
     before = len(upstream.requests)
     resp = client.post(
@@ -306,6 +321,7 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
     _bind_payload(payload, FLAGGED)
     if not payload.get("quarantined") or payload.get("risk_level") != "dangerous":
         _fail("turn 1 receipt does not attest to the blocked verdict")
+    print("  Stopped before the model. The document cannot instruct the agent.")
     print(f"  scanned path     : {parts[0]['path']} ({parts[0]['content_type']})")
     print(
         f"  action           : {action} (verdict={resp.headers.get('x-elcaro-verdict')}, "
@@ -328,7 +344,7 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
 
     # ── Turn 2: clean control ────────────────────────────────────────────
     if interactive:
-        input("\n[turn 2 — clean control] press Enter to send the request")
+        input("\n2. Scan the clean note — press Enter")
     _print_turn_header("TURN 2 — clean control", instruction, repr(CLEAN))
     before = len(upstream.requests)
     resp = client.post(
@@ -360,6 +376,7 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
     _bind_payload(payload, CLEAN)
     if payload.get("quarantined") or payload.get("risk_level") != "safe":
         _fail("turn 2 receipt does not attest to the clean verdict")
+    print("  Clean note reached the simulated model unchanged.")
     print(
         f"  scanned path     : {parts[0]['path']} ({parts[0]['content_type']}) — scanned, allowed"
     )
@@ -370,6 +387,12 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
     # ── Optional live catalog leg (clean dispatch only) ──────────────────
     catalog = None
     if live:
+        if interactive:
+            input(
+                "\n3. Press Enter to ask Tangem which tools exist "
+                "(tools/list only). Pair off-projector."
+            )
+        print("  asking Tangem: tools/list (read-only)…", flush=True)
         attempted0, completed0 = dispatch_attempted, dispatch_completed
         catalog = after_verdict(resp, receipt_ok, counted_reader, CLEAN)
         print(
@@ -428,8 +451,31 @@ def run(auto: bool = False, *, catalog_reader: CatalogReader | None = None) -> i
                 f"upstream delta={delta3}) — forwarded byte-identical,"
                 " receipt verified; simulated model executes no tools"
             )
+            if review_catalog:
+                # Re-run the exact safe gate on this response (receipt was
+                # verified above) — names print only when every check holds.
+                reviewed = after_verdict(resp3, True, lambda: catalog, serialized)
+                if reviewed is None:
+                    _fail("review gate held on a verified clean catalog turn")
+                eligible = [
+                    t["name"]
+                    for t in reviewed
+                    if t.get("read_only_hint") == "true"
+                    and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,63}", t["name"])
+                ]
+                if eligible:
+                    print(
+                        "  server-declared read-only candidates "
+                        f"(not authorization): {', '.join(eligible)}"
+                    )
+                else:
+                    print(
+                        "  no server-declared read-only candidates — ask the "
+                        "organizers which tool to demo; do not guess"
+                    )
         else:
             _fail(f"catalog scan unexpected shape: action={action3} verdict={verdict3}")
+        print(f"  tools/list → {len(catalog)} descriptions → {action3} (scan action)")
         print(
             "  WALLET LEG: capability metadata only — separate from signing,"
             " nothing here dialed a phone or wrote to a wallet."
@@ -454,20 +500,44 @@ def main(argv: list[str] | None = None) -> int:
         help="after the verified clean turn, discover the Tangem tool catalog"
         " (initialize + tools/list only; interactive pairing, run off-projector)",
     )
+    parser.add_argument(
+        "--review-catalog",
+        action="store_true",
+        help="requires --tangem-catalog — after the verified clean catalog"
+        " scan, print server-declared read-only candidate names only"
+        " (annotations are hints, not authorization)",
+    )
     args = parser.parse_args(argv)
+    if args.review_catalog and not args.tangem_catalog:
+        parser.error("--review-catalog requires --tangem-catalog")
     reader = None
     if args.tangem_catalog:
         from examples.tangem_catalog import read_tangem_catalog  # noqa: PLC0415
 
-        reader = read_tangem_catalog
+        reader = (
+            functools.partial(read_tangem_catalog, review=True)
+            if args.review_catalog
+            else read_tangem_catalog
+        )
     try:
-        return run(auto=args.auto, catalog_reader=reader)
+        return run(
+            auto=args.auto,
+            catalog_reader=reader,
+            review_catalog=args.review_catalog,
+        )
     except Exception as exc:
         from examples.tangem_catalog import CatalogError  # noqa: PLC0415
 
         if isinstance(exc, CatalogError):
-            print(f"catalog leg unavailable: {exc}")
-            print("presenter fallback: re-run offline with --auto")
+            print(
+                "Tangem catalog unavailable; no catalog verdict or wallet "
+                "action. The two local scan receipts are still valid."
+            )
+            print(
+                "Continue in the Scan app: "
+                "https://elcaro.trustfall.xyz/scan?example=tangem-market-note"
+            )
+            print(f"(reason: {exc})")
             return 2
         raise
 

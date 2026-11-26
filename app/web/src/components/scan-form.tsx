@@ -7,6 +7,7 @@ import type { ContentType, ScanError, ScanResponse } from "@/lib/types";
 import { scanContent, isError, fetchUrlAvailable, fetchUrlContent, isFetchUrlError } from "@/lib/api";
 import { trackFunnel } from "@/lib/analytics";
 import { CONTENT_TYPES, EXAMPLES, type ExamplePayload } from "@/lib/constants";
+import { WORKSHOP_CASES } from "@/lib/tangem-casebook";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
 import { useWebMcpScan } from "@/lib/use-webmcp-scan";
@@ -483,22 +484,28 @@ export function ScanForm({
       content !== comparisonMatch.content
   );
 
-  // Tangem cutaway — matched on the exact specimen content alone so the
-  // illustration stays mounted while a scan is in flight (comparisonMatch is
-  // suppressed during scanning to keep the generic hint honest).
-  const tangemNote = EXAMPLES.find((ex) => ex.id === "tangem-market-note");
-  const tangemComparison = tangemNote?.comparison;
-  const tangemActive = Boolean(
-    tangemNote &&
-      contentType === tangemNote.content_type &&
-      (content === tangemNote.content ||
-        (tangemComparison && content === tangemComparison.content))
+  // Workshop casebook cutaway — matched on the exact specimen content alone
+  // so the illustration stays mounted while a scan is in flight
+  // (comparisonMatch is suppressed during scanning to keep the generic hint
+  // honest). Membership comes from the casebook itself, not from an id naming
+  // convention: adding a case there is enough to light up the plates. Other
+  // paired specimens keep the generic hint below.
+  const workshopExample = EXAMPLES.find(
+    (ex) =>
+      WORKSHOP_CASES.some((c) => c.id === ex.id) &&
+      contentType === ex.content_type &&
+      (content === ex.content || content === ex.comparison?.content)
   );
+  const workshopComparison = workshopExample?.comparison;
+  const workshopCase = workshopExample
+    ? WORKSHOP_CASES.find((c) => c.id === workshopExample.id)
+    : undefined;
+  const tangemActive = Boolean(workshopExample && workshopCase);
   const tangemShowingClean = Boolean(
     tangemActive &&
-      tangemComparison &&
-      content === tangemComparison.content &&
-      content !== tangemNote?.content
+      workshopComparison &&
+      content === workshopComparison.content &&
+      content !== workshopExample?.content
   );
   const matchingLiveResult =
     lastLive &&
@@ -559,23 +566,32 @@ export function ScanForm({
         )}
       </AnimatePresence>
 
-      {/* Tangem walkthrough — illustrated cutaway for the paired market-note
-          specimen only. Mounted for the exact flagged/clean content at
-          document type; verdict comes solely from the live response bound to
+      {/* Workshop casebook walkthrough — illustrated plates for the paired
+          tangem-* specimens. Mounted for exact marked/clean content at the
+          case's type; verdict comes solely from the live response bound to
           this content. Other paired specimens keep the generic hint below. */}
-      {tangemActive && tangemNote?.comparison && (
+      {tangemActive && workshopExample?.comparison && workshopCase && (
         <TangemCutaway
           note={content}
           clean={tangemShowingClean}
           scanning={scanning}
           verdict={matchingLiveResult}
           error={error}
+          caseDef={workshopCase}
+          activeCaseId={workshopExample.id}
           onScan={handleScan}
           onSwitch={() =>
             tangemShowingClean
-              ? setSpecimenContent(tangemNote)
-              : setSpecimenContent(tangemNote, tangemNote.comparison!.content)
+              ? setSpecimenContent(workshopExample)
+              : setSpecimenContent(
+                  workshopExample,
+                  workshopExample.comparison!.content
+                )
           }
+          onSelectCase={(id) => {
+            const next = EXAMPLES.find((ex) => ex.id === id);
+            if (next) setSpecimenContent(next);
+          }}
         />
       )}
 
@@ -645,7 +661,7 @@ export function ScanForm({
           to compare. Plain native button, no animation for the switch. The
           Tangem specimen renders its own cutaway above instead. */}
       {comparisonMatch?.comparison &&
-        comparisonMatch.id !== "tangem-market-note" && (
+        !tangemActive && (
           <div className="flex items-center gap-2 text-xs">
             <button
               onClick={() =>

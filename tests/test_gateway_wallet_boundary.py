@@ -282,3 +282,172 @@ def test_gate_dispatches_on_fully_clean_response():
     spy = SpyReader()
     assert demo.after_verdict(_clean_response(), True, spy, demo.CLEAN) == spy.catalog
     assert spy.calls == 1
+
+
+# Review fixture: same stdio protocol, but tools carry SDK-style camelCase
+# annotations so the real SDK parses them into tool.annotations.
+_REVIEW_FIXTURE_SERVER = r"""
+import json
+import sys
+
+TOOLS = [
+    {"name": "read_balance", "description": "safe read",
+     "inputSchema": {"type": "object", "properties": {}},
+     "annotations": {"readOnlyHint": True}},
+    {"name": "nuke_wallet", "description": "flagged destructive",
+     "inputSchema": {"type": "object", "properties": {}},
+     "annotations": {"readOnlyHint": True, "destructiveHint": True}},
+    {"name": "mystery", "description": "no hints declared",
+     "inputSchema": {"type": "object", "properties": {}}},
+]
+
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    req = json.loads(line)
+    mid = req.get("id")
+    method = req.get("method")
+    if method == "initialize":
+        resp = {
+            "jsonrpc": "2.0",
+            "id": mid,
+            "result": {
+                "protocolVersion": req["params"]["protocolVersion"],
+                "capabilities": {},
+                "serverInfo": {"name": "fixture", "version": "0"},
+            },
+        }
+    elif method == "notifications/initialized":
+        continue
+    elif method == "ping":
+        resp = {"jsonrpc": "2.0", "id": mid, "result": {}}
+    elif method == "tools/list":
+        resp = {"jsonrpc": "2.0", "id": mid, "result": {"tools": TOOLS}}
+    else:
+        resp = {
+            "jsonrpc": "2.0",
+            "id": mid,
+            "error": {"code": -32601, "message": "method not supported"},
+        }
+    sys.stdout.write(json.dumps(resp) + "\n")
+    sys.stdout.flush()
+"""
+
+
+def _review_fixture_params():
+    mcp = pytest.importorskip("mcp")
+    return mcp.StdioServerParameters(command=sys.executable, args=["-c", _REVIEW_FIXTURE_SERVER])
+
+
+def test_default_read_suppresses_hint_field():
+    catalog = asyncio.run(asyncio.wait_for(tc._read(_review_fixture_params()), timeout=30))
+    assert all("read_only_hint" not in d for d in catalog)
+
+
+def test_review_read_marks_only_declared_readonly_nodestructive():
+    catalog = asyncio.run(
+        asyncio.wait_for(tc._read(_review_fixture_params(), review=True), timeout=30)
+    )
+    hints = {d["name"]: d["read_only_hint"] for d in catalog}
+    assert hints == {
+        "read_balance": "true",
+        "nuke_wallet": "unconfirmed",  # destructiveHint set → never a candidate
+        "mystery": "unconfirmed",  # undeclared → unconfirmed, not guessed
+    }
+
+
+def test_review_prints_only_eligible_names(capsys):
+    spy = SpyReader(
+        [
+            {"name": "read_balance", "description": "x", "read_only_hint": "true"},
+            {"name": "bad name!", "description": "x", "read_only_hint": "true"},
+            {"name": "-lead_dash", "description": "x", "read_only_hint": "true"},
+            {"name": "nuke_wallet", "description": "x", "read_only_hint": "unconfirmed"},
+            {"name": "mystery", "description": "x"},  # no hint field at all
+        ]
+    )
+    assert demo.run(auto=True, catalog_reader=spy, review_catalog=True) == 0
+    out = capsys.readouterr().out
+    assert "server-declared read-only candidates (not authorization)" in out
+    assert "read_balance" in out
+    assert "bad name!" not in out
+    assert "-lead_dash" not in out
+    assert "nuke_wallet" not in out
+    assert "mystery" not in out
+
+
+def test_no_review_flag_prints_no_candidates(capsys):
+    spy = SpyReader([{"name": "read_balance", "description": "x", "read_only_hint": "true"}])
+    assert demo.run(auto=True, catalog_reader=spy) == 0
+    out = capsys.readouterr().out
+    assert "read_balance" not in out
+    assert "candidates" not in out
+
+
+def test_review_no_eligible_asks_organizers(capsys):
+    spy = SpyReader([{"name": "nuke_wallet", "description": "x", "read_only_hint": "unconfirmed"}])
+    assert demo.run(auto=True, catalog_reader=spy, review_catalog=True) == 0
+    out = capsys.readouterr().out
+    assert "no server-declared read-only candidates" in out
+    assert "nuke_wallet" not in out
+
+
+def test_blocked_catalog_reveals_no_candidate_names(capsys):
+    """A flagged descriptor blocks the catalog turn — the review branch is
+    inside the clean arm only, so names never print on a refusal."""
+    spy = SpyReader(
+        [
+            {
+                "name": "read_balance",
+                "description": demo.FLAGGED,
+                "read_only_hint": "true",
+            }
+        ]
+    )
+    assert demo.run(auto=True, catalog_reader=spy, review_catalog=True) == 0
+    out = capsys.readouterr().out
+    assert "read_balance" not in out
+    assert "candidates" not in out
+
+
+def test_review_catalog_requires_tangem_catalog():
+    with pytest.raises(SystemExit) as exc:
+        demo.main(["--review-catalog", "--auto"])
+    assert exc.value.code == 2
+
+
+def test_cli_wires_review_partial(monkeypatch):
+    captured = {}
+
+    def fake_run(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    def fake_reader(*, review=False):
+        return [{"name": "x", "description": "y"}]
+
+    monkeypatch.setattr(demo, "run", fake_run)
+    monkeypatch.setattr(tc, "read_tangem_catalog", fake_reader)
+    assert demo.main(["--tangem-catalog", "--review-catalog", "--auto"]) == 0
+    reader = captured["catalog_reader"]
+    assert captured["review_catalog"] is True
+    assert reader.func is fake_reader
+    assert reader.keywords == {"review": True}
+
+
+def test_cli_default_passes_plain_reader(monkeypatch):
+    captured = {}
+
+    def fake_run(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    def fake_reader(*, review=False):
+        return [{"name": "x", "description": "y"}]
+
+    monkeypatch.setattr(demo, "run", fake_run)
+    monkeypatch.setattr(tc, "read_tangem_catalog", fake_reader)
+    assert demo.main(["--tangem-catalog", "--auto"]) == 0
+    assert captured["catalog_reader"] is fake_reader
+    assert captured["review_catalog"] is False
