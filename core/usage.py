@@ -21,10 +21,11 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
+from uuid import uuid4
 
 from core.policy import Mode
 
@@ -57,6 +58,14 @@ class UsageEvent:
     serv_input_tokens: int | None = None
     serv_output_tokens: int | None = None
     charge_usdc: Decimal = Decimal("0")
+    # x402 payment attribution (WS3). ``event_id`` correlates the row with
+    # the post-serve settlement update; non-payment lanes keep the defaults
+    # (``settlement_status="none"``).
+    event_id: str = field(default_factory=lambda: uuid4().hex)
+    payer_address: str | None = None
+    payment_network: str | None = None
+    payment_tx_hash: str | None = None
+    settlement_status: str = "none"  # none | pending | settled | failed | verified_local
 
 
 class UsageSink(Protocol):
@@ -69,6 +78,9 @@ class NullUsageSink:
     """Default: drop events. Safe until Dev C's Neon sink lands."""
 
     def emit(self, event: UsageEvent) -> None:
+        pass
+
+    def record_settlement(self, event_id: str, *, tx_hash: str | None, status: str) -> None:
         pass
 
 
@@ -100,6 +112,21 @@ def emit_usage(event: UsageEvent) -> None:
         _sink.emit(event)
     except Exception:  # noqa: BLE001 — metering must not fail requests
         log.warning("usage sink dropped an event", exc_info=True)
+
+
+def record_settlement(event_id: str, *, tx_hash: str | None, status: str) -> None:
+    """Update the usage row for ``event_id`` with the settlement outcome.
+
+    Sinks without settlement support (test spies, stdout) simply lack the
+    method — the guard keeps them valid. Never raises into the request path,
+    same posture as :func:`emit_usage`.
+    """
+    try:
+        recorder = getattr(_sink, "record_settlement", None)
+        if recorder is not None:
+            recorder(event_id, tx_hash=tx_hash, status=status)
+    except Exception:  # noqa: BLE001 — metering must not fail requests
+        log.warning("usage sink dropped a settlement update", exc_info=True)
 
 
 # ── Key lookup ───────────────────────────────────────────────────────────────

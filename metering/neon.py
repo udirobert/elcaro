@@ -80,9 +80,26 @@ _DDL = (
         latency_ms_upstream   double precision NOT NULL,
         serv_input_tokens     int,
         serv_output_tokens    int,
-        charge_usdc           numeric(14,6) NOT NULL DEFAULT 0
+        charge_usdc           numeric(14,6) NOT NULL DEFAULT 0,
+        event_id              text,
+        payer_address         text,
+        payment_network       text,
+        payment_tx_hash       text,
+        settlement_status     text NOT NULL DEFAULT 'none'
     )
     """,
+    # Idempotent migrations for databases created before WS3 payment
+    # attribution — CREATE TABLE IF NOT EXISTS never alters existing tables.
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS event_id text",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS payer_address text",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS payment_network text",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS payment_tx_hash text",
+    (
+        "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS settlement_status"
+        " text NOT NULL DEFAULT 'none'"
+    ),
+    "CREATE INDEX IF NOT EXISTS usage_events_event_id_idx ON usage_events(event_id)",
+    "CREATE INDEX IF NOT EXISTS usage_events_settlement_idx ON usage_events(settlement_status, ts)",
     "CREATE INDEX IF NOT EXISTS usage_events_key_ts_idx ON usage_events(key_id, ts)",
     "CREATE INDEX IF NOT EXISTS usage_events_ts_idx ON usage_events(ts)",
     """
@@ -118,6 +135,11 @@ _EVENT_COLUMNS = (
     "serv_input_tokens",
     "serv_output_tokens",
     "charge_usdc",
+    "event_id",
+    "payer_address",
+    "payment_network",
+    "payment_tx_hash",
+    "settlement_status",
 )
 
 
@@ -226,6 +248,25 @@ class NeonMetering:
                 )
         except Exception:
             log.exception("usage event dropped — metering outage, request unaffected")
+
+    def record_settlement(self, event_id: str, *, tx_hash: str | None, status: str) -> None:
+        """Update one x402 usage row with its settlement outcome.
+
+        Idempotent (same tx hash + status rewrite cleanly), so unlike
+        ``emit`` this is safe against ambiguous-commit retries — but it
+        still never raises into the request path: a missed update is a
+        visibility gap, not a billing error, and rows stuck in ``pending``
+        are themselves the honest signal that settlement never completed.
+        """
+        try:
+            with self._conn() as conn:
+                conn.execute(
+                    "UPDATE usage_events SET payment_tx_hash = %s, settlement_status = %s"
+                    " WHERE event_id = %s",
+                    (tx_hash, status, event_id),
+                )
+        except Exception:
+            log.exception("settlement update dropped — row stays pending, request unaffected")
 
     # ── KeyStore ───────────────────────────────────────────────────────────
 

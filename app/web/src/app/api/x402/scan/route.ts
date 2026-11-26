@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAddress, recoverTypedDataAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { minerForwardHeaders } from "@/lib/miner-proxy";
+import { insertScanUsage } from "@/lib/usage-events";
 
 /**
  * x402-paid scan — the PayBox marketplace lane for Elcaro.
@@ -359,6 +360,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const t0 = performance.now();
   const verdict = await verifyPayment(payment);
   if ("reason" in verdict) return challenge(req, verdict.reason);
 
@@ -389,6 +391,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const tMinerDone = performance.now();
   const scanJson = await minerResponse.json().catch(() => null);
   if (!minerResponse.ok || scanJson == null) {
     return NextResponse.json(
@@ -400,6 +403,26 @@ export async function POST(req: NextRequest) {
   // Verified before we serve — settle (best-effort) after, per x402's
   // verify→serve→settle order. A facilitator miss doesn't claw the verdict.
   const settlement = await settleViaFacilitator(payment, verdict.accept);
+
+  // WS3 attribution: one usage_events row per paid scan, same table the
+  // gateway writes — traceable payer → tx → settlement. Best-effort: the
+  // insert never fails the paid response.
+  await insertScanUsage({
+    eventId: crypto.randomUUID(),
+    keyId: `x402:${verdict.payer}`,
+    payer: verdict.payer,
+    network: verdict.accept.network,
+    amountAtomic: verdict.accept.amount,
+    txHash: settlement.txHash ?? null,
+    settlementStatus: settlement.settled
+      ? "settled"
+      : settlement.detail === "verified_local"
+        ? "verified_local"
+        : "failed",
+    riskLevel: typeof scanJson?.risk_level === "string" ? scanJson.risk_level : "unknown",
+    latencyMsMiner: tMinerDone - t0,
+    latencyMsTotal: performance.now() - t0,
+  });
 
   const receipt = {
     success: true,

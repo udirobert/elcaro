@@ -50,6 +50,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
+from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI, Request
@@ -61,7 +62,7 @@ from core import x402
 from core.autopsy import summarize as summarize_autopsy
 from core.policy import FLAG_THRESHOLD, Mode, PartVerdict, PolicyResult, Provider, apply_policy
 from core.signing import VerdictSigner, canonical_verdict_payload, sha256_hex, verify_verdict
-from core.usage import KeyConfig, UsageEvent, emit_usage, get_key
+from core.usage import KeyConfig, UsageEvent, emit_usage, get_key, record_settlement
 from gateway.blocks import anthropic_block_response, openai_block_response, provider_error
 from gateway.upstream import (
     ROUTE_PATHS,
@@ -520,8 +521,21 @@ def create_app(
         t_elcaro_ms: float,
         t_upstream_ms: float,
         charge: Decimal,
+        payment: dict | None = None,
     ) -> None:
         in_tok, out_tok = _serv_tokens(result.parts) if result else (None, None)
+        payment_fields = (
+            {
+                # The row starts pending; the post-serve background task
+                # rewrites settlement_status (and the tx hash) by event_id.
+                "event_id": payment["event_id"],
+                "payer_address": payment.get("payer"),
+                "payment_network": payment.get("network"),
+                "settlement_status": "pending",
+            }
+            if payment
+            else {}
+        )
         emit_usage(
             UsageEvent(
                 key_id=key_id,
@@ -537,6 +551,7 @@ def create_app(
                 serv_input_tokens=in_tok,
                 serv_output_tokens=out_tok,
                 charge_usdc=charge,
+                **payment_fields,
             )
         )
 
@@ -588,10 +603,29 @@ def create_app(
             mode=ppc_mode,
             upstream=ppc_upstream,
         )
+        # Correlation id shared by the usage row (emitted later in the
+        # request) and the post-serve settlement update below.
+        event_id = uuid4().hex
+
+        def _settle_and_record() -> None:
+            res = x402.settle_via_facilitator(payment, result.accept, x402_facilitator)
+            if res.settled:
+                status = "settled"
+            elif res.detail == "verified_local":
+                status = "verified_local"
+            else:
+                status = "failed"
+            record_settlement(event_id, tx_hash=res.tx_hash, status=status)
+
         settle = BackgroundTasks()
-        settle.add_task(x402.settle_via_facilitator, payment, result.accept, x402_facilitator)
+        settle.add_task(_settle_and_record)
         charge = Decimal(result.accept.amount) / Decimal(1_000_000)
-        return key_cfg, ppc_upstream_key, payment, charge, settle
+        payment_meta = {
+            "event_id": event_id,
+            "payer": result.payer,
+            "network": result.accept.network,
+        }
+        return key_cfg, ppc_upstream_key, payment, charge, settle, payment_meta
 
     # ── The shared proxy path ─────────────────────────────────────────────
 
@@ -601,6 +635,7 @@ def create_app(
 
         elcaro_key, upstream_key = extract_keys(request.headers)
         settle_bg: BackgroundTasks | None = None
+        payment_meta: dict | None = None
         charge = price
         if elcaro_key is not None:
             key_cfg = key_lookup(elcaro_key)
@@ -623,7 +658,7 @@ def create_app(
             gate = _x402_gate(request, is_anthropic=is_anthropic)
             if isinstance(gate, Response):
                 return gate
-            key_cfg, upstream_key, _payment, charge, settle_bg = gate
+            key_cfg, upstream_key, _payment, charge, settle_bg, payment_meta = gate
 
         body_bytes = await request.body()
         if len(body_bytes) > max_body_bytes:
@@ -745,6 +780,7 @@ def create_app(
                 t_elcaro_ms=t_elcaro_ms,
                 t_upstream_ms=0.0,
                 charge=charge,
+                payment=payment_meta,
             )
             metrics.record(key_cfg.key_id, action, _verdict_label(result), len(result.parts))
             metrics.latencies_ms_elcaro.append(t_elcaro_ms)
@@ -796,6 +832,7 @@ def create_app(
                 t_elcaro_ms=t_elcaro_ms,
                 t_upstream_ms=t_upstream_ms,
                 charge=charge,
+                payment=payment_meta,
             )
             metrics.record(key_cfg.key_id, action, verdict, len(result.parts) if result else 0)
             metrics.latencies_ms_elcaro.append(t_elcaro_ms)

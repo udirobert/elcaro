@@ -14,6 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from core.usage import UsageEvent
 from metering.neon import KEY_PREFIX_LEN, NeonMetering, from_env, hash_key
 
 
@@ -184,6 +185,11 @@ def _event(**kw):
         serv_input_tokens=None,
         serv_output_tokens=None,
         charge_usdc=Decimal("0.010000"),
+        event_id="ev-test",
+        payer_address=None,
+        payment_network=None,
+        payment_tx_hash=None,
+        settlement_status="none",
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -402,3 +408,105 @@ def test_install_registers_both_protocols(monkeypatch):
     m, _ = _make()
     assert m.install() is m
     assert calls == [("sink", m), ("store", m)]
+
+
+# ── WS3 attribution schema ──────────────────────────────────────────────────
+
+
+class _FakeConnTracking:
+    """Records every executed statement so tests can assert on SQL."""
+
+    def __init__(self):
+        self.executed = []
+
+    def execute(self, sql, params=None):
+        self.executed.append((sql.strip().split()[0].upper(), sql, params))
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class _FakePoolTracking:
+    def __init__(self):
+        self.conn = _FakeConnTracking()
+
+    def connection(self):
+        return self.conn
+
+
+def test_ddl_includes_attribution_migration():
+    """WS3: the explicit migration is part of DDL — unlike CREATE TABLE IF NOT
+    EXISTS, ALTER ... IF NOT EXISTS applies to existing tables."""
+    pool = _FakePoolTracking()
+    NeonMetering("postgresql://x", pool=pool, config_factory=_factory)
+    alters = [sql for op, sql, _ in pool.conn.executed if op == "ALTER"]
+    joined = " ".join(alters)
+    for col in (
+        "event_id",
+        "payer_address",
+        "payment_network",
+        "payment_tx_hash",
+        "settlement_status",
+    ):
+        assert col in joined, f"missing migration for {col}"
+
+
+def test_insert_writes_attribution_columns():
+    pool = _FakePoolTracking()
+    m = NeonMetering("postgresql://x", pool=pool, config_factory=_factory)
+    ev = UsageEvent(
+        key_id="x402:0xabc",
+        ts=datetime(2026, 11, 15, tzinfo=UTC),
+        route="/v1/chat/completions",
+        provider="openai",
+        upstream="serv",
+        parts_scanned=1,
+        action="none",
+        overall="low",
+        latency_ms_elcaro=1.0,
+        latency_ms_upstream=2.0,
+        payer_address="0xabc",
+        payment_network="eip155:84532",
+        settlement_status="pending",
+    )
+    m.emit(ev)
+    inserts = [(sql, params) for op, sql, params in pool.conn.executed if op == "INSERT"]
+    assert len(inserts) == 1
+    sql, params = inserts[0]
+    assert "payer_address" in sql
+    # positional params follow _EVENT_COLUMNS order — locate values by index
+    from metering.neon import _EVENT_COLUMNS
+
+    values = dict(zip(_EVENT_COLUMNS, params, strict=True))
+    assert values["payer_address"] == "0xabc"
+    assert values["payment_network"] == "eip155:84532"
+    assert values["settlement_status"] == "pending"
+    assert values["event_id"] == ev.event_id
+
+
+def test_update_settlement_rewrites_pending_row():
+    pool = _FakePoolTracking()
+    m = NeonMetering("postgresql://x", pool=pool, config_factory=_factory)
+    m.record_settlement("ev-1", tx_hash="0xtx", status="settled")
+    updates = [(sql, params) for op, sql, params in pool.conn.executed if op == "UPDATE"]
+    assert len(updates) == 1
+    sql, params = updates[0]
+    assert "payment_tx_hash" in sql and "settlement_status" in sql
+    assert "event_id" in sql  # keyed by event correlation id, not payer
+    assert params == ("0xtx", "settled", "ev-1")
+
+
+def test_record_settlement_requires_registration():
+    """Without a registered metering sink, record_settlement is a safe no-op."""
+    import core.usage as cu
+
+    old = cu._sink
+    try:
+        cu._sink = cu.NullUsageSink()
+        cu.record_settlement("ev-x", tx_hash="0x", status="settled")  # must not raise
+    finally:
+        cu._sink = old
