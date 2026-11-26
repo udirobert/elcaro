@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { trackFunnel } from "@/lib/analytics";
 
 /**
  * Self-service Elcaro key management (contract C2 surface).
@@ -111,6 +112,7 @@ export function KeyManager() {
         return;
       }
       const { key, key_id, upstream: mintedUpstream } = await res.json();
+      trackFunnel("key.minted", { upstream: mintedUpstream });
       setMinted({ raw: key, keyId: key_id, upstream: mintedUpstream });
       persistKeys([
         {

@@ -353,7 +353,7 @@ export function ScanResult({ result, content }: ScanResultProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.35, ease: EASE_OUT }}
         >
-          <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest">
+          <p className="text-xs font-medium text-ink-faint uppercase tracking-widest">
             Findings · {result.indicators.length}
           </p>
           <div
@@ -427,7 +427,7 @@ function ScoreDelta({ ruleScore, servScore, cost }: ScoreDeltaProps) {
         {direction} {Math.abs(moved).toFixed(2)}
       </span>
       {cost?.total_usdc != null && cost.total_usdc > 0 && (
-        <span className="text-ink-faint font-mono text-[10px]">
+        <span className="text-ink-faint font-mono text-xs">
           · ~${cost.total_usdc.toFixed(4)}
         </span>
       )}
@@ -463,7 +463,7 @@ function ServReasoningPanel({ result }: { result: ScanResponse }) {
     <div className="border-t border-violet/10">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-violet/70 hover:text-violet transition-colors"
+        className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-violet/70 hover:text-violet transition-colors"
         aria-expanded={expanded}
       >
         <span>Why SERV changed the score</span>
@@ -505,7 +505,7 @@ function SessionServCount() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: EASE_OUT }}
-      className="inline-flex items-center gap-2 text-[11px] text-violet font-medium bg-violet/5 border border-violet/15 rounded-full px-3 py-1"
+      className="inline-flex items-center gap-2 text-xs text-violet font-medium bg-violet/5 border border-violet/15 rounded-full px-3 py-1"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-violet shrink-0" />
       SERV refined {refined} of {total} recent scans
@@ -527,7 +527,7 @@ function SessionJevCount() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: EASE_OUT }}
-      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+      className="inline-flex items-center gap-2 text-xs text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
       Jev compared {compared} of {total} recent scans
@@ -613,7 +613,7 @@ function JevComparisonCard({ comparison }: { comparison: JevComparison }) {
           </span>
         </span>
         {!comparison.agrees_with_rules && (
-          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+          <span className="text-xs font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
             disagreement
           </span>
         )}
@@ -639,7 +639,7 @@ function JevComparisonCard({ comparison }: { comparison: JevComparison }) {
       </div>
 
       {(comparison.input_tokens != null || comparison.cost_usd != null) && (
-        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+        <div className="border-t border-teal/10 px-3 py-1.5 text-xs text-ink-faint font-mono flex items-center gap-2">
           {comparison.input_tokens != null && (
             <span>
               {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens
@@ -666,7 +666,7 @@ function SessionLayaCount() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: EASE_OUT }}
-      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+      className="inline-flex items-center gap-2 text-xs text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
       Laya compared {compared} of {total} recent scans
@@ -717,7 +717,7 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
           </span>
         </span>
         {!comparison.agrees_with_rules && (
-          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+          <span className="text-xs font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
             disagreement
           </span>
         )}
@@ -739,7 +739,7 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
           (Brier 0.32 on eval/corpus.json, TNR 1.0 / TPR 0.11 at threshold 0.5).
           Rules saw ≥ 0.5 while Laya said no — keep the rules' verdict. */}
       {!comparison.agrees_with_rules && comparison.rule_score >= 0.5 && comparison.laya_score < 0.5 && (
-        <p className="px-3 pb-2 text-[10px] text-ink-faint leading-relaxed">
+        <p className="px-3 pb-2 text-xs text-ink-faint leading-relaxed">
           Note: calibration runs (26-case corpus, Brier 0.32) show Laya rates
           most real injections as clean — treat this disagreement as noise,
           not evidence it&rsquo;s safe.
@@ -747,7 +747,7 @@ function LayaComparisonCard({ comparison }: { comparison: LayaComparison }) {
       )}
 
       {(comparison.input_tokens != null || comparison.cost_usd != null) && (
-        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+        <div className="border-t border-teal/10 px-3 py-1.5 text-xs text-ink-faint font-mono flex items-center gap-2">
           {comparison.input_tokens != null && (
             <span>
               {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens
@@ -774,7 +774,7 @@ function SessionJevVlCount() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: EASE_OUT }}
-      className="inline-flex items-center gap-2 text-[11px] text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
+      className="inline-flex items-center gap-2 text-xs text-teal font-medium bg-teal/5 border border-teal/15 rounded-full px-3 py-1"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-teal shrink-0" />
       JEV-VL compared {compared} of {total} recent scans
@@ -824,7 +824,7 @@ function JevVlComparisonCard({ comparison }: { comparison: JevVlComparison }) {
           </span>
         </span>
         {!comparison.agrees_with_rules && (
-          <span className="text-[10px] font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
+          <span className="text-xs font-semibold text-teal bg-teal/10 rounded-full px-2 py-0.5 shrink-0">
             disagreement
           </span>
         )}
@@ -842,7 +842,7 @@ function JevVlComparisonCard({ comparison }: { comparison: JevVlComparison }) {
       </div>
 
       {(comparison.input_tokens != null || comparison.cost_usd != null) && (
-        <div className="border-t border-teal/10 px-3 py-1.5 text-[10px] text-ink-faint font-mono flex items-center gap-2">
+        <div className="border-t border-teal/10 px-3 py-1.5 text-xs text-ink-faint font-mono flex items-center gap-2">
           {comparison.input_tokens != null && (
             <span>
               {comparison.input_tokens} in / {comparison.output_tokens ?? 0} out tokens

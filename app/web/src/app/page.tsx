@@ -5,6 +5,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { TrustChipBand } from "@/components/trust-chip-band";
 import { TaxonomyGrid } from "@/components/taxonomy-grid";
 import { AdaptiveCTA } from "@/components/adaptive-cta";
+import { AnalyticsPageView } from "@/components/analytics-page-view";
 
 const PRIMARY_BTN =
   "inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ink text-canvas text-sm font-semibold hover:bg-ink/90 active:opacity-90 transition-colors";
@@ -14,6 +15,7 @@ const SECONDARY_BTN =
 export default function HomePage() {
   return (
     <main className="min-h-dvh flex flex-col">
+      <AnalyticsPageView event="landing.viewed" />
       <SiteHeader />
 
       {/* Split hero: copy left, live catch right. Mobile stacks catch under the title. */}
@@ -29,16 +31,6 @@ export default function HomePage() {
                   className="text-[#46a758] hover:underline underline-offset-2"
                 >
                   Winner · OpenServ Dolphin track
-                </Link>
-                <span className="ml-2 text-violet/70">· SERV-powered gateway</span>
-              </p>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
-                IPI detection · miner 8848
-                <Link
-                  href="/hermes"
-                  className="ml-2 text-[#46a758] hover:underline underline-offset-2"
-                >
-                  · live in the Hermes plugin catalog →
                 </Link>
               </p>
             </div>
@@ -58,19 +50,20 @@ export default function HomePage() {
 
           <div className="order-3 space-y-6 max-w-md">
             <p className="text-base text-ink-muted leading-relaxed">
-              Hidden instructions live inside emails, search results, documents
-              and tool results your agent retrieves. Elcaro is the drop-in
-              gateway that scans them first — SERV inside, every verdict
-              signed.
+              Your agent reads emails, pages, and documents. Some of them
+              contain hidden instructions trying to hijack it. Elcaro scans
+              everything your agent retrieves and catches them before it acts —
+              in milliseconds, with a signed verdict. Use it free in the
+              browser, or drop it in as a gateway for your agent.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <Link href="/integrate#gateway" className={PRIMARY_BTN}>
-                Use the Gateway
+              <Link href="/scan?example=remit-swap" className={PRIMARY_BTN}>
+                Scan something
                 <span className="text-canvas/60">→</span>
               </Link>
-              <Link href="/scan" className={SECONDARY_BTN}>
-                Try a scan
+              <Link href="/integrate#gateway" className={SECONDARY_BTN}>
+                For developers: point your SDK at it
               </Link>
               <Link
                 href="/evaluate/gauntlet"
@@ -81,23 +74,10 @@ export default function HomePage() {
             </div>
 
             <p className="text-xs text-ink-faint">
-              SERV powers the gateway · every verdict carries an Ed25519
-              receipt —{" "}
-              <a
-                href="https://docs.openserv.ai/serv-reasoning"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-ink underline underline-offset-2"
-              >
-                how it works
-              </a>
-            </p>
-
-            <p className="text-xs text-ink-faint">
-              elcaro is{" "}
-              <em className="text-ink-muted not-italic font-medium">oracle</em>,
-              reversed. An oracle speaks the answer. Elcaro checks what was
-              whispered to the agent before it decides to believe it.
+              No account, no install — paste content, get a verdict. ·{" "}
+              <Link href="/integrate#gateway" className="hover:text-ink underline underline-offset-2">
+                How the gateway works
+              </Link>
             </p>
 
             <TrustChipBand />
@@ -156,6 +136,46 @@ export default function HomePage() {
 
       <section className="border-t border-border px-6 py-20">
         <AdaptiveCTA />
+      </section>
+
+      {/* Below-the-fold detail for the already-interested: infrastructure
+          signals and the name. Kept out of the hero so strangers meet the
+          product before the vocabulary. */}
+      <section className="border-t border-border px-6 py-12">
+        <div className="max-w-2xl mx-auto space-y-3 text-xs text-ink-faint leading-relaxed">
+          <p>
+            <span className="text-ink-muted font-medium">Under the hood:</span>{" "}
+            IPI detection · miner 8848 on{" "}
+            <a
+              href="https://telegraphprotocol.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-ink underline underline-offset-2"
+            >
+              Telegraph Protocol
+            </a>{" "}
+            ·{" "}
+            <Link href="/hermes" className="text-[#46a758] hover:underline underline-offset-2">
+              live in the Hermes plugin catalog →
+            </Link>{" "}
+            · SERV-powered gateway · every verdict carries an Ed25519 receipt (
+            <a
+              href="https://docs.openserv.ai/serv-reasoning"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-ink underline underline-offset-2"
+            >
+              how it works
+            </a>
+            ).
+          </p>
+          <p>
+            <span className="text-ink-muted font-medium">The name:</span> elcaro
+            is <em className="text-ink-muted not-italic font-medium">oracle</em>,
+            reversed. An oracle speaks the answer. Elcaro checks what was
+            whispered to the agent before it decides to believe it.
+          </p>
+        </div>
       </section>
 
       <SiteFooter />

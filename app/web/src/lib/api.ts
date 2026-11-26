@@ -13,7 +13,13 @@ export async function scanContent(
     const data = await response.json();
 
     if (!response.ok) {
-      return { error: "Scan failed", detail: data.detail || data.error };
+      const rateLimited = response.status === 429;
+      return {
+        error: rateLimited ? "Free scan limit reached" : "Scan failed",
+        detail: data.message || data.detail || data.error,
+        retry_after_seconds: data.retry_after_seconds,
+        upgrade: data.upgrade,
+      };
     }
 
     return data as ScanResponse;

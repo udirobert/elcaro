@@ -89,6 +89,14 @@ verification and bypasses free quotas; the free browser route forwards the
 end-user IP without bypassing. 429 payloads and the scan UI both point at
 `/api/x402/scan`.
 
+**Hardening delta (2026-11-27, local pending deploy):** direct miner/Telegraph
+ingress now uses a separate higher resource-protection quota (300/day,
+30/minute) rather than the strict browser conversion quota, because the devnode
+is not cryptographically distinguishable from direct API callers. The strict
+premium quota still applies everywhere. Scan bodies are capped at 100,000
+characters, and the Postgres limiter upserts minute+day windows in one round
+trip. Production values are committed in `deploy/ecosystem.config.cjs`.
+
 **Production verification (2026-11-26):** token distributed to Netlify
 production + VPS `.env`; VPS suite 614 passed then miner+gateway restarted
 via `deploy/update.sh`; Netlify deploy ready 20:07 UTC. Direct miner burst:
@@ -102,7 +110,7 @@ x402 upgrade block; second anonymous `serv=1` in a minute → 429
 production; 429 body/headers carry the x402 hint; load test shows graceful
 degradation; SERV-enabled anonymous scans are tightly capped.
 
-### WS0d — Durable funnel instrumentation · implemented locally, pending production deploy
+### WS0d — Durable funnel instrumentation · implemented locally (commit `736cfe7`), pending production deploy
 
 **Problem:** a small analytics system exists (`app/web/src/lib/analytics.ts`,
 `/api/analytics`) but is audit-scoped, writes JSONL to local disk (ephemeral on
@@ -132,24 +140,23 @@ week.
 
 ## P1 — Conversion batch
 
-### WS1 — Fix the front door · mostly done, finish and deploy · ~0.5–1 day
+### WS1 — Fix the front door · implemented locally, pending visual audit + deploy · ~0.5 day
 
-Largely implemented in the working tree: scan is the primary CTA, developer
-gateway is secondary, jargon moved below the fold (`app/web/src/app/page.tsx`).
+Implemented locally: scan is the primary CTA, the hero keeps the explicit
+gateway promise ("Use it free in the browser, or drop it in as a gateway for
+your agent"), jargon moved below the fold, and the CTA deep-links to
+`/scan?example=remit-swap` so landing → verdict is two clicks
+(`app/web/src/app/page.tsx`).
+
 Remaining requirements:
 
-1. Preserve the OpenServ promise: keep the winner badge above the fold and the
-   word "gateway" in the hero or immediate supporting line (e.g. "Use it free
-   in the browser, or drop it in as a gateway for your agent"). The tweet's
-   promise and the landing page must match.
-2. Deep-link scan examples (`/scan?example=…`) so "landing → verdict" is truly
-   ≤2 clicks.
-3. Deploy as one batch WITH WS2 so funnel comparison is clean.
+1. Owner visual/browser audit of desktop and mobile rendering.
+2. Deploy as one batch WITH WS2 so funnel comparison is clean.
 
 **Done when:** first-time visitor reaches a verdict in ≤2 clicks; funnel
 events fire at each step; no jargon above the fold in screenshot review.
 
-### WS2 — Simplify the scan form · 1–2 days
+### WS2 — Simplify the scan form · implemented locally, pending visual audit + deploy · ~1 day
 
 **Problem:** `scan-form.tsx` (~892 lines) exposes SERV/Jev/Laya/JEV-VL toggles
 inline in the main action row; several are no-ops on the free path.
@@ -161,6 +168,13 @@ inline in the main action row; several are no-ops on the free path.
    change the verdict").
 2. Mobile audit at 375px; fix stacking.
 3. Microcopy to ≥12px; check `text-ink-faint` contrast against AA.
+
+**Implementation note (2026-11-27):** SERV/Jev/Laya/JEV-VL controls are
+collapsed behind "Advanced: second opinions"; the label states that SERV can
+refine verdicts while the comparison rails are comparison-only. Mobile controls
+stack below `sm`, scan-flow microcopy is ≥12px, and `text-ink-faint` is darkened
+for AA contrast. 429 responses preserve `upgrade` and `retry_after_seconds` and
+surface the x402 paid-scan path in the error state.
 
 **Done when:** default path shows one input, one button, one verdict; toggles
 hidden unless expanded; Lighthouse a11y ≥ 95 on `/scan`.

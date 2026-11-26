@@ -120,7 +120,7 @@ export function RiskMeter({ score, level, latencyMs, ruleScoreBefore }: RiskMete
 
       {/* Latency — fades in after the score lands */}
       <motion.span
-        className="text-[11px] text-ink-faint font-mono self-center"
+        className="text-xs text-ink-faint font-mono self-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: showLatency ? 1 : 0 }}
         transition={{ duration: 0.3 }}

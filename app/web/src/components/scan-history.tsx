@@ -105,7 +105,7 @@ export function ScanHistory({ onSelect, refreshKey }: ScanHistoryProps) {
                   </span>
 
                   {/* Time */}
-                  <span className="text-[10px] text-ink-faint shrink-0">
+                  <span className="text-xs text-ink-faint shrink-0">
                     {timeAgo(entry.timestamp)}
                   </span>
                 </button>
@@ -118,7 +118,7 @@ export function ScanHistory({ onSelect, refreshKey }: ScanHistoryProps) {
                 clearHistory();
                 setClearCount((n) => n + 1);
               }}
-              className="mt-2 text-[10px] text-ink-faint hover:text-dangerous transition-colors"
+              className="mt-2 text-xs text-ink-faint hover:text-dangerous transition-colors"
             >
               Clear history
             </button>

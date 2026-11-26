@@ -6,6 +6,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { TelegraphRail } from "@/components/telegraph-rail";
 import { PageHeader } from "@/components/page-header";
 import { SpecimenMarquee } from "@/components/specimen-marquee";
+import { AnalyticsPageView } from "@/components/analytics-page-view";
 
 export const metadata: Metadata = {
   title: "Integrate",
@@ -217,6 +218,7 @@ function CollapsibleSection({
 export default function IntegratePage() {
   return (
     <main className="min-h-dvh flex flex-col">
+      <AnalyticsPageView event="integrate.viewed" />
       {/* Shared chrome */}
       <SiteHeader active="integrate" />
 

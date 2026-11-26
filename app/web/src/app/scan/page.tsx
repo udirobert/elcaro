@@ -1,4 +1,5 @@
 import { ScanForm } from "@/components/scan-form";
+import { AnalyticsPageView } from "@/components/analytics-page-view";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { EXAMPLES } from "@/lib/constants";
 import type { Metadata } from "next";
@@ -24,6 +25,7 @@ export default async function ScanPage({
 
   return (
     <main className="min-h-dvh flex flex-col">
+      <AnalyticsPageView event="scan.viewed" />
       {/* Shared chrome */}
       <SiteHeader active="scan" />
 

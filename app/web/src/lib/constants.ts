@@ -159,9 +159,11 @@ export const EXAMPLES: ExamplePayload[] = [
     comparison: {
       content: TANGEM_MARKET_NOTE_CLEAN,
       label: "Load clean note",
+      // Generic fallback line — the Tangem specimen renders its own numbered
+      // walkthrough; this only shows if another paired specimen reuses it.
       hint:
         "This market note is retrieved content, not a wallet instruction. " +
-        "Scan it, then compare it without the last line. No wallet is connected.",
+        "Scan it, then compare the version without the last line.",
     },
   },
 ];

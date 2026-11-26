@@ -7,6 +7,7 @@ import type { RiskLevel, ScanResponse } from "@/lib/types";
 import { encodeVerdict } from "@/lib/share";
 import { buildVerdictReport, type ReportLabel } from "@/lib/report";
 import { QUARANTINE_THRESHOLD } from "@/lib/history";
+import { trackFunnel } from "@/lib/analytics";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 
@@ -72,6 +73,10 @@ export function NextSteps({ result, content }: NextStepsProps) {
     navigator.clipboard
       .writeText(cmd)
       .then(() => {
+        trackFunnel("scan.copied", {
+          target: "curl",
+          risk_level: result.risk_level,
+        });
         setCopiedCurl(true);
         setTimeout(() => setCopiedCurl(false), 2000);
       })
@@ -98,6 +103,10 @@ export function NextSteps({ result, content }: NextStepsProps) {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
+      trackFunnel("scan.shared", {
+        risk_level: result.risk_level,
+        risk_score: Number(result.risk_score.toFixed(2)),
+      });
     } catch {
       // Share sheet dismissed — no-op
     }
@@ -128,7 +137,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
     >
       {/* What your agent would receive — the remedy, not just the alarm */}
       <div>
-        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest mb-2">
+        <p className="text-xs font-medium text-ink-faint uppercase tracking-widest mb-2">
           What your agent would receive
         </p>
         {quarantined ? (
@@ -139,7 +148,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
             {/* The stamp — the site's signature moment, peaking where the
                 stakes are real: the user's own content, caught live */}
             <motion.span
-              className="absolute right-3 top-3 px-2.5 py-1 rounded-md border-2 text-[10px] font-black uppercase tracking-[0.18em] border-dangerous text-dangerous bg-dangerous-bg/90 pointer-events-none"
+              className="absolute right-3 top-3 px-2.5 py-1 rounded-md border-2 text-xs font-black uppercase tracking-[0.18em] border-dangerous text-dangerous bg-dangerous-bg/90 pointer-events-none"
               initial={
                 reduceMotion
                   ? { opacity: 0 }
@@ -177,7 +186,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
 
       {/* Your move — the decision, in three verbs max */}
       <div>
-        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-widest mb-2">
+        <p className="text-xs font-medium text-ink-faint uppercase tracking-widest mb-2">
           Your move
         </p>
         <p className="text-sm font-semibold text-ink leading-snug mb-2">
@@ -208,7 +217,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
       {/* Share — the verdict travels; the content travels with it (disclosed) */}
       <div className="pt-1 border-t border-border">
         <div className="flex items-center justify-between gap-4 flex-wrap pt-3">
-          <p className="text-[11px] text-ink-faint leading-relaxed max-w-sm">
+          <p className="text-xs text-ink-faint leading-relaxed max-w-sm">
             Sharing encodes this scan in the link itself — nothing is stored on
             any server. The link contains the pasted content.
           </p>
@@ -234,7 +243,7 @@ export function NextSteps({ result, content }: NextStepsProps) {
           feed eval via scripts/ingest_verdict_reports.py. */}
       <div className="pt-1 border-t border-border">
         <div className="flex items-center justify-between gap-4 flex-wrap pt-3">
-          <p className="text-[11px] text-ink-faint leading-relaxed max-w-sm">
+          <p className="text-xs text-ink-faint leading-relaxed max-w-sm">
             Wrong verdict? Report it — the report opens a GitHub issue and the
             body is copied to your clipboard (it includes the pasted content).
             Labeled reports become eval test cases.

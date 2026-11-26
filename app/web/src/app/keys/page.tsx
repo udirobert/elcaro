@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { KeyManager } from "@/components/key-manager";
 import { PageHeader } from "@/components/page-header";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { AnalyticsPageView } from "@/components/analytics-page-view";
 
 export const metadata: Metadata = {
   title: "API keys",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function KeysPage() {
   return (
     <main className="min-h-dvh flex flex-col">
+      <AnalyticsPageView event="keys.viewed" />
       <SiteHeader />
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-14 space-y-10">

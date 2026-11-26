@@ -187,6 +187,13 @@ export interface ScanRequest {
 export interface ScanError {
   error: string;
   detail?: string;
+  retry_after_seconds?: number;
+  upgrade?: {
+    type?: string;
+    endpoint?: string;
+    price_usdc?: string;
+    description?: string;
+  };
 }
 
 // ── URL fetching (/scan "Fetch page content") ────────────────────────────────

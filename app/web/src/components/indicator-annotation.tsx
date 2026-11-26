@@ -71,7 +71,7 @@ export function IndicatorAnnotation({
             {/* Header row */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${SEVERITY_BG[indicator.severity]}`}
+                className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${SEVERITY_BG[indicator.severity]}`}
                 style={{ color: accentColor }}
               >
                 {indicator.severity}
@@ -125,7 +125,7 @@ export function IndicatorAnnotation({
               {indicator.ttps.map((ttp) => (
                 <span
                   key={`${ttp.framework}-${ttp.technique_id}`}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-canvas border border-border text-ink-muted"
+                  className="text-xs font-mono px-2 py-0.5 rounded-full bg-canvas border border-border text-ink-muted"
                 >
                   {ttp.technique_id} · {ttp.tactic}
                 </span>

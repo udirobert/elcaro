@@ -3,8 +3,9 @@
 import { useState, useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import type { ContentType, ScanResponse } from "@/lib/types";
+import type { ContentType, ScanError, ScanResponse } from "@/lib/types";
 import { scanContent, isError, fetchUrlAvailable, fetchUrlContent, isFetchUrlError } from "@/lib/api";
+import { trackFunnel } from "@/lib/analytics";
 import { CONTENT_TYPES, EXAMPLES, type ExamplePayload } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
@@ -19,6 +20,7 @@ import {
 } from "./agent-session";
 import { ScanBeam } from "./scan-beam";
 import { ScanHistory } from "./scan-history";
+import { TangemCutaway } from "./tangem-cutaway";
 
 // Motion tokens — consistent across the app
 const SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
@@ -110,6 +112,17 @@ export function ScanForm({
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorUpgrade, setErrorUpgrade] = useState<ScanError["upgrade"] | null>(null);
+  const [errorRetryAfter, setErrorRetryAfter] = useState<number | null>(null);
+
+  function clearScanError() {
+    setError(null);
+    setErrorUpgrade(null);
+    setErrorRetryAfter(null);
+  }
+  // Advanced disclosure (second-opinion rails) — collapsed by default so the
+  // default scan path is one input, one button, one verdict.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(
     Boolean(initialExample)
@@ -118,6 +131,15 @@ export function ScanForm({
   const [intentContrast, setIntentContrast] = useState<IntentContrast | null>(
     null
   );
+  // The last response that came back live for the exact content+type still in
+  // the box. The Tangem cutaway reads its verdict from this — never from
+  // canned scores or which variant is showing — so a stale or shared-verdict
+  // result can't dress the figure in a verdict it didn't earn.
+  const [lastLive, setLastLive] = useState<{
+    content: string;
+    type: ContentType;
+    response: ScanResponse;
+  } | null>(null);
   // Progressive-enhancement toggle: when on, the miner consults SERV
   // Reasoning for borderline cases (only fires when the miner has been
   // configured with SERV_API_KEY + SERV_ENABLED=1 — defaults to a no-op
@@ -204,7 +226,7 @@ export function ScanForm({
       setContentType(sharedVerdict.content_type);
       setResult(sharedVerdict.response);
       setIntentContrast(null);
-      setError(null);
+      clearScanError();
       setDismissedOnboarding(true);
     }
   }
@@ -258,6 +280,13 @@ export function ScanForm({
     }
 
     scanningRef.current = true;
+    trackFunnel("scan.started", {
+      content_type: nextType,
+      serv_enabled: servEnabled,
+      jev_enabled: jevEnabled,
+      laya_enabled: layaEnabled,
+      jev_vl_enabled: jevVlEnabled,
+    });
     setDismissedOnboarding(true);
     setContent(nextContent);
     setContentType(nextType);
@@ -266,7 +295,7 @@ export function ScanForm({
     setResult(null);
     resultRef.current = null;
     setIntentContrast(null);
-    setError(null);
+    clearScanError();
 
     try {
       const response = await scanContent({
@@ -280,10 +309,28 @@ export function ScanForm({
 
       if (isError(response)) {
         setError(response.detail || response.error);
+        setErrorUpgrade(response.upgrade ?? null);
+        setErrorRetryAfter(response.retry_after_seconds ?? null);
+        trackFunnel("scan.error", {
+          content_type: nextType,
+          rate_limited: Boolean(response.upgrade),
+        });
         triggerShake();
       } else {
+        trackFunnel("scan.verdict", {
+          content_type: nextType,
+          risk_level: response.risk_level,
+          risk_score: Number(response.risk_score.toFixed(2)),
+          quarantined: Boolean(response.quarantined),
+          serv_used: Boolean(response.serv_used),
+        });
         setResult(response);
         resultRef.current = response;
+        setLastLive({
+          content: nextContent,
+          type: nextType,
+          response,
+        });
         addToHistory(nextContent, nextType, response);
         setHistoryRefresh((n) => n + 1);
       }
@@ -318,7 +365,7 @@ export function ScanForm({
     setResult(null);
     resultRef.current = null;
     setIntentContrast(null);
-    setError(null);
+    clearScanError();
     setFetchedFrom(null);
     setFetchUrlError(null);
     cancelTyping();
@@ -368,7 +415,7 @@ export function ScanForm({
     setResult(null);
     resultRef.current = null;
     setIntentContrast(null);
-    setError(null);
+    clearScanError();
     setFetchedFrom(null);
     setFetchUrlError(null);
     cancelTyping();
@@ -402,7 +449,7 @@ export function ScanForm({
     setResult(entry.response);
     resultRef.current = entry.response;
     setIntentContrast(null);
-    setError(null);
+    clearScanError();
     setFetchedFrom(null);
     setFetchUrlError(null);
   }
@@ -435,6 +482,31 @@ export function ScanForm({
       content === comparisonMatch.comparison.content &&
       content !== comparisonMatch.content
   );
+
+  // Tangem cutaway — matched on the exact specimen content alone so the
+  // illustration stays mounted while a scan is in flight (comparisonMatch is
+  // suppressed during scanning to keep the generic hint honest).
+  const tangemNote = EXAMPLES.find((ex) => ex.id === "tangem-market-note");
+  const tangemComparison = tangemNote?.comparison;
+  const tangemActive = Boolean(
+    tangemNote &&
+      contentType === tangemNote.content_type &&
+      (content === tangemNote.content ||
+        (tangemComparison && content === tangemComparison.content))
+  );
+  const tangemShowingClean = Boolean(
+    tangemActive &&
+      tangemComparison &&
+      content === tangemComparison.content &&
+      content !== tangemNote?.content
+  );
+  const matchingLiveResult =
+    lastLive &&
+    lastLive.response === result &&
+    lastLive.content === content &&
+    lastLive.type === contentType
+      ? result
+      : null;
 
   const suggestion = hasContent ? detectContentType(content) : null;
   const urlDetected = fetchUrlEnabled && hasContent && isBareUrl(content);
@@ -487,6 +559,26 @@ export function ScanForm({
         )}
       </AnimatePresence>
 
+      {/* Tangem walkthrough — illustrated cutaway for the paired market-note
+          specimen only. Mounted for the exact flagged/clean content at
+          document type; verdict comes solely from the live response bound to
+          this content. Other paired specimens keep the generic hint below. */}
+      {tangemActive && tangemNote?.comparison && (
+        <TangemCutaway
+          note={content}
+          clean={tangemShowingClean}
+          scanning={scanning}
+          verdict={matchingLiveResult}
+          error={error}
+          onScan={handleScan}
+          onSwitch={() =>
+            tangemShowingClean
+              ? setSpecimenContent(tangemNote)
+              : setSpecimenContent(tangemNote, tangemNote.comparison!.content)
+          }
+        />
+      )}
+
       {/* The content area */}
       <motion.div className="relative" animate={shakeControls}>
         {/* Scanning beam overlay */}
@@ -528,7 +620,7 @@ export function ScanForm({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute bottom-4 left-6 text-[10px] text-ink-faint font-mono"
+              className="absolute bottom-4 left-6 text-xs text-ink-faint font-mono"
             >
               ⌘ Enter to scan
             </motion.span>
@@ -550,32 +642,34 @@ export function ScanForm({
       )}
 
       {/* Paired flagged/clean specimen — swap variants in place, then scan
-          to compare. Plain native button, no animation for the switch. */}
-      {comparisonMatch?.comparison && (
-        <div className="flex items-center gap-2 text-xs">
-          <button
-            onClick={() =>
-              comparisonShowingClean
-                ? setSpecimenContent(comparisonMatch)
-                : setSpecimenContent(
-                    comparisonMatch,
-                    comparisonMatch.comparison!.content
-                  )
-            }
-            disabled={scanning}
-            className="text-teal font-medium hover:text-teal/80 transition-colors disabled:opacity-50"
-          >
-            {comparisonShowingClean
-              ? "Load marked note"
-              : comparisonMatch.comparison.label}
-          </button>
-          <span className="text-ink-faint">
-            {comparisonShowingClean
-              ? "— the extra instruction is gone. Scan this version to compare. No wallet is connected."
-              : `— ${comparisonMatch.comparison.hint}`}
-          </span>
-        </div>
-      )}
+          to compare. Plain native button, no animation for the switch. The
+          Tangem specimen renders its own cutaway above instead. */}
+      {comparisonMatch?.comparison &&
+        comparisonMatch.id !== "tangem-market-note" && (
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() =>
+                comparisonShowingClean
+                  ? setSpecimenContent(comparisonMatch)
+                  : setSpecimenContent(
+                      comparisonMatch,
+                      comparisonMatch.comparison!.content
+                    )
+              }
+              disabled={scanning}
+              className="text-teal font-medium hover:text-teal/80 transition-colors disabled:opacity-50"
+            >
+              {comparisonShowingClean
+                ? "Load marked note"
+                : comparisonMatch.comparison.label}
+            </button>
+            <span className="text-ink-faint">
+              {comparisonShowingClean
+                ? "— the extra instruction is gone. Scan this version to compare."
+                : `— ${comparisonMatch.comparison.hint}`}
+            </span>
+          </div>
+        )}
 
       {/* Fetch page content — offered when the whole box is one bare URL.
           The server never fetches the URL itself; Tavily does (avoids SSRF
@@ -610,7 +704,7 @@ export function ScanForm({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-[11px] text-ink-faint font-mono truncate"
+          className="text-xs text-ink-faint font-mono truncate"
         >
           Fetched from {fetchedFrom.url}
           {fetchedFrom.credits != null && ` · ${fetchedFrom.credits} credit${fetchedFrom.credits === 1 ? "" : "s"}`}
@@ -618,7 +712,7 @@ export function ScanForm({
       )}
 
       {/* Actions row — examples (left), content-type + scan (right) */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         {/* Examples */}
         <div className="flex flex-col gap-1.5">
           <AnimatePresence>
@@ -627,7 +721,7 @@ export function ScanForm({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-[10px] text-ink-faint uppercase tracking-wide"
+                className="text-xs text-ink-faint uppercase tracking-wide"
               >
                 Try an example
               </motion.span>
@@ -650,7 +744,7 @@ export function ScanForm({
               >
                 {example.label}
                 {example.is_serv_demo && (
-                  <span className="text-[9px] opacity-70" title="Lands in the gray zone — toggle SERV Reasoning to see the LLM second pass">
+                  <span className="text-xs opacity-70" title="Lands in the gray zone — toggle SERV Reasoning to see the LLM second pass">
                     ⚡
                   </span>
                 )}
@@ -660,7 +754,7 @@ export function ScanForm({
         </div>
 
         {/* Content type + scan — grouped on the right */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           {/* Content type — labeled, visible, not floating */}
           <label className="flex items-center gap-1.5 text-xs text-ink-faint">
             <span className="font-medium">Type</span>
@@ -679,199 +773,11 @@ export function ScanForm({
             </select>
           </label>
 
-          {/* SERV Reasoning toggle — progressive enhancement, opt-in. No-op
-              when the miner isn't configured with SERV_API_KEY. Off by default
-              so the free fast path stays visible. */}
-          <div className="flex flex-col gap-1">
-            <label
-              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
-              title="Progressive enhancement: ask the miner to consult SERV Reasoning for borderline cases. Free fast path when off; safe no-op when the miner isn't SERV-configured."
-            >
-              <input
-                type="checkbox"
-                checked={servEnabled}
-                onChange={(e) => setServEnabled(e.target.checked)}
-                className="h-3 w-3 rounded border-border accent-violet cursor-pointer"
-                aria-label="Use SERV Reasoning"
-              />
-              <span className="font-medium">SERV Reasoning</span>
-            </label>
-            {/* Contextual nudge: SERV is requested but the miner has none configured.
-                Only surfaces after a scan confirms serv_available=false. */}
-            {servEnabled &&
-              result !== null &&
-              result.serv_available === false &&
-              result.serv_attempted === false && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-violet font-medium leading-relaxed"
-                >
-                  Miner not configured for SERV — enable
-                  {' '}SERV_ENABLED=1 + SERV_API_KEY{' '}on your deployment, then re-scan. See{' '}
-                  <Link href="/integrate" className="underline underline-offset-1 hover:text-violet/80">
-                    pricing tiers
-                  </Link>.
-                </motion.p>
-              )}
-            {/* Miner has SERV configured but it errored this run */}
-            {servEnabled &&
-              result?.serv_attempted &&
-              !result.serv_used &&
-              result.serv_available && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-ink-faint leading-relaxed"
-                >
-                  SERV was attempted but did not contribute this scan — rule verdict stands.
-                </motion.p>
-              )}
-          </div>
-
-          {/* Jev comparison toggle — informational only, never changes the
-              verdict. No-op when the miner isn't configured with JEV_API_KEY. */}
-          <div className="flex flex-col gap-1">
-            <label
-              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
-              title="Comparison only: ask the miner for Jev's (TypeSafe) calibrated confidence on borderline cases, shown side-by-side. Never changes the quarantine decision."
-            >
-              <input
-                type="checkbox"
-                checked={jevEnabled}
-                onChange={(e) => setJevEnabled(e.target.checked)}
-                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
-                aria-label="Compare against Jev"
-              />
-              <span className="font-medium">Compare with Jev</span>
-            </label>
-            {jevEnabled &&
-              result !== null &&
-              result.jev_available === false &&
-              result.jev_attempted === false && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-teal font-medium leading-relaxed"
-                >
-                  Miner not configured for Jev — set
-                  {' '}JEV_ENABLED=1 + JEV_API_KEY{' '}on your deployment, then re-scan.
-                </motion.p>
-              )}
-            {jevEnabled &&
-              result?.jev_attempted &&
-              !result.jev_used &&
-              result.jev_available && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-ink-faint leading-relaxed"
-                >
-                  Jev was unavailable for this scan — no comparison to show.
-                </motion.p>
-              )}
-          </div>
-
-          {/* Laya comparison toggle — a second rail, same contract as Jev.
-              No-op when the miner isn't configured with a Runware key. */}
-          <div className="flex flex-col gap-1">
-            <label
-              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
-              title="Comparison only: ask the miner for Convai's Laya probability that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
-            >
-              <input
-                type="checkbox"
-                checked={layaEnabled}
-                onChange={(e) => setLayaEnabled(e.target.checked)}
-                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
-                aria-label="Compare against Laya"
-              />
-              <span className="font-medium">Compare with Laya</span>
-            </label>
-            {layaEnabled &&
-              result !== null &&
-              result.laya_available === false &&
-              result.laya_attempted === false && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-teal font-medium leading-relaxed"
-                >
-                  Miner not configured for Laya — set
-                  {' '}LAYA_ENABLED=1 + a Runware key{' '}on your deployment, then re-scan.
-                </motion.p>
-              )}
-            {layaEnabled &&
-              result?.laya_attempted &&
-              !result.laya_used &&
-              result.laya_available && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-ink-faint leading-relaxed"
-                >
-                  Laya was unavailable for this scan — no comparison to show.
-                </motion.p>
-              )}
-          </div>
-
-          {/* JEV-27B-VL comparison toggle — a third rail, same contract as
-              Jev and Laya. No-op when the miner isn't configured with a
-              Novita key. */}
-          <div className="flex flex-col gap-1">
-            <label
-              className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
-              title="Comparison only: ask the miner for AutoTrust's JEV-27B-VL probability (via Novita) that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
-            >
-              <input
-                type="checkbox"
-                checked={jevVlEnabled}
-                onChange={(e) => setJevVlEnabled(e.target.checked)}
-                className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
-                aria-label="Compare against JEV-27B-VL"
-              />
-              <span className="font-medium">Compare with JEV-VL</span>
-            </label>
-            {jevVlEnabled &&
-              result !== null &&
-              result.jev_vl_available === false &&
-              result.jev_vl_attempted === false && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-teal font-medium leading-relaxed"
-                >
-                  Miner not configured for JEV-VL — set
-                  {' '}JEV_VL_ENABLED=1 + a Novita key{' '}on your deployment, then re-scan.
-                </motion.p>
-              )}
-            {jevVlEnabled &&
-              result?.jev_vl_attempted &&
-              !result.jev_vl_used &&
-              result.jev_vl_available && (
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-ink-faint leading-relaxed"
-                >
-                  JEV-VL was unavailable for this scan — no comparison to show.
-                </motion.p>
-              )}
-          </div>
-
           {/* Scan button */}
           <motion.button
             onClick={handleScan}
             disabled={scanning || !hasContent}
-            className="relative px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
+            className="relative flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-ink text-canvas font-semibold text-sm overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
             whileTap={hasContent && !scanning ? { opacity: 0.9 } : {}}
             transition={{ duration: 0.15 }}
           >
@@ -909,6 +815,229 @@ export function ScanForm({
         </div>
       </div>
 
+      {/* Advanced: second-opinion rails — collapsed by default. These are
+          calibration/comparison surfaces (SERV is the only one that can
+          contribute to the verdict), not part of the default scan path. */}
+      <div className="border-t border-border/60 pt-3">
+        <button
+          onClick={() => setAdvancedOpen((v) => !v)}
+          aria-expanded={advancedOpen}
+          className="flex items-center gap-1.5 text-xs text-ink-faint hover:text-ink transition-colors select-none"
+        >
+          <span
+            className="inline-block transition-transform"
+            style={{ transform: advancedOpen ? "rotate(90deg)" : "rotate(0deg)" }}
+            aria-hidden
+          >
+            ▸
+          </span>
+          Advanced: second opinions
+          <span className="font-normal opacity-70">
+            — SERV can refine verdicts; others compare only
+          </span>
+        </button>
+        <AnimatePresence initial={false}>
+          {advancedOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-start gap-5 flex-wrap pt-3">
+                {/* SERV Reasoning toggle — progressive enhancement, opt-in. No-op
+                    when the miner isn't configured with SERV_API_KEY. */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+                    title="Progressive enhancement: ask the miner to consult SERV Reasoning for borderline cases. Free fast path when off; safe no-op when the miner isn't SERV-configured."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={servEnabled}
+                      onChange={(e) => setServEnabled(e.target.checked)}
+                      className="h-3 w-3 rounded border-border accent-violet cursor-pointer"
+                      aria-label="Use SERV Reasoning"
+                    />
+                    <span className="font-medium">SERV Reasoning</span>
+                  </label>
+                  {/* Contextual nudge: SERV is requested but the miner has none configured.
+                      Only surfaces after a scan confirms serv_available=false. */}
+                  {servEnabled &&
+                    result !== null &&
+                    result.serv_available === false &&
+                    result.serv_attempted === false && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-violet font-medium leading-relaxed"
+                      >
+                        Miner not configured for SERV — enable
+                        {' '}SERV_ENABLED=1 + SERV_API_KEY{' '}on your deployment, then re-scan. See{' '}
+                        <Link href="/integrate" className="underline underline-offset-1 hover:text-violet/80">
+                          pricing tiers
+                        </Link>.
+                      </motion.p>
+                    )}
+                  {/* Miner has SERV configured but it errored this run */}
+                  {servEnabled &&
+                    result?.serv_attempted &&
+                    !result.serv_used &&
+                    result.serv_available && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-ink-faint leading-relaxed"
+                      >
+                        SERV was attempted but did not contribute this scan — rule verdict stands.
+                      </motion.p>
+                    )}
+                </div>
+
+                {/* Jev comparison toggle — informational only, never changes the
+                    verdict. No-op when the miner isn't configured with JEV_API_KEY. */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+                    title="Comparison only: ask the miner for Jev's (TypeSafe) calibrated confidence on borderline cases, shown side-by-side. Never changes the quarantine decision."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={jevEnabled}
+                      onChange={(e) => setJevEnabled(e.target.checked)}
+                      className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                      aria-label="Compare against Jev"
+                    />
+                    <span className="font-medium">Compare with Jev</span>
+                  </label>
+                  {jevEnabled &&
+                    result !== null &&
+                    result.jev_available === false &&
+                    result.jev_attempted === false && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-teal font-medium leading-relaxed"
+                      >
+                        Miner not configured for Jev — set
+                        {' '}JEV_ENABLED=1 + JEV_API_KEY{' '}on your deployment, then re-scan.
+                      </motion.p>
+                    )}
+                  {jevEnabled &&
+                    result?.jev_attempted &&
+                    !result.jev_used &&
+                    result.jev_available && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-ink-faint leading-relaxed"
+                      >
+                        Jev was unavailable for this scan — no comparison to show.
+                      </motion.p>
+                    )}
+                </div>
+
+                {/* Laya comparison toggle — a second rail, same contract as Jev.
+                    No-op when the miner isn't configured with a Runware key. */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+                    title="Comparison only: ask the miner for Convai's Laya probability that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={layaEnabled}
+                      onChange={(e) => setLayaEnabled(e.target.checked)}
+                      className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                      aria-label="Compare against Laya"
+                    />
+                    <span className="font-medium">Compare with Laya</span>
+                  </label>
+                  {layaEnabled &&
+                    result !== null &&
+                    result.laya_available === false &&
+                    result.laya_attempted === false && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-teal font-medium leading-relaxed"
+                      >
+                        Miner not configured for Laya — set
+                        {' '}LAYA_ENABLED=1 + a Runware key{' '}on your deployment, then re-scan.
+                      </motion.p>
+                    )}
+                  {layaEnabled &&
+                    result?.laya_attempted &&
+                    !result.laya_used &&
+                    result.laya_available && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-ink-faint leading-relaxed"
+                      >
+                        Laya was unavailable for this scan — no comparison to show.
+                      </motion.p>
+                    )}
+                </div>
+
+                {/* JEV-27B-VL comparison toggle — a third rail, same contract as
+                    Jev and Laya. No-op when the miner isn't configured with a
+                    Novita key. */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-ink-faint cursor-pointer select-none"
+                    title="Comparison only: ask the miner for AutoTrust's JEV-27B-VL probability (via Novita) that the content is a prompt injection, shown side-by-side. Never changes the quarantine decision."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={jevVlEnabled}
+                      onChange={(e) => setJevVlEnabled(e.target.checked)}
+                      className="h-3 w-3 rounded border-border accent-teal cursor-pointer"
+                      aria-label="Compare against JEV-27B-VL"
+                    />
+                    <span className="font-medium">Compare with JEV-VL</span>
+                  </label>
+                  {jevVlEnabled &&
+                    result !== null &&
+                    result.jev_vl_available === false &&
+                    result.jev_vl_attempted === false && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-teal font-medium leading-relaxed"
+                      >
+                        Miner not configured for JEV-VL — set
+                        {' '}JEV_VL_ENABLED=1 + a Novita key{' '}on your deployment, then re-scan.
+                      </motion.p>
+                    )}
+                  {jevVlEnabled &&
+                    result?.jev_vl_attempted &&
+                    !result.jev_vl_used &&
+                    result.jev_vl_available && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs text-ink-faint leading-relaxed"
+                      >
+                        JEV-VL was unavailable for this scan — no comparison to show.
+                      </motion.p>
+                    )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* Scan history */}
       <ScanHistory onSelect={loadFromHistory} refreshKey={historyRefresh} />
 
@@ -924,6 +1053,29 @@ export function ScanForm({
           >
             <span className="shrink-0 mt-0.5">×</span>
             <span>{error}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* The free quota is itself the conversion moment: show the paid lane
+          instead of a dead-end error. This stays compact because most users
+          never see it. */}
+      <AnimatePresence>
+        {error && errorUpgrade?.endpoint && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="rounded border border-violet/30 bg-violet/5 px-3 py-2 text-xs text-ink-muted leading-relaxed"
+          >
+            <span className="font-medium text-violet">Continue with x402:</span>{" "}
+            {errorUpgrade.price_usdc ? `$${errorUpgrade.price_usdc} per scan` : "Pay per scan"}, no signup —{" "}
+            <code className="font-mono text-xs text-ink">{errorUpgrade.endpoint}</code>
+            {errorRetryAfter ? <> or wait ~{Math.ceil(errorRetryAfter / 60)} min</> : null}.{" "}
+            <Link href="/integrate" className="underline underline-offset-2 text-violet hover:text-violet/80">
+              Integration guide
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>
