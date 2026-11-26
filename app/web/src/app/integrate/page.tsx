@@ -390,6 +390,25 @@ export default function IntegratePage() {
             remediation. Structured for machine consumption — log it or act on
             it.
           </p>
+          <p className="text-xs text-ink-faint leading-relaxed">
+            Same call, your own quota: add a{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              x-elcaro-key: elk_…
+            </code>{" "}
+            header (mint one at{" "}
+            <Link
+              href="/keys"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              /keys
+            </Link>
+            ) and the scan draws on that key instead of the shared bucket, with{" "}
+            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+              X-RateLimit-*
+            </code>{" "}
+            on the response. The scan API needs nothing else — path 01, the
+            gateway, additionally wants your own provider credential.
+          </p>
           <p className="text-sm font-semibold text-ink pt-2">
             Verify the verdict
           </p>

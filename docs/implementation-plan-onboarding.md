@@ -4,9 +4,10 @@
 > quote-tweet: improve onboarding · **Status:** OB1 core shipped (`f604023`),
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
-> OB6 keyed `/scan` is shipped and verified live. **OB3** (zero-decision
-> minting + the post-mint command) is now unblocked and is the next thing.
-> OB2 is no longer urgent; **OB7** is a new open ops item.
+> OB6 (keyed `/scan`) and OB3 (zero-decision minting + post-mint command) are
+> shipped and verified live. What remains is **OB7** (the scan limiter is not
+> actually running in production) and **OB4/OB5** (the stranger test and the
+> public reply). OB2 is no longer urgent.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -149,31 +150,34 @@ advertised, and when it is, it should read "your own quota, visible on every
 response" rather than repeating `5000/day` — a number ops can change should not
 become a page claim (V2's lesson). The post-mint command itself is OB3.
 
-### OB3 — Zero-decision key minting · 0.5 day, **after OB6**
+### OB3 — Zero-decision key minting · **shipped and verified live**
 
-**Problem:** minting exposes the upstream choice (a `<select>` at
-`key-manager.tsx:188-196`) before the user has seen a verdict, and the
-post-mint screen dead-ends at "copy it now".
+**Problem:** minting exposed the upstream choice before the user had seen a
+verdict, and the post-mint screen dead-ended at "copy it now".
 
-**Already done (V5):** upstream defaults to SERV (`key-manager.tsx:70`) — the
-original item 1 needed no code.
+**Shipped (`key-manager.tsx`, `/integrate` path 00):**
 
-**Changes:**
+1. The upstream `<select>` moved behind a collapsed **"Advanced — which
+   provider this key routes to"** disclosure. The mint row is now label +
+   button; SERV stays selected and untouched.
+2. The provider explanation lives inside that disclosure, where it is wanted:
+   it only describes gateway routing, and says the scan API takes the key
+   alone.
+3. The post-mint screen is a continuation, not a dead end: the key, then the
+   *same* curl with `-H "x-elcaro-key: …"` already interpolated (copy button
+   included) and the specimen that returns `dangerous`. Nothing to edit.
+4. `/integrate` path 00 now names the header and the consequence — own quota,
+   `X-RateLimit-*` on the response — and says the gateway on path 01
+   additionally wants your own provider credential.
+5. No limit number is published anywhere: the quota is observable on every
+   response instead of frozen into copy (V2's lesson).
 
-1. Move the upstream `<select>` behind an "advanced" disclosure, SERV
-   pre-selected and unchanged by default.
-2. One line of plain language: "this is which provider your gateway traffic is
-   forwarded to — you can mint more keys later."
-3. Post-mint screen becomes a continuation: the key, plus the scan curl with
-   `-H "x-elcaro-key: <the key just minted>"` already interpolated. **Depends
-   on OB6** — written before it, the command cannot succeed.
-4. Say the gateway's own prerequisite at the point of mint: path 01 needs
-   *your* OpenAI/Anthropic/SERV credential as well as the `elk_` key. Today
-   that is only implied inside the code sample.
+**Verified 2026-11-26, after the OB6 miner deploy:** a key minted at `/keys`,
+the post-mint command pasted unedited → `dangerous` / risk 1.00 with
+`x-ratelimit-limit: 5000`, `remaining: 4999`. Key revoked afterwards; the same
+command then returns `401 unknown_key`.
 
-**Done when:** minting is one click with zero choices, and the post-mint
-command — run as-is, nothing edited — returns a verdict drawing on the key's
-quota. Verified in a clean browser profile.
+**Not verified:** a human typing it in a fresh browser profile — that is OB4.
 
 ### OB7 — Turn the scan rate limiter back on · 1 hour, ops
 
@@ -224,8 +228,8 @@ in seconds. A visible fixed-it loop is worth more than the fix.
 |---|---|---|---|
 | 1 | OB1 no-key-first `/integrate` | nothing — highest leverage | core shipped `f604023`; claims corrected 2026-11-26 |
 | 2 | OB6 keyed `/scan` | nothing | **shipped + verified live 2026-11-26** |
-| 3 | **OB3 zero-decision minting** | OB6 ✅ live | **next** — upstream already defaults to SERV |
-| 4 | OB7 limiter actually on | deploy/env check on `api.` | open ops item |
+| 3 | OB3 zero-decision minting | OB6 ✅ live | **shipped + verified live 2026-11-26** |
+| 4 | **OB7 limiter actually on** | deploy/env check on `api.` | **next** — open ops item |
 | 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
 | 6 | OB4 stranger test | OB1+OB3+OB6 deployed | gates OB5 |
 | 7 | OB5 close the loop | OB4 green | owner action |
