@@ -233,6 +233,20 @@ metric, not a silent gap.
 
 ### WS4 — Price and arm the paid lanes · 4–7 days (NOT 2–3)
 
+**STATUS: core shipped and proven live (2025-11-26, `ddd84da` + `35c60c2`).**
+Decision: **scan-only pricing** — payment buys the scan + signed verdict,
+callers always bring their own upstream key, so flat per-request pricing can
+never subsidize inference. Armed on Base Sepolia + Base mainnet at 0.005
+USDC/request, per-payer cap 100/day counting all settlement states.
+Done-when proven end-to-end on the live gateway: 402 → signed payment →
+scanned signed response (verdict clean) → settled attribution rows
+(`0x7c412988…`, `0x6ea5b42e…`, `0xdbc512bb…` on Sepolia). Scan lane also
+validated end-to-end (item 1) — first revenue in /api/revenue.
+Known semantics: an upstream 4xx after payment still settles (payment buys
+scan + forwarding, not upstream success) — documented limitation, matches
+x402 exact scheme. Remaining WS4 items: CDP facilitator JWT auth for
+mainnet settlement robustness, and watching settlement-failure rates.
+
 **Problem:** the original plan conflated two different surfaces:
 
 - `/api/x402/scan` — paid scan, already live/onchain. Needs validation only.

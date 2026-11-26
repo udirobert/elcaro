@@ -127,6 +127,20 @@ export function PricingTiers({ elevatedServ = false }: PricingTiersProps) {
         is free and public — provenance is the network&apos;s shared surface,
         not a metered one.
       </p>
+      <p className="text-[11px] text-ink-faint leading-relaxed mt-2">
+        Gateway pay-per-call:{" "}
+        <code className="font-mono bg-surface border border-border px-1.5 py-0.5 rounded text-xs">
+          0.005 USDC
+        </code>{" "}
+        per request via x402, scan-only — the payment buys Elcaro&apos;s scan
+        and signed verdict; you bring your own upstream key (any allowlisted
+        upstream, chosen with{" "}
+        <code className="font-mono bg-surface border border-border px-1 rounded text-xs">
+          x-elcaro-upstream
+        </code>
+        ), so per-request pricing can never subsidize inference. Live on Base
+        Sepolia and Base mainnet; capped at 100 requests/payer/day.
+      </p>
 
       {/* When SERV is configured but not yet enabled — a contextual nudge */}
       <p className="text-[11px] text-ink-faint leading-relaxed">
