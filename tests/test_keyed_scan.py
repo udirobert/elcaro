@@ -91,10 +91,27 @@ def test_keyed_scan_reports_its_own_quota(client, key_store, keyed_limiter):
 
 
 def test_anonymous_scan_echoes_no_keyed_quota(client, capture_engine):
+    """With no ordinary limiter configured there is no quota to report — and
+    certainly not the keyed one."""
     response = client.post("/scan", json=scan_payload())
 
     assert response.status_code == 200
     assert "x-ratelimit-limit" not in response.headers
+
+
+def test_anonymous_scan_reports_the_shared_quota(client, capture_engine, monkeypatch):
+    """An armed limiter is visible on a 200, not only as a wall. This is what
+    catches a deploy running a stale pm2 env (OB7)."""
+    shared = InMemoryScanRateLimiter(
+        per_minute=30, per_day=300, pepper="test-pepper", namespace="direct_scan"
+    )
+    monkeypatch.setattr(api_module, "_direct_scan_rate_limiter", shared)
+
+    response = client.post("/scan", json=scan_payload())
+
+    assert response.status_code == 200
+    assert response.headers["x-ratelimit-limit"] == "300"
+    assert response.headers["x-ratelimit-remaining"] == "299"
 
 
 def test_keyed_quota_exhausts_without_a_wallet_upsell(client, key_store, keyed_limiter):

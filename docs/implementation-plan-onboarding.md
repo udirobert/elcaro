@@ -4,10 +4,9 @@
 > quote-tweet: improve onboarding · **Status:** OB1 core shipped (`f604023`),
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
-> OB6 (keyed `/scan`) and OB3 (zero-decision minting + post-mint command) are
-> shipped and verified live. What remains is **OB7** (the scan limiter is not
-> actually running in production) and **OB4/OB5** (the stranger test and the
-> public reply). OB2 is no longer urgent.
+> OB1, OB3, OB6 and OB7 are shipped and verified live — OB7's cause was a stale
+> pm2 env, not missing code. What remains is **OB4/OB5** (the stranger test and
+> the public reply) and the deferred OB2 npm decision.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -179,20 +178,46 @@ command then returns `401 unknown_key`.
 
 **Not verified:** a human typing it in a fresh browser profile — that is OB4.
 
-### OB7 — Turn the scan rate limiter back on · 1 hour, ops
+### OB7 — Turn the scan rate limiter back on · **fixed and verified live**
 
-**Found on review (V2):** 34 rapid anonymous scans all returned `200` with no
-`X-RateLimit-*` headers and no `429`. `direct_scan_rate_limiter_from_env()`
-returns `None` when `ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY` is unset or `0`
-(`core/rate_limit.py:292-310`), while `deploy/ecosystem.config.cjs:73` sets
-`300` — so the process answering `api.` is either not the one that config
-describes, or limiter init is failing open. Either way an unauthenticated
-endpoint is currently unlimited, which is a cost and abuse exposure
-independent of onboarding.
+**Root cause (not what the plan guessed).** The limiter was never broken:
+`ELCARO_DIRECT_SCAN_RATE_LIMIT_*` was committed in `deploy/ecosystem.config.cjs`
+and the code was correct. The running process was started with
+`pm2 restart elcaro-miner`, which **reuses the env frozen in pm2's dump** and
+never re-reads the ecosystem file — the exact gotcha `deploy/README.md:179`
+warns about. So the process had no limit env, `direct_scan_rate_limiter_from_env()`
+returned `None`, and an unauthenticated endpoint ran unlimited while the config
+file said `30/min · 300/day`. Limiter init was *not* failing open, and the DSN
+was not the problem.
 
-**Done when:** the documented `30/min · 300/day` direct quota is observable —
-`X-RateLimit-Remaining` on a `200`, `429` + `Retry-After` past the cap — and
-the `/integrate` limit line can quote a number again.
+**Fixed:** the OB6 deploy used `deploy/update.sh`, whose
+`pm2 startOrRestart` re-reads the file. Measured after it:
+
+- 31st scan in a window → `429` with `retry-after`, `x-ratelimit-limit: 30`,
+  `x-ratelimit-remaining: 0` and the x402 upsell body
+- `/metrics` `rate_limited_scans` incremented (`0 → 10` across a burst)
+- buckets are per caller IP (Traefik's right-most `X-Forwarded-For`), so one
+  host's burst cannot throttle anyone else
+
+**Guards so it cannot go quiet again** — the real defect was that nothing
+noticed:
+
+1. `X-RateLimit-Limit` / `-Remaining` now ride **every** scan response, keyed
+   or anonymous, so an idle limiter shows up as missing headers on a `200`
+   instead of as a wall that never arrives.
+2. `deploy/verify-live.sh` check `8b` bursts until it sees a `429`, then
+   asserts the header and `Retry-After`. It fails when a deployment is running
+   a stale env. `SKIP_QUOTA_CHECK=1` for local runs, where limits are off.
+3. `deploy/update.sh` reads the quota back from the restarted process and
+   prints either `✓ Anonymous scan quota armed (x-ratelimit-limit: N)` or a
+   warning naming the stale-dump cause.
+
+**Done when (met):** the documented quota is observable — headers on `200`,
+`429` + `Retry-After` past the cap — and `verify-live.sh` asserts it.
+
+**Deliberate non-change:** `/integrate` still does not quote a number. "Each
+response tells you what's left" is true whatever ops sets the limit to; `30/min`
+is not (V2's lesson, applied twice).
 
 ### OB4 — The full-path stranger test · 0.5 day, no code unless it fails
 
@@ -229,9 +254,9 @@ in seconds. A visible fixed-it loop is worth more than the fix.
 | 1 | OB1 no-key-first `/integrate` | nothing — highest leverage | core shipped `f604023`; claims corrected 2026-11-26 |
 | 2 | OB6 keyed `/scan` | nothing | **shipped + verified live 2026-11-26** |
 | 3 | OB3 zero-decision minting | OB6 ✅ live | **shipped + verified live 2026-11-26** |
-| 4 | **OB7 limiter actually on** | deploy/env check on `api.` | **next** — open ops item |
+| 4 | OB7 limiter actually on | stale pm2 env, cleared by the OB6 deploy | **fixed + guarded 2026-11-26** |
 | 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
-| 6 | OB4 stranger test | OB1+OB3+OB6 deployed | gates OB5 |
+| 6 | **OB4 stranger test** | OB1+OB3+OB6 deployed | **next** — gates OB5 |
 | 7 | OB5 close the loop | OB4 green | owner action |
 
 Total: ~2–3 days, mostly frontend/copy plus one small backend route (OB6).

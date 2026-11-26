@@ -71,4 +71,22 @@ fi
 
 echo ""
 echo "=== Update complete: $PREV_COMMIT → $(git rev-parse --short HEAD) ==="
+
+# 7. Quota arming is part of the contract, and it is the one thing a restart can
+#    silently undo: `pm2 restart` reuses the env frozen in pm2's dump, so limits
+#    added to the ecosystem file stay dead until a startOrRestart. The free-scan
+#    quota once ran idle in production for exactly that reason. Read it back
+#    from the process itself rather than trusting the file.
+QUOTA=$(curl -s -D - -o /dev/null --max-time 10 -X POST http://127.0.0.1:8848/scan \
+    -H "Content-Type: application/json" \
+    -d '{"content": "deploy probe", "content_type": "email"}' \
+    | awk 'tolower($1)=="x-ratelimit-limit:" {print $2}' | tr -d '\r')
+if [ -n "$QUOTA" ]; then
+    echo "✓ Anonymous scan quota armed (x-ratelimit-limit: $QUOTA)"
+else
+    echo "⚠ No x-ratelimit-limit header — the free-scan limiter is NOT armed."
+    echo "  The process is running without ELCARO_*_RATE_LIMIT_*, which means its"
+    echo "  env predates ecosystem.config.cjs. Re-run 'pm2 startOrRestart"
+    echo "  deploy/ecosystem.config.cjs', then assert it: bash deploy/verify-live.sh"
+fi
 echo "Full verification: BASE_URL=https://api.elcaro.trustfall.xyz SKIP_FRONTEND=1 bash deploy/verify-live.sh"

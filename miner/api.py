@@ -377,8 +377,10 @@ def _key_rejection_response(reason: str) -> JSONResponse:
 
 
 def _apply_quota_headers(response: Response, decision) -> None:
-    """Expose the key's own quota, so a keyed scan is visibly distinct from the
-    shared anonymous bucket without anyone having to read our metrics."""
+    """Expose the quota that applied to this call — the key's own window, or
+    the shared anonymous one. A caller can then see the allowance shrinking
+    before it runs out, and an idle limiter is visible as missing headers
+    rather than as a wall that never arrives."""
     if decision is None:
         return
     response.headers["X-RateLimit-Limit"] = str(decision.limit)
@@ -409,10 +411,11 @@ def _guard_scan_request(
 ) -> tuple[ScanRequest, JSONResponse | None, object | None]:
     """Apply free-tier cost controls and return a safe request.
 
-    Returns (possibly-sanitized request, response, keyed_quota). A non-None
-    response means the scan must not run. ``keyed_quota`` is the caller's own
-    rate-limit decision when an ``elk_`` key was presented and honoured — the
-    endpoint echoes it back as headers.
+    Returns (possibly-sanitized request, response, quota). A non-None response
+    means the scan must not run. ``quota`` is the rate-limit decision that
+    applied — the key's own window when an ``elk_`` key was honoured, else the
+    shared anonymous one — and the endpoint echoes it back as headers so the
+    remaining allowance is visible before the wall, not only after it.
     """
     max_chars = _max_content_chars()
     if max_chars > 0 and len(request.content) > max_chars:
@@ -466,6 +469,7 @@ def _guard_scan_request(
         if not decision.allowed:
             _metrics.rate_limited_scans += 1
             return request, _rate_limit_response(decision), None
+        return request, None, decision
     return request, None, None
 
 
@@ -683,14 +687,14 @@ async def scan(
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
-    request, limited_response, keyed_quota = _guard_scan_request(http_request, request)
+    request, limited_response, quota = _guard_scan_request(http_request, request)
     if limited_response is not None:
         return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:
         _metrics.serv_calls += 1
-    _apply_quota_headers(response, keyed_quota)
+    _apply_quota_headers(response, quota)
     return _sign_response(request.content, result)
 
 
@@ -705,14 +709,14 @@ async def infer(
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
-    request, limited_response, keyed_quota = _guard_scan_request(http_request, request)
+    request, limited_response, quota = _guard_scan_request(http_request, request)
     if limited_response is not None:
         return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:
         _metrics.serv_calls += 1
-    _apply_quota_headers(response, keyed_quota)
+    _apply_quota_headers(response, quota)
     return _sign_response(request.content, result)
 
 

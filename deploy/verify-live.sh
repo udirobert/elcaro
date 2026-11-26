@@ -5,7 +5,8 @@
 #
 # Usage:
 #   bash deploy/verify-live.sh                       # full check (miner + frontend)
-#   BASE_URL=http://127.0.0.1:8848 SKIP_FRONTEND=1 bash deploy/verify-live.sh  # local smoke
+#   BASE_URL=http://127.0.0.1:8848 SKIP_FRONTEND=1 SKIP_QUOTA_CHECK=1 \
+#       bash deploy/verify-live.sh                  # local smoke (limits are off)
 #
 # Env overrides:
 #   BASE_URL       miner base URL   (default: https://api.elcaro.trustfall.xyz)
@@ -18,6 +19,14 @@
 #   ELCARO_INTERNAL_PROXY_TOKEN
 #                  premium-lane token for the SERV check; when unset the
 #                  script reads it from ./.env when available
+#   SKIP_QUOTA_CHECK
+#                  set to 1 for local runs: the free-scan quota check bursts
+#                  until it sees a 429, which only makes sense against a
+#                  deployment whose limits are armed
+#   EXPECTED_FREE_LIMIT_PER_MINUTE
+#                  per-minute free quota the 429 should report (default 30,
+#                  matching deploy/ecosystem.config.cjs)
+#   QUOTA_BURST    how many scans the quota check may spend (default 40)
 
 set -u
 
@@ -101,6 +110,38 @@ check "POST /v1/infer → risk_level matches" "dangerous" "$(json_field "$HTTP_B
 METRICS=$(curl -sS --max-time 15 "$BASE_URL/metrics")
 check "GET /metrics total_scans ≥ 1" "True" "$(json_field "$METRICS" "d['total_scans'] >= 1")"
 check "GET /metrics error_rate 0" "True" "$(json_field "$METRICS" "d['error_rate'] == 0.0")"
+
+# 8b. The free-scan quota is actually armed. The limiter buckets on the
+#     caller IP (Traefik's right-most X-Forwarded-For), so this burst only
+#     burns the running host's own window — it cannot throttle anyone else.
+#     A deploy that leaves a stale pm2 env (`pm2 restart` reuses the dump
+#     instead of re-reading ecosystem.config.cjs) shows up here as "no 429",
+#     which is exactly how the quota once sat idle while the config file said
+#     otherwise. Skip for local smoke runs, where limits are intentionally off.
+if [ "${SKIP_QUOTA_CHECK:-0}" != "1" ]; then
+    QUOTA_BURST="${QUOTA_BURST:-40}"
+    QUOTA_EXPECTED="${EXPECTED_FREE_LIMIT_PER_MINUTE:-30}"
+    BLOCKED_AT=""
+    LIMIT_HEADER=""
+    RETRY_AFTER=""
+    for i in $(seq 1 "$QUOTA_BURST"); do
+        HDRS=$(curl -sS -o /dev/null -D - -X POST "$BASE_URL/scan" \
+            -H "Content-Type: application/json" \
+            -d '{"content":"quota probe","content_type":"email"}' --max-time 15)
+        CODE=$(echo "$HDRS" | head -n1 | awk '{print $2}')
+        if [ "$CODE" = "429" ]; then
+            BLOCKED_AT="$i"
+            LIMIT_HEADER=$(echo "$HDRS" | awk 'tolower($1)=="x-ratelimit-limit:" {print $2}' | tr -d '\r')
+            RETRY_AFTER=$(echo "$HDRS" | awk 'tolower($1)=="retry-after:" {print $2}' | tr -d '\r')
+            break
+        fi
+    done
+    check "anonymous quota armed (429 within $QUOTA_BURST scans)" "True" \
+        "$([ -n "$BLOCKED_AT" ] && echo True || echo False)"
+    check "429 x-ratelimit-limit" "$QUOTA_EXPECTED" "$LIMIT_HEADER"
+    check "429 retry-after present" "True" \
+        "$([ -n "$RETRY_AFTER" ] && echo True || echo False)"
+fi
 
 # 9. SERV second pass is armed and answers (Phase 0.1). The docs advertise
 #    SERV; production must actually run it. A known gray-zone payload

@@ -183,6 +183,12 @@ Two pm2 gotchas this file is written around:
   `pm2 startOrRestart deploy/ecosystem.config.cjs` — `update.sh` does.
 - After any `startOrRestart`, `pm2 save` so `pm2 resurrect` restores the
   new env, not the stale dump.
+- Both failure modes are now visible rather than silent: `update.sh` reads the
+  quota back from the restarted process (`✓ Anonymous scan quota armed` /
+  a warning naming the stale dump), every scan response carries
+  `X-RateLimit-*`, and `verify-live.sh` check `8b` fails when no `429` arrives
+  within its burst. That is how the free-scan limiter was found running idle
+  while `ecosystem.config.cjs` said `30/min · 300/day`.
 
 ### Free-scan abuse controls and paid-lane quota bypass
 
