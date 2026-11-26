@@ -184,21 +184,31 @@ Two pm2 gotchas this file is written around:
 - After any `startOrRestart`, `pm2 save` so `pm2 resurrect` restores the
   new env, not the stale dump.
 
-### Free-scan abuse controls and premium authorization
+### Free-scan abuse controls and paid-lane quota bypass
 
 Production now rate-limits the expensive second-opinion rails (SERV, Jev,
 Laya, JEV-VL, and deep analysis) separately from the ordinary rule-based scan.
 Anonymous callers can still try them, but only inside a small durable quota;
-the paid x402 lane bypasses that free quota. Enforcement lives at the miner
-edge, so callers cannot avoid it by bypassing Netlify and hitting the miner
-directly.
+the paid x402 lane bypasses free quotas after payment verification.
+Enforcement lives at the miner edge, so callers cannot avoid premium caps by
+bypassing Netlify and hitting the miner directly.
+
+Ordinary traffic intentionally has two quotas. The strict conversion quota
+applies only when the trusted Netlify proxy asserts an end-user IP. Direct
+miner ingress uses a separate higher resource-protection quota because
+legitimate Telegraph devnode traffic and direct API callers are not
+cryptographically distinguishable today; treating all of it as one browser
+user would eventually throttle counted miner volume.
 
 The committed miner contract enables durable fixed-window quotas:
 
-- `ELCARO_SCAN_RATE_LIMIT_PER_MINUTE=6`
-- `ELCARO_SCAN_RATE_LIMIT_PER_DAY=30`
-- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE=1`
-- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY=3`
+- `ELCARO_SCAN_RATE_LIMIT_PER_MINUTE=6` — trusted web-proxy burst quota
+- `ELCARO_SCAN_RATE_LIMIT_PER_DAY=30` — trusted web-proxy daily conversion quota
+- `ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_MINUTE=30` — direct/Telegraph ingress burst quota
+- `ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY=300` — direct/Telegraph ingress resource quota
+- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE=1` — second-opinion burst quota everywhere
+- `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY=3` — second-opinion daily quota everywhere
+- `ELCARO_SCAN_MAX_CONTENT_CHARS=100000` — request body cost ceiling
 
 When `ELCARO_CANARY_DSN`/`ELCARO_METERING_DSN` is present, the counters live in
 Neon table `scan_rate_windows` and survive restarts/multiple workers. Stored

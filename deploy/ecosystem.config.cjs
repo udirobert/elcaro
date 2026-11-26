@@ -70,8 +70,11 @@ module.exports = {
         // by their own IP and the paid x402 lane can bypass free quotas.
         ELCARO_SCAN_RATE_LIMIT_PER_DAY: "30",
         ELCARO_SCAN_RATE_LIMIT_PER_MINUTE: "6",
+        ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY: "300",
+        ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_MINUTE: "30",
         ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY: "3",
         ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE: "1",
+        ELCARO_SCAN_MAX_CONTENT_CHARS: "100000",
       },
       // Restart policy
       autorestart: true,

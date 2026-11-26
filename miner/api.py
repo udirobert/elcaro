@@ -44,7 +44,7 @@ from core.canary import TOKEN_RE
 from core.jev_reasoner import JevReasoner
 from core.jev_vl_reasoner import JevVlReasoner
 from core.laya_reasoner import LayaReasoner
-from core.rate_limit import scan_rate_limiters_from_env
+from core.rate_limit import direct_scan_rate_limiter_from_env, scan_rate_limiters_from_env
 from core.sandbox import (
     SandboxConfig,
     run_sandbox,
@@ -193,12 +193,15 @@ _metrics = Metrics()
 #    are disabled unless the corresponding env limit is set, because local
 #    development and the offline test suite intentionally scan repeatedly.
 # 2. Expensive second-opinion rails get a much smaller anonymous quota than
-#    the ordinary rule-only path. A deployment-internal token lets the paid
-#    x402 lane bypass those free quotas; the public browser lane uses the same
-#    token only to assert the end-user IP, not to bypass quotas.
+#    the ordinary rule-only path. Strict ordinary quotas apply to trusted
+#    web-proxy traffic keyed by the asserted end-user IP. Direct miner ingress
+#    (Telegraph devnode and direct API callers are not cryptographically
+#    distinguishable today) gets a separate higher resource-protection quota.
+#    A deployment-internal token lets the paid x402 lane bypass free quotas.
 
 try:
     _scan_rate_limiter, _premium_scan_rate_limiter = scan_rate_limiters_from_env()
+    _direct_scan_rate_limiter = direct_scan_rate_limiter_from_env()
 except Exception as exc:  # boot-time config failure must be loud, not silent
     raise RuntimeError(f"scan rate limiting is enabled but could not initialize: {exc}") from exc
 
@@ -286,6 +289,25 @@ def _rate_limit_response(decision, *, premium: bool = False) -> JSONResponse:
     )
 
 
+def _max_content_chars() -> int:
+    try:
+        return int(os.environ.get("ELCARO_SCAN_MAX_CONTENT_CHARS", "100000"))
+    except ValueError:
+        return 100000
+
+
+def _content_too_large_response(limit: int) -> JSONResponse:
+    return JSONResponse(
+        status_code=413,
+        content={
+            "error": "content_too_large",
+            "message": f"Scan content is limited to {limit:,} characters on this deployment.",
+            "limit_chars": limit,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 def _guard_scan_request(
     http_request: Request, request: ScanRequest
 ) -> tuple[ScanRequest, JSONResponse | None]:
@@ -294,6 +316,10 @@ def _guard_scan_request(
     Returns (possibly-sanitized request, response). A non-None response means
     the scan must not run.
     """
+    max_chars = _max_content_chars()
+    if max_chars > 0 and len(request.content) > max_chars:
+        return request, _content_too_large_response(max_chars)
+
     premium_authorized = _premium_scan_authorized(http_request)
     if premium_authorized:
         return request, None
@@ -309,10 +335,16 @@ def _guard_scan_request(
             _metrics.rate_limited_premium_scans += 1
             return request, _rate_limit_response(decision, premium=True)
 
-    # Every anonymous scan consumes the ordinary free quota as well. Paid
-    # premium traffic returned above and bypasses both free buckets.
-    if _scan_rate_limiter is not None:
-        decision = _scan_rate_limiter.check(client_ip)
+    # Every anonymous scan consumes an ordinary quota as well. Paid premium
+    # traffic returned above and bypasses free buckets. The strict conversion
+    # quota is only meaningful when our web proxy can assert the end-user IP;
+    # direct ingress uses a higher shared-resource quota so legitimate
+    # Telegraph devnode volume is not throttled as if it were one browser user.
+    ordinary_limiter = (
+        _scan_rate_limiter if _valid_internal_token(http_request) else _direct_scan_rate_limiter
+    )
+    if ordinary_limiter is not None:
+        decision = ordinary_limiter.check(client_ip)
         if not decision.allowed:
             _metrics.rate_limited_scans += 1
             return request, _rate_limit_response(decision)

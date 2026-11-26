@@ -71,14 +71,13 @@ class InMemoryScanRateLimiter:
                 del self._windows[k]
         return value
 
-    def check(self, ip: str) -> RateLimitDecision:
-        now = int(time.time())
-        ip_key = self._ip_key(ip)
-        minute_start = now - (now % 60)
-        day_start = now - (now % 86400)
-        minute_count = self._increment(f"{self.namespace}:minute:{ip_key}", minute_start)
-        day_count = self._increment(f"{self.namespace}:day:{ip_key}", day_start)
+    def _increment_pair(self, ip_key: str, minute_start: int, day_start: int) -> tuple[int, int]:
+        return (
+            self._increment(f"{self.namespace}:minute:{ip_key}", minute_start),
+            self._increment(f"{self.namespace}:day:{ip_key}", day_start),
+        )
 
+    def _decision(self, minute_count: int, day_count: int, now: int) -> RateLimitDecision:
         if minute_count > self.per_minute:
             return RateLimitDecision(
                 allowed=False,
@@ -100,6 +99,14 @@ class InMemoryScanRateLimiter:
             limit=self.per_day,
             remaining=max(0, self.per_day - day_count),
         )
+
+    def check(self, ip: str) -> RateLimitDecision:
+        now = int(time.time())
+        ip_key = self._ip_key(ip)
+        minute_start = now - (now % 60)
+        day_start = now - (now % 86400)
+        minute_count, day_count = self._increment_pair(ip_key, minute_start, day_start)
+        return self._decision(minute_count, day_count, now)
 
 
 class PostgresScanRateLimiter(InMemoryScanRateLimiter):
@@ -157,6 +164,36 @@ class PostgresScanRateLimiter(InMemoryScanRateLimiter):
                 (bucket, window_start),
             ).fetchone()
         return int(row[0])
+
+    def _increment_pair(self, ip_key: str, minute_start: int, day_start: int) -> tuple[int, int]:
+        # Both windows are upserted in one round trip. Rate limiting sits in
+        # front of a sub-2ms scan engine, so per-request Neon latency matters.
+        minute_bucket = f"{self.namespace}:minute:{ip_key}"
+        day_bucket = f"{self.namespace}:day:{ip_key}"
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                """
+                WITH minute_window AS (
+                    INSERT INTO scan_rate_windows (bucket, window_start, count)
+                    VALUES (%s, %s, 1)
+                    ON CONFLICT (bucket, window_start)
+                    DO UPDATE SET count = scan_rate_windows.count + 1,
+                                  updated_at = now()
+                    RETURNING count
+                ), day_window AS (
+                    INSERT INTO scan_rate_windows (bucket, window_start, count)
+                    VALUES (%s, %s, 1)
+                    ON CONFLICT (bucket, window_start)
+                    DO UPDATE SET count = scan_rate_windows.count + 1,
+                                  updated_at = now()
+                    RETURNING count
+                )
+                SELECT minute_window.count, day_window.count
+                FROM minute_window, day_window
+                """,
+                (minute_bucket, minute_start, day_bucket, day_start),
+            ).fetchone()
+        return int(row[0]), int(row[1])
 
 
 def _int_env(name: str, default: int) -> int:
@@ -250,6 +287,27 @@ def scan_rate_limiters_from_env():
             namespace="premium_scan",
         )
     return scan, premium
+
+
+def direct_scan_rate_limiter_from_env():
+    """Build the higher-volume direct-ingress limiter, or None.
+
+    Direct miner ingress is a mixed bag: legitimate Telegraph devnode traffic
+    and callers bypassing the web app look similar because the protocol does
+    not authenticate the devnode to the miner. It therefore gets a separate
+    resource-protection quota instead of the strict browser conversion quota.
+    Premium second-opinion rails remain tightly capped for everyone.
+    """
+    per_day = _int_env("ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY", 0)
+    if per_day <= 0:
+        return None
+    return _build_limiter(
+        per_minute=_int_env("ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_MINUTE", 30),
+        per_day=per_day,
+        pepper=_rate_limit_pepper(),
+        dsn=_rate_limit_dsn(),
+        namespace="direct_scan",
+    )
 
 
 def rate_limiter_from_env():

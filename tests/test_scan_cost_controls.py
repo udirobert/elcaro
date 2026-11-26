@@ -1,9 +1,10 @@
 """Tests for miner-edge free-scan cost controls.
 
 The public miner must protect itself even when callers bypass the Netlify
-proxy: anonymous traffic is rate-limited when configured and cannot invoke
-paid second-opinion rails. The paid x402 lane proves it is ours with an
-internal proxy token and only then unlocks premium rails.
+proxy. Strict conversion quotas apply to trusted web-proxy traffic keyed by
+the end-user IP; direct miner/Telegraph ingress gets a separate higher
+resource-protection quota. Premium second-opinion rails are tightly capped in
+both cases, and the verified paid x402 lane bypasses free quotas.
 """
 
 from __future__ import annotations
@@ -11,7 +12,11 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from core.rate_limit import InMemoryScanRateLimiter
+from core.rate_limit import (
+    InMemoryScanRateLimiter,
+    direct_scan_rate_limiter_from_env,
+    scan_rate_limiters_from_env,
+)
 from core.schemas import RiskLevel, ScanResponse
 from miner import api as api_module
 
@@ -115,6 +120,7 @@ def test_internal_proxy_token_alone_does_not_bypass_premium_quota(
 
 
 def test_rate_limit_returns_429_upsell_and_headers(client, capture_engine, monkeypatch):
+    monkeypatch.setenv("ELCARO_INTERNAL_PROXY_TOKEN", "test-internal-token")
     limiter = InMemoryScanRateLimiter(per_minute=2, per_day=10, pepper="test-pepper")
     monkeypatch.setattr(api_module, "_scan_rate_limiter", limiter)
     payload = scan_payload(
@@ -124,10 +130,11 @@ def test_rate_limit_returns_429_upsell_and_headers(client, capture_engine, monke
         laya_enabled=False,
         jev_vl_enabled=False,
     )
+    headers = {"x-elcaro-internal-token": "test-internal-token"}
 
-    assert client.post("/scan", json=payload).status_code == 200
-    assert client.post("/scan", json=payload).status_code == 200
-    limited = client.post("/scan", json=payload)
+    assert client.post("/scan", json=payload, headers=headers).status_code == 200
+    assert client.post("/scan", json=payload, headers=headers).status_code == 200
+    limited = client.post("/scan", json=payload, headers=headers)
 
     assert limited.status_code == 429
     body = limited.json()
@@ -137,6 +144,44 @@ def test_rate_limit_returns_429_upsell_and_headers(client, capture_engine, monke
     assert "retry-after" in {k.lower() for k in limited.headers.keys()}
     assert limited.headers["x-ratelimit-limit"] == "2"
     assert limited.headers["x-ratelimit-remaining"] == "0"
+
+
+def test_direct_ingress_uses_separate_resource_quota(client, capture_engine, monkeypatch):
+    """Direct miner traffic cannot be distinguished from Telegraph devnode
+    traffic today, so it must not consume the strict browser conversion
+    bucket. It still has its own resource-protection ceiling."""
+    strict_web_limiter = InMemoryScanRateLimiter(per_minute=1, per_day=1, pepper="test-pepper")
+    direct_limiter = InMemoryScanRateLimiter(
+        per_minute=3, per_day=3, pepper="test-pepper", namespace="direct_scan"
+    )
+    monkeypatch.setattr(api_module, "_scan_rate_limiter", strict_web_limiter)
+    monkeypatch.setattr(api_module, "_direct_scan_rate_limiter", direct_limiter)
+    payload = scan_payload(
+        deep_analysis=False,
+        serv_enabled=False,
+        jev_enabled=False,
+        laya_enabled=False,
+        jev_vl_enabled=False,
+    )
+
+    # Two direct calls succeed even though the strict web bucket is 1/minute.
+    assert client.post("/scan", json=payload).status_code == 200
+    assert client.post("/scan", json=payload).status_code == 200
+    assert client.post("/scan", json=payload).status_code == 200
+    assert client.post("/scan", json=payload).status_code == 429
+
+
+def test_oversized_scan_fails_closed_before_rate_limit_or_premium(
+    client, capture_engine, monkeypatch
+):
+    monkeypatch.setenv("ELCARO_SCAN_MAX_CONTENT_CHARS", "128")
+    response = client.post("/scan", json=scan_payload(content="x" * 129))
+
+    assert response.status_code == 413
+    body = response.json()
+    assert body["error"] == "content_too_large"
+    assert body["limit_chars"] == 128
+    assert "request" not in capture_engine
 
 
 def test_premium_scans_have_a_separate_smaller_anonymous_quota(client, capture_engine, monkeypatch):
@@ -171,6 +216,48 @@ def test_authorized_premium_lane_bypasses_free_quota(client, capture_engine, mon
     payload = scan_payload()
     assert client.post("/scan", json=payload, headers=headers).status_code == 200
     assert client.post("/scan", json=payload, headers=headers).status_code == 200
+
+
+def test_scan_rate_limiter_factory_builds_separate_buckets(monkeypatch):
+    monkeypatch.setenv("ELCARO_SCAN_RATE_LIMIT_PER_DAY", "30")
+    monkeypatch.setenv("ELCARO_SCAN_RATE_LIMIT_PER_MINUTE", "6")
+    monkeypatch.setenv("ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY", "3")
+    monkeypatch.setenv("ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE", "1")
+    for name in (
+        "ELCARO_SCAN_RATE_LIMIT_DSN",
+        "ELCARO_METERING_DSN",
+        "ELCARO_CANARY_DSN",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    scan, premium = scan_rate_limiters_from_env()
+
+    assert scan is not None
+    assert premium is not None
+    assert scan.namespace == "scan"
+    assert scan.per_day == 30
+    assert scan.per_minute == 6
+    assert premium.namespace == "premium_scan"
+    assert premium.per_day == 3
+    assert premium.per_minute == 1
+
+
+def test_direct_scan_rate_limiter_factory_builds_direct_bucket(monkeypatch):
+    monkeypatch.setenv("ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY", "300")
+    monkeypatch.setenv("ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_MINUTE", "30")
+    for name in (
+        "ELCARO_SCAN_RATE_LIMIT_DSN",
+        "ELCARO_METERING_DSN",
+        "ELCARO_CANARY_DSN",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    direct = direct_scan_rate_limiter_from_env()
+
+    assert direct is not None
+    assert direct.namespace == "direct_scan"
+    assert direct.per_day == 300
+    assert direct.per_minute == 30
 
 
 def test_trusted_client_ip_assertion_requires_internal_token(monkeypatch):
