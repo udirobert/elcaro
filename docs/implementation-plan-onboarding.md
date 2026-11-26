@@ -4,9 +4,9 @@
 > quote-tweet: improve onboarding · **Status:** OB1 core shipped (`f604023`),
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
-> OB6 keyed `/scan` shipped in code; OB3 is unblocked once the miner is
-> redeployed and the post-deploy checks pass. OB2 is no longer urgent; **OB7**
-> is a new open ops item.
+> OB6 keyed `/scan` is shipped and verified live. **OB3** (zero-decision
+> minting + the post-mint command) is now unblocked and is the next thing.
+> OB2 is no longer urgent; **OB7** is a new open ops item.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -104,7 +104,7 @@ stale `dist/` would publish silently.
 installed quickstart returns a verdict, or the decision is recorded as
 "deferred — not referenced anywhere a user can reach".
 
-### OB6 — Make a key do something on the surface the stranger just used · **shipped, pending deploys**
+### OB6 — Make a key do something on the surface the stranger just used · **shipped and verified live**
 
 **Problem (V4):** the ladder's second rung was empty. `elk_` was accepted only
 by the gateway, which additionally demands the caller's own upstream
@@ -132,20 +132,22 @@ without editing a command.
   falls through to the anonymous bucket, **never** to unlimited access.
 - `rate_limited_keyed_scans` added to `/metrics`.
 
-**Deliberately not done yet:** no `/integrate` copy advertises the keyed quota
-until the miner is redeployed and observed live. Publishing a limit the running
-edge does not enforce is exactly the V2 failure this plan exists to correct.
+**Post-deploy verification — run 2026-11-26 against production, all green:**
 
-**Post-deploy verification (no substitutes):**
+1. Keyed scan (a key minted at `/keys`, then revoked): `200` with
+   `x-ratelimit-limit: 5000` and `remaining` counting down `4999 → 4998`
+   across `/scan` and `/v1/infer`. The done-when is met: same curl as the
+   first-run call, one extra header, own quota.
+2. `elk_bogus_key_check` → `401 unknown_key`.
+3. Anonymous scan → `200`, no `X-RateLimit-*` (the free boundary is unchanged).
+4. Deploy path: `deploy/update.sh` on the VPS, rollback anchor `35c60c2`,
+   tests gated the restart and passed, `/health` healthy after
+   `pm2 startOrRestart`.
 
-1. `curl -i -X POST https://api.elcaro.trustfall.xyz/scan -H 'content-type:
-   application/json' -H "x-elcaro-key: elk_…" -d '{"content":"hello",
-   "content_type":"email"}'` → `200` with `X-RateLimit-Limit: 5000`.
-2. Same call with `elk_bogus` → `401 unknown_key`.
-3. Anonymous call → `200`, no `X-RateLimit-*` (unchanged boundary).
-4. `GET /metrics` shows `rate_limited_keyed_scans`.
-
-Then OB3's post-mint command is the one-line change the plan promised.
+**Still deliberately unsaid on `/integrate`:** the keyed quota is not
+advertised, and when it is, it should read "your own quota, visible on every
+response" rather than repeating `5000/day` — a number ops can change should not
+become a page claim (V2's lesson). The post-mint command itself is OB3.
 
 ### OB3 — Zero-decision key minting · 0.5 day, **after OB6**
 
@@ -221,8 +223,8 @@ in seconds. A visible fixed-it loop is worth more than the fix.
 | Order | Work | Depends on | State |
 |---|---|---|---|
 | 1 | OB1 no-key-first `/integrate` | nothing — highest leverage | core shipped `f604023`; claims corrected 2026-11-26 |
-| 2 | OB6 keyed `/scan` | nothing | code + tests shipped; needs a miner deploy, then the post-deploy checks in OB6 |
-| 3 | OB3 zero-decision minting | OB6 verified live | upstream already defaults to SERV |
+| 2 | OB6 keyed `/scan` | nothing | **shipped + verified live 2026-11-26** |
+| 3 | **OB3 zero-decision minting** | OB6 ✅ live | **next** — upstream already defaults to SERV |
 | 4 | OB7 limiter actually on | deploy/env check on `api.` | open ops item |
 | 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
 | 6 | OB4 stranger test | OB1+OB3+OB6 deployed | gates OB5 |
