@@ -225,6 +225,10 @@ export async function GET(req: NextRequest) {
       payerAddress: payerAddress(),
       tokenRequired: Boolean(process.env.TELEGRAPH_BRIDGE_TOKEN),
       extensionPinned: pinnedExtensionIds().length > 0,
+      // False when TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION=0 — the "deliberately
+      // closed" state from the origin policy above, so an operator can tell
+      // "open to any extension" apart from "closed" without probing origins.
+      allowAnyExtension: process.env.TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION !== "0",
       dailyCap: capToday() || null,
       asksUsed: dailyAsks.count,
       asksRemaining: remaining,
