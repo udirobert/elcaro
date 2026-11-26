@@ -4,9 +4,9 @@
 > quote-tweet: improve onboarding · **Status:** OB1 core shipped (`f604023`),
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
-> OB1, OB3, OB6 and OB7 are shipped and verified live — OB7's cause was a stale
-> pm2 env, not missing code. What remains is **OB4/OB5** (the stranger test and
-> the public reply) and the deferred OB2 npm decision.
+> OB1, OB3, OB4, OB6 and OB7 are shipped and verified live — OB7's cause was a
+> stale pm2 env, not missing code. What remains is **OB5** (post the drafted
+> reply) and the deferred OB2 npm decision.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -236,33 +236,77 @@ Verified: **27 passed, 0 failed**, including the three new quota assertions.
 response tells you what's left" is true whatever ops sets the limit to; `30/min`
 is not (V2's lesson, applied twice).
 
-### OB4 — The full-path stranger test · 0.5 day, no code unless it fails
+### OB4 — The full-path stranger test · **run 2026-11-26 against production**
 
-**Problem:** every previous estimate of onboarding quality was written by
-people who already hold keys. The feedback that triggered this plan came
-from a stranger.
+**Method:** a fresh browser profile (no cookies, no localStorage, no keychain)
+driven over CDP, plus a clean shell with no env. The walk was exactly the one
+the plan describes, timed at each step. Caveat stated up front: this proves the
+path works, is timed, and is free of dead ends — it is not evidence that a
+human would *choose* each step, which is what a person sitting next to you
+still tells you.
 
-**Changes:** scripted clean-room test — fresh browser profile, fresh shell,
-no keychain, no env: land on `/` from the tweet → scan in browser → follow
-to `/integrate` → run the no-key curl → check the verdict against
-`GET /pubkey` → mint key → run the keyed scan from OB6 → confirm
-`POST /verify` on the miner returns `valid: true` (V6 — there is no web
-`/verify` page; do not script against one). Time each step; log every
-hesitation point, jargon wall, or dead end. Anything that fails becomes a bug
-in OB1/OB3/OB6 scope; anything merely confusing becomes copy work in the same
-pass.
+| Step | Measured |
+|---|---|
+| Landing page, cold profile, no cache | **3.6 s** to first paint of the hero |
+| "Scan something" is the first CTA, found without scrolling the nav | 1 glance |
+| Paste the authority specimen → click Scan → `DANGEROUS` rendered | **776 ms** |
+| `/integrate` first section = the no-key curl, its output shape matches the real response | ✅ |
+| `/keys`: one click, no choices (label optional, Advanced collapsed) | **453 ms** to a key |
+| Post-mint command pasted **unedited** → verdict with its own quota | ✅ `dangerous` 1.00 |
+| `GET /pubkey` → `key_id` matches the verdict's `key_id` (ed25519) | ✅ |
+| `POST /verify` with the six fields → `valid: true` | ✅ |
+| Keyed + verified leg, shell only | **2.1 s** |
 
-**Done when:** median time-to-first-verdict ≤ 60 seconds, time-to-first
-*keyed, receipted, verified* call ≤ 5 minutes, zero steps requiring knowledge
-the test subject doesn't have. Results recorded in this doc.
+**Against the bar:** time-to-first-verdict **0.8 s** (bar: ≤ 60 s);
+time-to-first *keyed, receipted, verified* call **≈ 8 s including page loads**
+(bar: ≤ 5 min); zero steps needed knowledge the tester did not have. Both
+thresholds met by a wide margin.
+
+**One bug found and fixed in the same pass:** the Telegraph rail on
+`/integrate` announced "Telegraph catalog unreachable right now" whenever the
+devnode answered `200` with an **empty** miner list — which is exactly what it
+does today. Reachable-but-empty and broken are now different states, and the
+empty state says so plainly instead of claiming an outage. This is the class of
+false claim the review pass caught on the rate limit, in a component nobody had
+looked at.
+
+**Friction worth knowing about (logged, not fixed):** the scan form assumes you
+already have something to paste — the prefilled example carries that. The
+`/integrate` → `/keys` hop is one click, and the post-mint command means the
+user never types their key into a tool.
 
 ### OB5 — Close the loop publicly · 15 minutes, owner action
 
-After OB1–OB3 deploy and OB4 verifies: reply to the person who gave the
-feedback — what changed, with the no-key curl inline so anyone can confirm
-in seconds. A visible fixed-it loop is worth more than the fix.
+Draft ready to post; the account holder sends it. It answers the person who
+reported the inversion, with something they can run in one paste:
 
-**Done when:** the reply is posted.
+> You were right, and it was worse than ordering: the only path that needed no
+> commitment wasn't on the page at all, and a minted key bought you nothing you
+> could run without also bringing your own provider credential. Both fixed.
+>
+> `/integrate` now opens with the free scan — no key, no account, no install:
+>
+> ```
+> curl -X POST https://api.elcaro.trustfall.xyz/scan \
+>   -H "Content-Type: application/json" \
+>   -d '{"content":"<paste a message from your inbox>","content_type":"email"}'
+> ```
+>
+> Every verdict is Ed25519-signed: `api.elcaro.trustfall.xyz/pubkey` is the
+> trust anchor, `POST /verify` takes the six fields back, and an altered verdict
+> returns `valid: false`.
+>
+> A key is now one click (no upstream question at mint) and the same curl with
+> `-H "x-elcaro-key: …"` draws on your own quota instead of the shared one. The
+> gateway path still needs your own provider key — that's a property of the
+> design, not a step we can remove, so it's path 01 now and says so.
+>
+> `npm i @elcaro/sdk` still 404s. It isn't referenced anywhere a reader can
+> reach, and I'd rather publish it deliberately than point you at a stub — so
+> that one is still open.
+
+**Done when:** posted. Not something an agent can do for you — the account is
+yours.
 
 ## Sequencing and dependencies
 
@@ -273,8 +317,8 @@ in seconds. A visible fixed-it loop is worth more than the fix.
 | 3 | OB3 zero-decision minting | OB6 ✅ live | **shipped + verified live 2026-11-26** |
 | 4 | OB7 limiter actually on | stale pm2 env, cleared by the OB6 deploy | **fixed + guarded 2026-11-26** |
 | 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
-| 6 | **OB4 stranger test** | OB1+OB3+OB6 deployed | **next** — gates OB5 |
-| 7 | OB5 close the loop | OB4 green | owner action |
+| 6 | OB4 stranger test | OB1+OB3+OB6 deployed | **run 2026-11-26** — both bars met |
+| 7 | OB5 close the loop | OB4 green | **owner action** — draft ready, only posting left |
 
 Total: ~2–3 days, mostly frontend/copy plus one small backend route (OB6).
 Nothing here blocks or is blocked by WS5 (extension) or the WS4 tail — a

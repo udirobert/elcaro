@@ -45,7 +45,7 @@ export function TelegraphRail() {
     );
   }
 
-  if (catalog.error || catalog.miners.length === 0) {
+  if (catalog.error) {
     return (
       <p className="text-xs text-ink-faint">
         Telegraph catalog unreachable right now. The miner is still registered
@@ -60,6 +60,29 @@ export function TelegraphRail() {
         </a>
         .
       </p>
+    );
+  }
+
+  // Reachable but empty is not the same as broken: the devnode answers 200 with
+  // no CONTENT_MODERATION miners listed, and saying "unreachable" then is a
+  // false claim on a page a first-time reader is using to decide whether any of
+  // this is real.
+  if (catalog.miners.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-5 space-y-2">
+        <p className="text-sm font-semibold text-ink">
+          Telegraph miners · CONTENT_MODERATION
+        </p>
+        <p className="text-xs text-ink-faint leading-relaxed">
+          The protocol node answered with no CONTENT_MODERATION miners listed
+          right now. Elcaro&apos;s own registration is unchanged — id 8848,
+          registrationId 406 — and the miner serves{" "}
+          <code className="font-mono bg-canvas border border-border px-1 rounded">
+            POST /scan
+          </code>{" "}
+          directly, whether or not the catalog lists it.
+        </p>
+      </div>
     );
   }
 
