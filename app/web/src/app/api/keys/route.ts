@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { issueKey, keyInfo, meteringConfigured, revokeKey } from "@/lib/keys";
+import {
+  isKeyUpstream,
+  issueKey,
+  keyInfo,
+  meteringConfigured,
+  revokeKey,
+  type KeyUpstream,
+} from "@/lib/keys";
 
 /**
  * Self-service Elcaro key management for /keys.
@@ -23,18 +30,33 @@ function unavailable() {
 export async function POST(req: NextRequest) {
   if (!meteringConfigured()) return unavailable();
   let label = "";
+  let upstream: KeyUpstream = "serv";
   try {
     const body = await req.json();
     if (typeof body?.label === "string") label = body.label.slice(0, 120);
+    if (body?.upstream !== undefined) {
+      if (!isKeyUpstream(body.upstream)) {
+        return NextResponse.json(
+          { error: "upstream must be one of: serv, openai, anthropic" },
+          { status: 400 }
+        );
+      }
+      upstream = body.upstream;
+    }
   } catch {
-    // empty body is fine — label is optional
+    // empty body is fine — label and upstream are optional
   }
-  const minted = await issueKey(label);
+  const minted = await issueKey(label, upstream);
   if (!minted) {
     return NextResponse.json({ error: "Key issuance failed" }, { status: 502 });
   }
   return NextResponse.json(
-    { key: minted.rawKey, key_id: minted.keyId, prefix: minted.prefix },
+    {
+      key: minted.rawKey,
+      key_id: minted.keyId,
+      prefix: minted.prefix,
+      upstream,
+    },
     { status: 201 }
   );
 }

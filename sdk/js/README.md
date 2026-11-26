@@ -5,8 +5,46 @@ drop-in wrappers for `openai`, `@anthropic-ai/sdk`, and the Vercel AI SDK.
 The integration is a base-URL swap plus two headers; these wrappers exist
 so you never hand-roll header names.
 
+> **Not published to npm yet.** The recommended path is the zero-dependency
+> swap below — the stock SDK with a `baseURL` and one header. Use this package
+> only if you build it from source (`npm ci && npm run build`) or it gets
+> published later.
+
+## Zero-dependency path (recommended)
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: process.env.SERV_API_KEY, // the upstream credential
+  baseURL: "https://gateway.elcaro.trustfall.xyz/v1", // note the /v1
+  defaultHeaders: {
+    "x-elcaro-key": process.env.ELCARO_API_KEY, // elk_… from /keys
+  },
+});
+```
+
+The key's `upstream` must match the credential: `serv` keys forward to SERV,
+`openai` to OpenAI, `anthropic` to Anthropic. Pick the upstream when minting at
+<https://elcaro.trustfall.xyz/keys>.
+
+Anthropic uses the version-free root — its SDK appends `/v1/messages` itself:
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY, // rides x-api-key
+  baseURL: "https://gateway.elcaro.trustfall.xyz",
+  defaultHeaders: { "x-elcaro-key": process.env.ELCARO_API_KEY },
+});
+```
+
+## Wrapper path (build from source)
+
 ```bash
-npm i @elcaro/sdk openai          # or @anthropic-ai/sdk / ai + @ai-sdk/openai
+git clone https://github.com/…/elcaro && cd elcaro/sdk/js
+npm ci && npm run build
 ```
 
 ```ts

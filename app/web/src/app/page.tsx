@@ -20,16 +20,28 @@ export default function HomePage() {
       <section className="flex-1 px-6 py-16 lg:py-20">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 lg:gap-x-16 gap-y-8 lg:items-start">
           <header className="order-1 space-y-4 max-w-md">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
-              IPI detection · miner 8848
-              <span className="ml-2 text-violet/70">· now with SERV Reasoning</span>
-              <Link
-                href="/hermes"
-                className="ml-2 text-[#46a758] hover:underline underline-offset-2"
-              >
-                · live in the Hermes plugin catalog →
-              </Link>
-            </p>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+                <Link
+                  href="https://x.com/openservai/status/2125641925604868121"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#46a758] hover:underline underline-offset-2"
+                >
+                  Winner · OpenServ Dolphin track
+                </Link>
+                <span className="ml-2 text-violet/70">· SERV-powered gateway</span>
+              </p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+                IPI detection · miner 8848
+                <Link
+                  href="/hermes"
+                  className="ml-2 text-[#46a758] hover:underline underline-offset-2"
+                >
+                  · live in the Hermes plugin catalog →
+                </Link>
+              </p>
+            </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-ink">
               See what your
               <br />
@@ -46,25 +58,40 @@ export default function HomePage() {
 
           <div className="order-3 space-y-6 max-w-md">
             <p className="text-base text-ink-muted leading-relaxed">
-              Hidden instructions live inside emails, search results, and
-              documents your agent retrieves. Elcaro finds them first.
+              Hidden instructions live inside emails, search results, documents
+              and tool results your agent retrieves. Elcaro is the drop-in
+              gateway that scans them first — SERV inside, every verdict
+              signed.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <Link href="/evaluate/gauntlet" className={PRIMARY_BTN}>
-                Run the Gauntlet
+              <Link href="/integrate#gateway" className={PRIMARY_BTN}>
+                Use the Gateway
                 <span className="text-canvas/60">→</span>
               </Link>
               <Link href="/scan" className={SECONDARY_BTN}>
                 Try a scan
               </Link>
               <Link
-                href="/integrate"
+                href="/evaluate/gauntlet"
                 className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors underline-offset-2 hover:underline"
               >
-                Add to your agent
+                Run the Gauntlet
               </Link>
             </div>
+
+            <p className="text-xs text-ink-faint">
+              SERV powers the gateway · every verdict carries an Ed25519
+              receipt —{" "}
+              <a
+                href="https://docs.openserv.ai/serv-reasoning"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-ink underline underline-offset-2"
+              >
+                how it works
+              </a>
+            </p>
 
             <p className="text-xs text-ink-faint">
               elcaro is{" "}

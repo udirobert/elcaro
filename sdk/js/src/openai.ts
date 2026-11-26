@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import type { ClientOptions } from "openai";
 
 import {
-  ELCARO_GATEWAY_URL,
+  ELCARO_OPENAI_BASE_URL,
   type ElcaroClientOptions,
   elcaroHeaders,
   resolveElcaroKey,
@@ -24,7 +24,7 @@ export class ElcaroOpenAI extends OpenAI {
     const { elcaroKey, upstreamKey, baseURL, headers, ...rest } = opts;
     super({
       apiKey: resolveElcaroKey(elcaroKey),
-      baseURL: baseURL ?? ELCARO_GATEWAY_URL,
+      baseURL: baseURL ?? ELCARO_OPENAI_BASE_URL,
       defaultHeaders: elcaroHeaders({ elcaroKey, upstreamKey, headers }),
       ...rest,
     });

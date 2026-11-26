@@ -15,6 +15,8 @@ interface StoredKey {
   raw: string;
   label: string;
   createdAt: string;
+  /** Provider this key routes to. Older entries may omit it. */
+  upstream?: string;
 }
 
 interface KeyStatus {
@@ -64,7 +66,12 @@ export function KeyManager() {
 
   const [status, setStatus] = useState<Record<string, KeyStatus | "gone">>({});
   const [label, setLabel] = useState("");
-  const [minted, setMinted] = useState<{ raw: string; keyId: string } | null>(null);
+  const [upstream, setUpstream] = useState("serv");
+  const [minted, setMinted] = useState<{
+    raw: string;
+    keyId: string;
+    upstream: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importKey, setImportKey] = useState("");
@@ -96,17 +103,23 @@ export function KeyManager() {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label }),
+        body: JSON.stringify({ label, upstream }),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
         setError(e.error ?? `Mint failed (${res.status})`);
         return;
       }
-      const { key, key_id } = await res.json();
-      setMinted({ raw: key, keyId: key_id });
+      const { key, key_id, upstream: mintedUpstream } = await res.json();
+      setMinted({ raw: key, keyId: key_id, upstream: mintedUpstream });
       persistKeys([
-        { keyId: key_id, raw: key, label, createdAt: new Date().toISOString() },
+        {
+          keyId: key_id,
+          raw: key,
+          label,
+          upstream: mintedUpstream,
+          createdAt: new Date().toISOString(),
+        },
         ...keys,
       ]);
       setLabel("");
@@ -162,13 +175,23 @@ export function KeyManager() {
             stored only in this browser. Only its hash reaches our database.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Label (optional — e.g. staging bot)"
-            className="flex-1 rounded-lg border border-border bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-violet"
+            className="rounded-lg border border-border bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-violet"
           />
+          <select
+            value={upstream}
+            onChange={(e) => setUpstream(e.target.value)}
+            aria-label="Upstream provider"
+            className="rounded-lg border border-border bg-canvas px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-violet"
+          >
+            <option value="serv">SERV</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
           <button
             onClick={mint}
             disabled={busy}
@@ -177,12 +200,28 @@ export function KeyManager() {
             {busy ? "Minting…" : "Mint key"}
           </button>
         </div>
+        <p className="text-xs text-ink-faint leading-relaxed">
+          The key routes to this provider, so the upstream credential you pass
+          must be that provider&apos;s key. The quickstart on{" "}
+          <a
+            href="/integrate#gateway"
+            className="underline underline-offset-2 hover:text-ink"
+          >
+            /integrate
+          </a>{" "}
+          uses SERV by default; for OpenAI, swap the key env var and model.
+        </p>
         {error && <p className="text-xs text-dangerous">{error}</p>}
 
         {minted && (
           <div className="rounded-lg border border-safe/40 bg-safe-bg p-4 space-y-2">
             <p className="text-xs font-semibold text-safe">
               Key minted — copy it now. It will not be shown again.
+            </p>
+            <p className="text-xs text-ink-muted">
+              Routes to <span className="font-mono">{minted.upstream}</span>.
+              Pass a <span className="font-mono">{minted.upstream}</span> API key
+              as the upstream credential.
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 font-mono text-xs text-ink break-all select-all">

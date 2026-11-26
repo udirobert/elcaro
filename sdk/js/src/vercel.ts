@@ -3,6 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 import {
   ELCARO_GATEWAY_URL,
+  ELCARO_OPENAI_BASE_URL,
   type ElcaroClientOptions,
   elcaroHeaders,
   resolveElcaroKey,
@@ -19,7 +20,7 @@ export function createElcaroOpenAI(opts: ElcaroClientOptions = {}) {
   const { elcaroKey, upstreamKey, baseURL, headers } = opts;
   return createOpenAI({
     apiKey: resolveElcaroKey(elcaroKey),
-    baseURL: baseURL ?? ELCARO_GATEWAY_URL,
+    baseURL: baseURL ?? ELCARO_OPENAI_BASE_URL,
     headers: elcaroHeaders({ elcaroKey, upstreamKey, headers }),
   });
 }

@@ -3,6 +3,18 @@
 Elcaro is competing in six hackathons. The product is the same; this page
 records the submission details for each.
 
+## OpenServ Hackathon 02 — Dolphin track — **winner**
+
+- **Result:** Elcaro won the **Dolphin track**; OpenServ shouted it out as "a
+  drop-in security gateway that scans every page, document and tool result an
+  agent reads for prompt injection. SERV powers the gateway, and every verdict
+  is receipted."
+- **Announcement:** <https://x.com/openservai/status/2125641925604868121>
+- **Launch readiness:** the shoutout drives developers to the site, so the
+  pre-announcement conversion work is tracked in
+  [openserv-dolphin-launch.md](openserv-dolphin-launch.md) — quickstart truth,
+  homepage alignment, gateway entry point, production smoke test.
+
 ## Hermes Agent Plugin Hackathon (Nous Research) — Nov 5–11, 2026
 
 - **Prize pool:** $20,000 (1st $10k · 2nd $5k · 3rd $2.5k · 4th $1.5k · 5th

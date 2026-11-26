@@ -68,6 +68,25 @@ export function TrustChipBand() {
   }
 
   chips.push({
+    id: "openserv",
+    label: "OpenServ Dolphin track winner",
+    detail: (
+      <>
+        Elcaro won the Dolphin track at OpenServ&apos;s Hackathon 02. SERV
+        powers the gateway, and every verdict carries an Ed25519 receipt you
+        can verify at{" "}
+        <Link
+          href="/integrate#gateway"
+          className="text-violet font-medium underline underline-offset-2 hover:text-violet/80 transition-colors"
+        >
+          /integrate#gateway
+        </Link>
+        .
+      </>
+    ),
+  });
+
+  chips.push({
     id: "spec-first",
     label: "Built spec-first · guarded by its own firewall",
     detail: (

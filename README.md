@@ -20,6 +20,12 @@ curl -X POST https://api.elcaro.trustfall.xyz/scan \
 
 ---
 
+> **OpenServ Hackathon 02 — Dolphin track winner.** Elcaro is a drop-in
+> security gateway: point your OpenAI or Anthropic SDK at it and every page,
+> document and tool result your agent reads is scanned for prompt injection.
+> SERV powers the gateway, and every verdict is Ed25519-signed. Launch
+> readiness: [`docs/openserv-dolphin-launch.md`](docs/openserv-dolphin-launch.md).
+
 > **PayBox Ch.1 — submitted.** See [`docs/paybox-ch1.md`](docs/paybox-ch1.md)
 > — the content mandate for agentic commerce: `POST /api/x402/scan` (paid
 > scan lane, x402 "exact" on Base + Base Sepolia), the **PayBox Gauntlet**

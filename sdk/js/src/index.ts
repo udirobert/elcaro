@@ -14,6 +14,13 @@
 
 export const ELCARO_GATEWAY_URL = "https://gateway.elcaro.trustfall.xyz";
 
+/**
+ * OpenAI-dialect base URL. The OpenAI SDK appends `/chat/completions` to
+ * `baseURL`, so the `/v1` prefix belongs here — unlike the Anthropic SDK,
+ * which appends `/v1/messages` itself.
+ */
+export const ELCARO_OPENAI_BASE_URL = `${ELCARO_GATEWAY_URL}/v1`;
+
 export interface ElcaroClientOptions {
   /** The customer's Elcaro key (`elk_…`). Env: ELCARO_API_KEY. */
   elcaroKey?: string;

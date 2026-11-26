@@ -16,6 +16,21 @@ import { Pool } from "pg";
 
 const KEY_PREFIX_LEN = 12; // "elk_" + 8 chars — matches metering/neon.py
 
+/**
+ * Upstreams a gateway key may route to. Must stay in sync with the gateway's
+ * allowlist (gateway/upstream.py) — a key pointing at an unknown upstream
+ * fails closed at request time.
+ */
+export const KEY_UPSTREAMS = ["serv", "openai", "anthropic"] as const;
+export type KeyUpstream = (typeof KEY_UPSTREAMS)[number];
+
+export function isKeyUpstream(value: unknown): value is KeyUpstream {
+  return (
+    typeof value === "string" &&
+    (KEY_UPSTREAMS as readonly string[]).includes(value)
+  );
+}
+
 let pool: Pool | null | undefined;
 let ddlPromise: Promise<void> | null = null;
 
@@ -62,9 +77,14 @@ export interface MintedKey {
   prefix: string;
 }
 
-/** Mint an elk_* key with the contract-C2 default config. Returns the raw
- * key exactly once — it is never stored. Null when the DB is down. */
-export async function issueKey(label = ""): Promise<MintedKey | null> {
+/** Mint an elk_* key with the contract-C2 default config. `upstream` is the
+ * provider the key routes to (SERV by default) and must match the credential
+ * the caller passes as the upstream key. Returns the raw key exactly once —
+ * it is never stored. Null when the DB is down. */
+export async function issueKey(
+  label = "",
+  upstream: KeyUpstream = "serv"
+): Promise<MintedKey | null> {
   const p = getPool();
   if (!p) return null;
   try {
@@ -72,9 +92,9 @@ export async function issueKey(label = ""): Promise<MintedKey | null> {
     const raw = `elk_${randomBytes(24).toString("base64url")}`;
     const keyId = `elkid_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
     await p.query(
-      `INSERT INTO api_keys (key_id, key_hash, key_prefix, label)
-       VALUES ($1, $2, $3, $4)`,
-      [keyId, hashKey(raw), raw.slice(0, KEY_PREFIX_LEN), label]
+      `INSERT INTO api_keys (key_id, key_hash, key_prefix, label, upstream)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [keyId, hashKey(raw), raw.slice(0, KEY_PREFIX_LEN), label, upstream]
     );
     return { rawKey: raw, keyId, prefix: raw.slice(0, KEY_PREFIX_LEN) };
   } catch {

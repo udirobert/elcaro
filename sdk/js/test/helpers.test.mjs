@@ -3,11 +3,22 @@ import { describe, it } from "node:test";
 
 import {
   ELCARO_GATEWAY_URL,
+  ELCARO_OPENAI_BASE_URL,
   elcaroHeaders,
   untrusted,
   untrustedHeader,
   verdictFromHeaders,
 } from "../dist/index.js";
+
+describe("base URLs", () => {
+  it("OpenAI base URL carries the /v1 prefix the SDK appends routes to", () => {
+    assert.equal(ELCARO_OPENAI_BASE_URL, `${ELCARO_GATEWAY_URL}/v1`);
+  });
+
+  it("the gateway root stays version-free for the Anthropic SDK", () => {
+    assert.equal(ELCARO_GATEWAY_URL, "https://gateway.elcaro.trustfall.xyz");
+  });
+});
 
 describe("elcaroHeaders", () => {
   it("carries the elcaro key + upstream key", () => {

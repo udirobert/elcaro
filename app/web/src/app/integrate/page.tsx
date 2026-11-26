@@ -13,23 +13,36 @@ export const metadata: Metadata = {
     "Add Elcaro to your agent's retrieval pipeline. Gateway URL swap for OpenAI/Anthropic/Vercel SDKs, direct /scan API, MCP tools, WebMCP, or Telegraph routing.",
 };
 
-const CODE_GATEWAY = `npm i @elcaro/sdk openai    # or @anthropic-ai/sdk / ai + @ai-sdk/openai
+const CODE_GATEWAY = `import OpenAI from "openai";
 
-import { ElcaroOpenAI } from "@elcaro/sdk/openai";
-// import { ElcaroAnthropic } from "@elcaro/sdk/anthropic";
-// import { createElcaroOpenAI } from "@elcaro/sdk/vercel";
-
-const client = new ElcaroOpenAI({
-  elcaroKey: process.env.ELCARO_API_KEY,   // elk_… from /keys
-  upstreamKey: process.env.OPENAI_API_KEY, // forwarded untouched
+// 1. Mint an elk_ key at elcaro.trustfall.xyz/keys (upstream: SERV)
+// 2. Point the stock SDK at the gateway — no wrapper package needed.
+const client = new OpenAI({
+  apiKey: process.env.SERV_API_KEY,                  // forwarded upstream
+  baseURL: "https://gateway.elcaro.trustfall.xyz/v1",
+  defaultHeaders: {
+    "x-elcaro-key": process.env.ELCARO_API_KEY,      // elk_… from /keys
+  },
 });
 
-// Identical surface to new OpenAI() — every tool result and tool_result
-// block is scanned before it reaches the model. Verdict metadata rides
-// the response headers: x-elcaro-verdict, -action, -receipt, -cost-usdc.
+// Tool results and function outputs are scanned before the model sees them.
 const res = await client.chat.completions.create({
-  model: "gpt-5",
+  model: "gpt-5.4-mini",
   messages: [/* your messages — tool results are scanned automatically */],
+});
+
+// Verdict metadata rides the response headers:
+// x-elcaro-verdict · -action · -receipt · -cost-usdc`;
+
+const CODE_GATEWAY_ANTHROPIC = `import Anthropic from "@anthropic-ai/sdk";
+
+// Mint the key with upstream: anthropic.
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,             // x-api-key → upstream
+  baseURL: "https://gateway.elcaro.trustfall.xyz",   // SDK appends /v1/messages
+  defaultHeaders: {
+    "x-elcaro-key": process.env.ELCARO_API_KEY,      // elk_… from /keys
+  },
 });`;
 
 const CODE_API = `curl -X POST https://api.elcaro.trustfall.xyz/scan \\
@@ -212,12 +225,23 @@ export default function IntegratePage() {
         {/* Hero — same mono eyebrow as the landing hero, so the interior
             opens with the same instrument voice */}
         <div className="space-y-4">
-          <PageHeader eyebrow="Integration · miner 8848" title="Add Elcaro to your agent">
+          <PageHeader eyebrow="Gateway · SERV-powered" title="Add Elcaro to your agent">
             <p className="text-base text-ink-muted leading-relaxed max-w-lg">
-              One scan call between your agent&apos;s retrieval step and its
-              reasoning loop. Under 2ms. No API key. Works today.
+              Point your existing OpenAI or Anthropic SDK at the gateway and
+              every retrieved part is scanned before the model sees it. Prefer
+              a single call? The scan API needs no key. Under 2ms for the
+              rules path.
             </p>
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <a
+                href="https://x.com/openservai/status/2125641925604868121"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#46a758] bg-[#46a758]/10 px-2.5 py-1 rounded-full hover:bg-[#46a758]/15 transition-colors"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#46a758]" />
+                Winner · OpenServ Dolphin track
+              </a>
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-safe bg-safe-bg px-2.5 py-1 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-safe" />
                 Live on Telegraph Protocol
@@ -260,33 +284,100 @@ export default function IntegratePage() {
         {/* 00 — the Gateway quickstart replaces the old tiers block (§2.9):
             for agents that already call an LLM SDK, the whole integration
             is a base-URL swap plus two keys. */}
-        <Section number="00" title="Gateway — URL swap (recommended)">
-          <p className="text-sm text-ink-muted leading-relaxed">
-            If your agent already calls OpenAI or Anthropic through an SDK,
-            you don&apos;t need a scan step at all — point the SDK at the
-            Elcaro Gateway and every retrieved part is scanned in-line,
-            before the model sees it. Injection verdicts ride back as
-            headers and signed receipts.
-          </p>
-          <CodeBlock code={CODE_GATEWAY} language="typescript" />
-          <p className="text-xs text-ink-faint leading-relaxed">
-            Get an{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              elk_
-            </code>{" "}
-            key on{" "}
-            <Link href="/keys" className="underline underline-offset-2 hover:text-ink">
-              /keys
-            </Link>
-            . Tool results, function calls, and Anthropic tool_result blocks
-            are scanned by default; mark anything else with{" "}
-            <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
-              untrusted(part)
-            </code>
-            . Blocked requests return the provider&apos;s native error shape
-            — your client code needs no changes.
-          </p>
-        </Section>
+        <div id="gateway" className="scroll-mt-24">
+          <Section number="00" title="Gateway — URL swap (recommended)">
+            <p className="text-sm text-ink-muted leading-relaxed">
+              If your agent already calls OpenAI or Anthropic through an SDK,
+              you don&apos;t need a scan step at all — point the SDK at the
+              Elcaro Gateway and every retrieved part is scanned in-line,
+              before the model sees it. SERV is the default upstream; verdicts
+              ride back as headers and Ed25519-signed receipts.
+            </p>
+
+            <ol className="space-y-2 text-sm text-ink-muted leading-relaxed list-decimal pl-5">
+              <li>
+                Mint an{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  elk_
+                </code>{" "}
+                key on{" "}
+                <Link href="/keys" className="text-violet underline underline-offset-2 hover:text-violet/80">
+                  /keys
+                </Link>
+                . Pick the upstream that matches the provider key you&apos;ll
+                pass — SERV by default.
+              </li>
+              <li>
+                Set{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  ELCARO_API_KEY
+                </code>{" "}
+                to the{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  elk_
+                </code>{" "}
+                key, and the provider key to its usual env var.
+              </li>
+              <li>
+                Run the snippet — it&apos;s the stock SDK with a base URL and
+                one header.
+              </li>
+              <li>
+                Look for{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  x-elcaro-verdict
+                </code>
+                ,{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  -action
+                </code>
+                , and{" "}
+                <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                  -receipt
+                </code>{" "}
+                on the response.
+              </li>
+            </ol>
+
+            <CodeBlock code={CODE_GATEWAY} language="typescript" />
+
+            <p className="text-xs font-mono text-ink-faint pt-2">
+              Anthropic — mint the key with upstream: anthropic
+            </p>
+            <CodeBlock code={CODE_GATEWAY_ANTHROPIC} language="typescript" />
+
+            <p className="text-xs text-ink-faint leading-relaxed">
+              The key&apos;s upstream must match the credential you pass: a{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                serv
+              </code>{" "}
+              key forwards to SERV,{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                openai
+              </code>{" "}
+              to OpenAI,{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                anthropic
+              </code>{" "}
+              to Anthropic. Tool results, function calls, and Anthropic
+              tool_result blocks are scanned by default; mark anything else
+              with{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                untrusted(part)
+              </code>
+              . Blocked requests return the provider&apos;s native error shape
+              — your client code needs no changes. Receipts verify at{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                /pubkey
+              </code>{" "}
+              and{" "}
+              <code className="font-mono bg-surface border border-border px-1 rounded text-ink-muted">
+                POST /verify
+              </code>
+              .
+            </p>
+          </Section>
+        </div>
 
         {/* Option 1 — Direct API */}
         <Section number="01" title="Direct API call">

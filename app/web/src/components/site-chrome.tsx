@@ -22,7 +22,7 @@ const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: "scan", href: "/scan", label: "Scan" },
   { key: "evaluate", href: "/evaluate/gauntlet", label: "Evaluate" },
   { key: "swarm", href: "/swarm", label: "Swarm" },
-  { key: "integrate", href: "/integrate", label: "Integrate" },
+  { key: "integrate", href: "/integrate#gateway", label: "Gateway" },
 ];
 
 // Utility surfaces that still exist as routes but don't earn a top-nav
