@@ -313,3 +313,31 @@ def direct_scan_rate_limiter_from_env():
 def rate_limiter_from_env():
     """Backward-compatible ordinary-scan limiter factory."""
     return scan_rate_limiters_from_env()[0]
+
+
+def keyed_scan_rate_limiter_from_env():
+    """Build the per-key scan limiter, or None.
+
+    A minted ``elk_`` key buys its own fixed window instead of sharing the
+    anonymous buckets, so "mint a key" has an observable consequence on the
+    same endpoint a first-time caller just used. Windows are keyed by
+    ``key_id`` — never the raw secret — so the store keeps no linkable handle
+    on the key material.
+
+    Opt-in like the others: no per-day limit configured, no limiter, and keyed
+    scans fall through to the anonymous quota rather than becoming unlimited.
+
+    Env:
+      ELCARO_KEYED_SCAN_RATE_LIMIT_PER_DAY      — 0/absent disables the keyed quota
+      ELCARO_KEYED_SCAN_RATE_LIMIT_PER_MINUTE   — keyed burst guard, default 120
+    """
+    per_day = _int_env("ELCARO_KEYED_SCAN_RATE_LIMIT_PER_DAY", 0)
+    if per_day <= 0:
+        return None
+    return _build_limiter(
+        per_minute=_int_env("ELCARO_KEYED_SCAN_RATE_LIMIT_PER_MINUTE", 120),
+        per_day=per_day,
+        pepper=_rate_limit_pepper(),
+        dsn=_rate_limit_dsn(),
+        namespace="keyed_scan",
+    )

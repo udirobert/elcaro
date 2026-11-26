@@ -11,12 +11,12 @@ export PATH="$HOME/.local/bin:$PATH"   # uv
 uv python install 3.12                  # once
 uv sync --extra all                     # create/update .venv with all extras
 
-uv run pytest -q                        # test suite (624 tests)
+uv run pytest -q                        # test suite (643 tests)
 uv run ruff check                       # lint
 cd lexsi-eval && uv run --project .. python selftest.py
 ```
 
-Expected: `624 passed`, `All checks passed!`, and
+Expected: `643 passed`, `All checks passed!`, and
 `selftest OK — 24 tasks, references pass, wrong answers fail`.
 
 ## Secrets and SERV locally

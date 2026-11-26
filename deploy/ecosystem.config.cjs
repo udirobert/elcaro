@@ -74,6 +74,12 @@ module.exports = {
         ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_MINUTE: "30",
         ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY: "3",
         ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE: "1",
+        // Keyed scans (OB6): a minted elk_ key draws its own window instead of
+        // the anonymous buckets, so minting has a visible consequence on the
+        // endpoint a first-time caller already used. Keys resolve through the
+        // same Neon store as the gateway (ELCARO_CANARY_DSN in .env).
+        ELCARO_KEYED_SCAN_RATE_LIMIT_PER_DAY: "5000",
+        ELCARO_KEYED_SCAN_RATE_LIMIT_PER_MINUTE: "120",
         ELCARO_SCAN_MAX_CONTENT_CHARS: "100000",
       },
       // Restart policy

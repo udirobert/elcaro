@@ -4,8 +4,9 @@
 > quote-tweet: improve onboarding · **Status:** OB1 core shipped (`f604023`),
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
-> OB3 is blocked on the new **OB6**; OB2 is no longer urgent; **OB7** is a new
-> open ops item.
+> OB6 keyed `/scan` shipped in code; OB3 is unblocked once the miner is
+> redeployed and the post-deploy checks pass. OB2 is no longer urgent; **OB7**
+> is a new open ops item.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -103,34 +104,48 @@ stale `dist/` would publish silently.
 installed quickstart returns a verdict, or the decision is recorded as
 "deferred — not referenced anywhere a user can reach".
 
-### OB6 — Make a key do something on the surface the stranger just used · 0.5–1 day
+### OB6 — Make a key do something on the surface the stranger just used · **shipped, pending deploys**
 
-**Problem:** the ladder's second rung is empty (V4). `elk_` is accepted only
+**Problem (V4):** the ladder's second rung was empty. `elk_` was accepted only
 by the gateway, which additionally demands the caller's own upstream
-credential, so minting a key currently buys nothing a first-time user can
-execute without editing a command. **OB3's post-mint screen cannot be finished
-before this exists.**
+credential, so minting a key bought nothing a first-time user could execute
+without editing a command.
 
-**Change (recommended):** accept `elk_` on `/scan` — on the miner directly, or
-as a gateway `/scan` route in front of it. Consequences to implement:
+**Shipped:** `/scan` and `/v1/infer` now honour `x-elcaro-key`.
 
-1. Keyed scans draw from the key's own bucket instead of the shared anonymous
-   one. `core/rate_limit.py` already keys windows by a hashed identity and a
-   `namespace`, so this is a new namespace (`keyed_scan`), not new machinery.
-2. The response keeps its `signature`/`key_id` — both are emitted today and
-   the miner already exposes `POST /verify` (V6) — so receipts become
-   attributable per key.
-3. The post-mint command becomes the *same* curl as the first-run one plus
-   `-H "x-elcaro-key: elk_…"`, with a reward that can be explained in a
-   sentence: your own quota, your own receipts.
+- Keys resolve through the same Neon store the gateway uses
+  (`metering.from_env()`, `ELCARO_METERING_DSN` or `ELCARO_CANARY_DSN`). Only
+  the *key store* is installed on the miner — the usage sink stays with the
+  gateway, so scan traffic is metered once, where it is charged. Note the cost
+  of that: `NeonMetering` validates eagerly, so the miner process now holds a
+  small pool (`min_size=1 · max_size=4`) and runs the key DDL at boot. An
+  unreachable store degrades to `503 key_service_unavailable`, never to a
+  silent anonymous downgrade.
+- A keyed call spends `ELCARO_KEYED_SCAN_RATE_LIMIT_*` (committed:
+  `120/min · 5000/day`, vs `30/min · 300/day` anonymous) from its own window,
+  keyed by `key_id` — never the raw secret.
+- A `200` echoes `X-RateLimit-Limit` / `X-RateLimit-Remaining`, so "your own
+  quota" is one `curl -i` away. A `429` returns `keyed_scan_rate_limited`
+  with no x402 upsell — a keyed caller already has an account.
+- Unknown key → `401 unknown_key`; no DSN configured →
+  `503 key_service_unavailable`; no keyed quota configured (dev/offline) →
+  falls through to the anonymous bucket, **never** to unlimited access.
+- `rate_limited_keyed_scans` added to `/metrics`.
 
-**Rejected alternative:** extend x402 scan-only pricing to keyed humans. Right
-for agents, wrong here — it puts a wallet and USDC in a human's second step,
-more friction than the form this plan exists to remove.
+**Deliberately not done yet:** no `/integrate` copy advertises the keyed quota
+until the miner is redeployed and observed live. Publishing a limit the running
+edge does not enforce is exactly the V2 failure this plan exists to correct.
 
-**Done when:** in a clean shell, the same specimen scanned anonymously and
-with a freshly minted key differs only by one header, and the keyed call
-reports its own quota rather than the shared bucket.
+**Post-deploy verification (no substitutes):**
+
+1. `curl -i -X POST https://api.elcaro.trustfall.xyz/scan -H 'content-type:
+   application/json' -H "x-elcaro-key: elk_…" -d '{"content":"hello",
+   "content_type":"email"}'` → `200` with `X-RateLimit-Limit: 5000`.
+2. Same call with `elk_bogus` → `401 unknown_key`.
+3. Anonymous call → `200`, no `X-RateLimit-*` (unchanged boundary).
+4. `GET /metrics` shows `rate_limited_keyed_scans`.
+
+Then OB3's post-mint command is the one-line change the plan promised.
 
 ### OB3 — Zero-decision key minting · 0.5 day, **after OB6**
 
@@ -206,8 +221,8 @@ in seconds. A visible fixed-it loop is worth more than the fix.
 | Order | Work | Depends on | State |
 |---|---|---|---|
 | 1 | OB1 no-key-first `/integrate` | nothing — highest leverage | core shipped `f604023`; claims corrected 2026-11-26 |
-| 2 | **OB6 keyed `/scan`** | nothing | **next** — unblocks OB3 |
-| 3 | OB3 zero-decision minting | OB6 | upstream already defaults to SERV |
+| 2 | OB6 keyed `/scan` | nothing | code + tests shipped; needs a miner deploy, then the post-deploy checks in OB6 |
+| 3 | OB3 zero-decision minting | OB6 verified live | upstream already defaults to SERV |
 | 4 | OB7 limiter actually on | deploy/env check on `api.` | open ops item |
 | 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
 | 6 | OB4 stranger test | OB1+OB3+OB6 deployed | gates OB5 |

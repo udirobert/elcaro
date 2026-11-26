@@ -208,7 +208,18 @@ The committed miner contract enables durable fixed-window quotas:
 - `ELCARO_DIRECT_SCAN_RATE_LIMIT_PER_DAY=300` — direct/Telegraph ingress resource quota
 - `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_MINUTE=1` — second-opinion burst quota everywhere
 - `ELCARO_PREMIUM_SCAN_RATE_LIMIT_PER_DAY=3` — second-opinion daily quota everywhere
+- `ELCARO_KEYED_SCAN_RATE_LIMIT_PER_MINUTE=120` — per-key burst quota (`x-elcaro-key`)
+- `ELCARO_KEYED_SCAN_RATE_LIMIT_PER_DAY=5000` — per-key daily quota
 - `ELCARO_SCAN_MAX_CONTENT_CHARS=100000` — request body cost ceiling
+
+A minted `elk_` key presented in `x-elcaro-key` is resolved through the same
+Neon key store the gateway uses (`ELCARO_METERING_DSN`, falling back to
+`ELCARO_CANARY_DSN`) and spends the per-key window instead of the anonymous
+ones. Windows are keyed by `key_id`, never the raw secret, and a keyed scan
+echoes `X-RateLimit-Limit` / `X-RateLimit-Remaining` so the quota is
+observable with `curl -i`. An unrecognised key is refused with `401
+unknown_key` rather than silently downgraded to anonymous; `503
+key_service_unavailable` means the miner has no DSN configured.
 
 When `ELCARO_CANARY_DSN`/`ELCARO_METERING_DSN` is present, the counters live in
 Neon table `scan_rate_windows` and survive restarts/multiple workers. Stored

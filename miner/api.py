@@ -28,6 +28,7 @@ import asyncio
 import hmac
 import ipaddress
 import json
+import logging
 import os
 import time
 from collections import deque
@@ -44,7 +45,11 @@ from core.canary import TOKEN_RE
 from core.jev_reasoner import JevReasoner
 from core.jev_vl_reasoner import JevVlReasoner
 from core.laya_reasoner import LayaReasoner
-from core.rate_limit import direct_scan_rate_limiter_from_env, scan_rate_limiters_from_env
+from core.rate_limit import (
+    direct_scan_rate_limiter_from_env,
+    keyed_scan_rate_limiter_from_env,
+    scan_rate_limiters_from_env,
+)
 from core.sandbox import (
     SandboxConfig,
     run_sandbox,
@@ -56,7 +61,10 @@ from core.signing import (
     sha256_hex,
     verify_verdict,
 )
+from core.usage import get_key
 from core.vulnerability import analyze as analyze_vulnerability
+
+log = logging.getLogger(__name__)
 
 # ── App ─────────────────────────────────────────────────────────────────────────
 
@@ -92,6 +100,7 @@ class Metrics:
     serv_calls: int = 0  # second-pass calls that actually contributed to a verdict
     rate_limited_scans: int = 0
     rate_limited_premium_scans: int = 0
+    rate_limited_keyed_scans: int = 0
     serv_cost_total_usdc: float = (
         0.0  # cumulative SERV cost in USDC (approximate, from char counts)
     )
@@ -157,6 +166,7 @@ class Metrics:
             "serv_cost_total_usdc": round(self.serv_cost_total_usdc, 6),
             "rate_limited_scans": self.rate_limited_scans,
             "rate_limited_premium_scans": self.rate_limited_premium_scans,
+            "rate_limited_keyed_scans": self.rate_limited_keyed_scans,
             "error_rate": (
                 round(self.total_errors / self.total_requests, 4)
                 if self.total_requests > 0
@@ -198,12 +208,41 @@ _metrics = Metrics()
 #    (Telegraph devnode and direct API callers are not cryptographically
 #    distinguishable today) gets a separate higher resource-protection quota.
 #    A deployment-internal token lets the paid x402 lane bypass free quotas.
+# 3. A minted elk_ key (x-elcaro-key) draws from its own bucket instead of the
+#    anonymous ones, so minting keys buys something on the endpoint a stranger
+#    already used. Keys resolve through the same Neon store as the gateway.
 
 try:
     _scan_rate_limiter, _premium_scan_rate_limiter = scan_rate_limiters_from_env()
     _direct_scan_rate_limiter = direct_scan_rate_limiter_from_env()
+    _keyed_scan_rate_limiter = keyed_scan_rate_limiter_from_env()
 except Exception as exc:  # boot-time config failure must be loud, not silent
     raise RuntimeError(f"scan rate limiting is enabled but could not initialize: {exc}") from exc
+
+
+def _install_key_store() -> bool:
+    """Resolve minted ``elk_`` keys at the miner edge.
+
+    Only the key store is installed — the usage sink stays with the gateway, so
+    scan traffic is metered once, where it is charged. Unconfigured (no metering
+    DSN, as in the offline suite) means keyed scans are simply rejected with 401
+    rather than silently falling back to the anonymous bucket.
+    """
+    try:
+        from core.usage import set_key_store
+        from metering import from_env
+
+        store = from_env()
+        if store is None:
+            return False
+        set_key_store(store)
+        return True
+    except Exception:  # noqa: BLE001 — an unreachable store must not stop scans
+        log.warning("key store unavailable — keyed scans will be rejected", exc_info=True)
+        return False
+
+
+_KEY_STORE_AVAILABLE = _install_key_store()
 
 _PREMIUM_SCAN_FIELDS = (
     "deep_analysis",
@@ -259,8 +298,26 @@ def _client_ip(http_request: Request) -> str:
     return "unknown"
 
 
-def _rate_limit_response(decision, *, premium: bool = False) -> JSONResponse:
+def _rate_limit_response(decision, *, premium: bool = False, keyed: bool = False) -> JSONResponse:
     retry = max(1, decision.retry_after_seconds)
+    if keyed:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "keyed_scan_rate_limited",
+                "message": (
+                    "This key's scan quota is exhausted for the current window — "
+                    "Retry-After says when it resets."
+                ),
+                "retry_after_seconds": retry,
+            },
+            headers={
+                "Retry-After": str(retry),
+                "X-RateLimit-Limit": str(decision.limit),
+                "X-RateLimit-Remaining": str(decision.remaining),
+                "Cache-Control": "no-store",
+            },
+        )
     return JSONResponse(
         status_code=429,
         content={
@@ -289,6 +346,45 @@ def _rate_limit_response(decision, *, premium: bool = False) -> JSONResponse:
     )
 
 
+def _presented_key(http_request: Request) -> str | None:
+    """The caller's raw ``elk_`` key, if they sent one."""
+    raw = (http_request.headers.get("x-elcaro-key") or "").strip()
+    return raw or None
+
+
+def _key_rejection_response(reason: str) -> JSONResponse:
+    """A presented key we cannot honour. Never silently downgrade to
+    anonymous: the caller would think their key was being used (and metered)."""
+    if reason == "unconfigured":
+        status, error, message = (
+            503,
+            "key_service_unavailable",
+            "This miner cannot resolve Elcaro keys (no key store configured). "
+            "Scan without a key, or call the gateway.",
+        )
+    else:
+        status, error, message = (
+            401,
+            "unknown_key",
+            "That x-elcaro-key is not recognised — it may be revoked, or minted "
+            "on another deployment. Mint one at https://elcaro.trustfall.xyz/keys.",
+        )
+    return JSONResponse(
+        status_code=status,
+        content={"error": error, "message": message},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def _apply_quota_headers(response: Response, decision) -> None:
+    """Expose the key's own quota, so a keyed scan is visibly distinct from the
+    shared anonymous bucket without anyone having to read our metrics."""
+    if decision is None:
+        return
+    response.headers["X-RateLimit-Limit"] = str(decision.limit)
+    response.headers["X-RateLimit-Remaining"] = str(decision.remaining)
+
+
 def _max_content_chars() -> int:
     try:
         return int(os.environ.get("ELCARO_SCAN_MAX_CONTENT_CHARS", "100000"))
@@ -310,19 +406,30 @@ def _content_too_large_response(limit: int) -> JSONResponse:
 
 def _guard_scan_request(
     http_request: Request, request: ScanRequest
-) -> tuple[ScanRequest, JSONResponse | None]:
+) -> tuple[ScanRequest, JSONResponse | None, object | None]:
     """Apply free-tier cost controls and return a safe request.
 
-    Returns (possibly-sanitized request, response). A non-None response means
-    the scan must not run.
+    Returns (possibly-sanitized request, response, keyed_quota). A non-None
+    response means the scan must not run. ``keyed_quota`` is the caller's own
+    rate-limit decision when an ``elk_`` key was presented and honoured — the
+    endpoint echoes it back as headers.
     """
     max_chars = _max_content_chars()
     if max_chars > 0 and len(request.content) > max_chars:
-        return request, _content_too_large_response(max_chars)
+        return request, _content_too_large_response(max_chars), None
+
+    raw_key = _presented_key(http_request)
+    key_cfg = None
+    if raw_key is not None:
+        if not _KEY_STORE_AVAILABLE:
+            return request, _key_rejection_response("unconfigured"), None
+        key_cfg = get_key(raw_key)
+        if key_cfg is None:
+            return request, _key_rejection_response("unknown"), None
 
     premium_authorized = _premium_scan_authorized(http_request)
     if premium_authorized:
-        return request, None
+        return request, None, None
 
     premium_requested = any(getattr(request, name) for name in _PREMIUM_SCAN_FIELDS)
     client_ip = _client_ip(http_request)
@@ -333,7 +440,18 @@ def _guard_scan_request(
         decision = _premium_scan_rate_limiter.check(client_ip)
         if not decision.allowed:
             _metrics.rate_limited_premium_scans += 1
-            return request, _rate_limit_response(decision, premium=True)
+            return request, _rate_limit_response(decision, premium=True), None
+
+    # A keyed caller spends its own window rather than the shared anonymous
+    # one. When no keyed quota is configured (local dev, offline suite) the key
+    # is still honoured for attribution but the request falls through to the
+    # anonymous bucket — never to unlimited access.
+    if key_cfg is not None and _keyed_scan_rate_limiter is not None:
+        decision = _keyed_scan_rate_limiter.check(f"key:{key_cfg.key_id}")
+        if not decision.allowed:
+            _metrics.rate_limited_keyed_scans += 1
+            return request, _rate_limit_response(decision, keyed=True), None
+        return request, None, decision
 
     # Every anonymous scan consumes an ordinary quota as well. Paid premium
     # traffic returned above and bypasses free buckets. The strict conversion
@@ -347,8 +465,8 @@ def _guard_scan_request(
         decision = ordinary_limiter.check(client_ip)
         if not decision.allowed:
             _metrics.rate_limited_scans += 1
-            return request, _rate_limit_response(decision)
-    return request, None
+            return request, _rate_limit_response(decision), None
+    return request, None, None
 
 
 # ── Request counting middleware ─────────────────────────────────────────────────
@@ -547,7 +665,7 @@ async def metrics():
 
 @app.post("/scan", response_model=ScanResponse)
 async def scan(
-    request: ScanRequest, http_request: Request, serv: bool | None = None
+    request: ScanRequest, http_request: Request, response: Response, serv: bool | None = None
 ) -> ScanResponse | JSONResponse:
     """Scan content for indirect prompt injection.
 
@@ -565,19 +683,20 @@ async def scan(
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
-    request, limited_response = _guard_scan_request(http_request, request)
+    request, limited_response, keyed_quota = _guard_scan_request(http_request, request)
     if limited_response is not None:
         return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:
         _metrics.serv_calls += 1
+    _apply_quota_headers(response, keyed_quota)
     return _sign_response(request.content, result)
 
 
 @app.post("/v1/infer", response_model=ScanResponse)
 async def infer(
-    request: ScanRequest, http_request: Request, serv: bool | None = None
+    request: ScanRequest, http_request: Request, response: Response, serv: bool | None = None
 ) -> ScanResponse | JSONResponse:
     """Telegraph-compatible inference endpoint.
 
@@ -586,13 +705,14 @@ async def infer(
     """
     if serv is not None:
         request = request.model_copy(update={"serv_enabled": serv})
-    request, limited_response = _guard_scan_request(http_request, request)
+    request, limited_response, keyed_quota = _guard_scan_request(http_request, request)
     if limited_response is not None:
         return limited_response
     result = _engine.scan(request)
     _metrics.record_scan(result)
     if result.serv_used:
         _metrics.serv_calls += 1
+    _apply_quota_headers(response, keyed_quota)
     return _sign_response(request.content, result)
 
 
