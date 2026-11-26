@@ -9,11 +9,11 @@ files touched, and a measurable done-when test.
 
 | Fact | Evidence | Consequence |
 |---|---|---|
-| Gateway has never served a successful production request | `/metrics`: `total_requests: 11, total_errors: 11` | No payment arming until keyed traffic is proven (see `docs/openserv-dolphin-launch.md` W5) |
+| ~~Gateway has never served a successful production request~~ **PROVEN 2026-11-26** | W5 smoke test: 200 + receipt + verify green | Keyed traffic is no longer a gate for WS4 |
 | `/api/x402/scan` paid scan lane is live and settling onchain | status: `paid: true, payToConfigured: true, settlement: onchain` | The 429 upsell should point here — not at the unproven gateway pay-per-call lane |
 | Free scan can invoke SERV-backed analysis | miner `/config`: `serv_available: true`; scan form/API pass `serv_enabled` | Direct cost exposure on the free path; rate limiting is P0, not week 2 |
-| Extension bridge payer key is malformed in production | `GET /api/engine-ask`: `payerConfigured: true, payerAddress: null` | Engine rail cannot pay; fix or disable before any CWS push |
-| Extension bridge accepts ANY chrome-extension origin | `extensionPinned: false` | Any installed extension can burn the daily cap; close before publicizing |
+| ~~Extension bridge payer key is malformed~~ **FIXED 2026-11-26** | `payerAddress` now resolves | — |
+| ~~Extension bridge accepts ANY chrome-extension origin~~ **CLOSED 2026-11-26** | `allowAnyExtension: false`, fake origin → 403 | Reopen per WS0b instructions when dev resumes |
 | Miner API is directly reachable, bypassing the web proxy | `api.elcaro.trustfall.xyz` serves `/scan` without the Netlify edge | Rate limiting only at Netlify is insufficient |
 | Phase 1 was Outcome C | `lexsi-eval/RESULTS-phase1.md` | No uplift claims; the benchmark is not a willingness-to-pay unlock |
 
@@ -21,29 +21,44 @@ files touched, and a measurable done-when test.
 
 ## P0 — Safety and proof (before any further traffic push)
 
-### WS0a — Finish the OpenServ launch verification
+### WS0a — Finish the OpenServ launch verification · ✅ DONE 2026-11-26
 
-Tracked in `docs/openserv-dolphin-launch.md` W5. Deploy confirmation, keyed
-gateway smoke test (dangerous/quarantined verdict, signed receipt, `/verify`
-green, metrics incrementing with `total_errors` not growing), then promotion.
+Tracked in `docs/openserv-dolphin-launch.md` W5 — all green:
 
-**Done when:** one keyed production call returns 200 with `x-elcaro-receipt`
-and `/metrics` shows a non-error request.
+- Keyed call (`elk_39QwAm0B…`) returned **HTTP 200** with
+  `x-elcaro-verdict: dangerous`, `x-elcaro-action: quarantined`, signed
+  receipt; upstream completion narrated the quarantine (injection never
+  reached the model).
+- `POST /verify` → `{"valid":true,"key_id":"3383cee92fdbdf2f"}`.
+- `/metrics` per-key row populated; `verify-live.sh` 27/27.
+- Homepage/nav/keys deploy checks all pass.
+- Note: the smoke-test payload in the launch doc was corrected — SERV
+  requires a system message and `tool` messages must answer `tool_calls`.
+- Remaining in that doc: owner actions only (like/repost, quote-tweet).
 
-### WS0b — Close the extension bridge holes · ~0.5 day
+### WS0b — Close the extension bridge holes · ✅ DONE 2026-11-26
 
-**Problem:** `payerAddress: null` with `payerConfigured: true` means the
-production key does not parse (usually a stray newline). `extensionPinned:
-false` means any extension origin can use the bridge. Both are live now.
-
-**Changes** (Netlify env, no code):
-
-1. Fix or remove `TELEGRAPH_BRIDGE_PAYER_KEY`; verify `payerAddress` resolves.
-2. Set `TELEGRAPH_BRIDGE_EXTENSION_IDS` to the dev/published extension id, or
-   `TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION=0` until the id is known.
-
-**Done when:** `GET /api/engine-ask` shows a non-null payer address AND
-`extensionPinned: true` (or the bridge is deliberately closed).
+- `TELEGRAPH_X402_KEY` replaced in the production context with the valid
+  Keychain key — `payerAddress` now resolves to
+  `0x3aB5CDE666c356B043111AAFDA16aC258E19868F`.
+- The extension is not installed in any browser on the owner's machine, so no
+  id exists to pin: chose the deliberate close,
+  `TELEGRAPH_BRIDGE_ALLOW_ANY_EXTENSION=0`. Probe of a fake
+  `chrome-extension://` origin now returns 403 FORBIDDEN_ORIGIN; site/Gmail
+  origins unaffected. The direct miner rail remains available for dev.
+- Status endpoint gained `allowAnyExtension` so the closed state is
+  observable without probing (commit `a90f784`).
+- **To reopen for dev:** load the extension, copy its id from
+  chrome://extensions, `netlify env:set TELEGRAPH_BRIDGE_EXTENSION_IDS <id>
+  --context production`, redeploy.
+- **Ops lesson recorded:** Netlify cancels builds for docs-only/empty commits
+  (`base = "app/web"`), so env-only changes need a real content change or
+  manual deploy to ride on — the canceled 19:42/19:49 deploys are why the
+  first env fix silently did nothing.
+- **Key hygiene note:** the Netlify CLI echoes the value in `env:set`
+  confirmation output — treat any key set through it as exposed in terminal
+  scrollback. The payer key is testnet-only; rotate before it ever holds
+  real value.
 
 ### WS0c — Defend the free scan path · 2–3 days
 
