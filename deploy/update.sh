@@ -23,13 +23,27 @@ cd "$DEPLOY_DIR"
 
 echo "=== Elcaro Miner Update ==="
 
-# 1. Rollback anchor — the commit currently deployed
-PREV_COMMIT=$(git rev-parse --short HEAD)
+# 1. Rollback anchor — the commit currently deployed. Carried through the
+#    hand-off below so a re-exec still reports the real anchor.
+PREV_COMMIT="${ELCARO_ROLLBACK_ANCHOR:-$(git rev-parse --short HEAD)}"
 echo "→ Rollback anchor: $PREV_COMMIT (git checkout $PREV_COMMIT && pm2 restart elcaro-miner)"
 
 # 2. Pull
 echo "→ Pulling latest code..."
 git pull --ff-only
+
+# 2b. `git pull` can rewrite this very file while bash is reading it. The
+#     interpreter keeps its byte offset into a file whose contents just
+#     shifted, so it resumes in the middle of the new script instead of the
+#     old one — observed as the script exiting 7 with the post-restart health
+#     check and everything after it silently skipped. Hand off to the pulled
+#     copy instead of pretending to keep running the old one.
+if [ "${ELCARO_UPDATE_FRESH:-0}" != "1" ] \
+    && [ -n "$(git diff --name-only "$PREV_COMMIT" HEAD -- deploy/update.sh || true)" ]; then
+    echo "→ This script changed in the pulled commit — re-executing the new one"
+    cp deploy/update.sh /tmp/elcaro-update-fresh.sh
+    ELCARO_UPDATE_FRESH=1 ELCARO_ROLLBACK_ANCHOR="$PREV_COMMIT" exec bash /tmp/elcaro-update-fresh.sh
+fi
 
 # Nothing to do if already current
 if [ "$(git rev-parse --short HEAD)" = "$PREV_COMMIT" ]; then
