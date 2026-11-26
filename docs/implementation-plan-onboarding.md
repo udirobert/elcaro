@@ -5,8 +5,9 @@
 > then corrected the same day by a review pass — see
 > [Verification log](#verification-log--2026-11-26-review-pass-after-f604023).
 > OB1, OB3, OB4, OB6 and OB7 are shipped and verified live — OB7's cause was a
-> stale pm2 env, not missing code. What remains is **OB5** (post the drafted
-> reply) and the deferred OB2 npm decision.
+> stale pm2 env, not missing code. **OB2 is decided: deferred**, with a written
+> trigger. The only thing left in this plan is **OB5** — posting the drafted
+> reply, which only the account holder can do.
 > **Related:** [implementation-plan-conversion.md](implementation-plan-conversion.md)
 > (scan-first conversion batch — this plan applies the same insight one level
 > deeper, to the integration surface)
@@ -94,15 +95,31 @@ in internal docs, and two of those (`docs/openserv-dolphin-launch.md:50`,
 `docs/roadmap-gateway.md:327`) record the fact accurately — they should not be
 edited into claiming otherwise.
 
-**So:** no emergency, and Option B is already true of every user-facing
-surface. Option A (publish) stays open on its merits: if taken, add
-`repository`/`homepage` and a `prepublishOnly` build first —
-`sdk/js/package.json` ships `files: ["dist"]` with no prepublish hook, so a
-stale `dist/` would publish silently.
+**Decision (2026-11-26): deferred — do not publish yet.** Recorded rather than
+left open, so nobody reopens it by accident and nobody assumes it's pending.
 
-**Done when:** either `npm i @elcaro/sdk` succeeds on a clean machine and the
-installed quickstart returns a verdict, or the decision is recorded as
-"deferred — not referenced anywhere a user can reach".
+Why not publish:
+
+- The package is a thin wrapper over the *gateway*, and the gateway is the path
+  that requires the caller's own provider credential. Its value is gated behind
+  the step this plan just moved to path 01 — the audience for a wrapper does not
+  exist yet.
+- Nothing a reader can reach points at it (V7), so no one is being sent to a
+  dead end. There is no cost being paid for waiting.
+- Publishing a first version puts a permanent name in a public registry to serve
+  nobody in particular, and npm's undo window is short. A stub published to look
+  complete is worse than an honest absence.
+
+**Revisit when** either (a) someone asks for the package by name, or (b) the
+gateway gets its first paying user — whichever comes first. At that point the
+checklist is: `repository`/`homepage` fields, a `prepublishOnly` build (the
+manifest ships `files: ["dist"]` with no hook, so a stale `dist/` would publish
+silently), provenance, and a README that leads with the no-key curl rather than
+the wrapper.
+
+**Done when:** met by this decision plus the trigger above. If the trigger
+fires, done becomes `npm i @elcaro/sdk` succeeding on a clean machine with the
+installed quickstart returning a verdict.
 
 ### OB6 — Make a key do something on the surface the stranger just used · **shipped and verified live**
 
@@ -232,9 +249,16 @@ touched production.
 `200`, `429` + `Retry-After` past the cap — and `verify-live.sh` asserts it.
 Verified: **27 passed, 0 failed**, including the three new quota assertions.
 
-**Deliberate non-change:** `/integrate` still does not quote a number. "Each
-response tells you what's left" is true whatever ops sets the limit to; `30/min`
-is not (V2's lesson, applied twice).
+**Decision — the number stays off the page.** `/integrate` says "each response
+tells you what's left" and never quotes a figure. Two reasons beyond V2 (a
+figure ops can change should not become page copy):
+
+1. There are two different quotas in play — the trusted browser proxy runs at
+   `6/min · 30/day` per end-user IP, direct ingress at `30/min · 300/day`. Any
+   single number a reader sees is wrong for somebody.
+2. `X-RateLimit-Remaining` already answers the only question that matters — how
+   much *this* caller has left — with the truth for their own connection,
+   instead of a figure that will rot.
 
 ### OB4 — The full-path stranger test · **run 2026-11-26 against production**
 
@@ -316,7 +340,7 @@ yours.
 | 2 | OB6 keyed `/scan` | nothing | **shipped + verified live 2026-11-26** |
 | 3 | OB3 zero-decision minting | OB6 ✅ live | **shipped + verified live 2026-11-26** |
 | 4 | OB7 limiter actually on | stale pm2 env, cleared by the OB6 deploy | **fixed + guarded 2026-11-26** |
-| 5 | OB2 npm decision | owner (publish scope) | not urgent — no reachable reference |
+| 5 | OB2 npm decision | owner (publish scope) | **decided 2026-11-26: deferred**, trigger recorded |
 | 6 | OB4 stranger test | OB1+OB3+OB6 deployed | **run 2026-11-26** — both bars met |
 | 7 | OB5 close the loop | OB4 green | **owner action** — draft ready, only posting left |
 
