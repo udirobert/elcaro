@@ -212,8 +212,25 @@ noticed:
    prints either `✓ Anonymous scan quota armed (x-ratelimit-limit: N)` or a
    warning naming the stale-dump cause.
 
-**Done when (met):** the documented quota is observable — headers on `200`,
-`429` + `Retry-After` past the cap — and `verify-live.sh` asserts it.
+**Found while fixing it — the deploy script was lying too.** `update.sh` ends
+with a post-restart health check, and that check had not been running: `RESPONSE=$(curl …)`
+under `set -euo pipefail` aborts the script when the port is not yet bound
+(curl exit 7), so every deploy exited 7 *after* restarting the miner, skipping
+the health assertion, the summary line and anything added after them. The root
+cause was nastier: `git pull` rewrites `deploy/update.sh` while bash is reading
+it, and the interpreter keeps its byte offset into content that just shifted.
+Fixed in three passes — retry the health probe and swallow curl's own failure;
+then (having learned the hand-off itself lived in the rewritten file) re-exec
+from an immutable `/tmp` copy before touching git, and hand off to the pulled
+version with the pre-deploy commit carried as `ELCARO_ROLLBACK_ANCHOR`. First
+clean run: `anchor 135bf06 → b6ed1e4`, `✓ Health check passed (attempt 3)`,
+`✓ Anonymous scan quota armed (x-ratelimit-limit: 300)`, exit 0. The mechanism
+was tested in a scratch repo (a v1 script pulling a v2 script) before it
+touched production.
+
+**Done when (met):** the documented quota is observable — `X-RateLimit-*` on a
+`200`, `429` + `Retry-After` past the cap — and `verify-live.sh` asserts it.
+Verified: **27 passed, 0 failed**, including the three new quota assertions.
 
 **Deliberate non-change:** `/integrate` still does not quote a number. "Each
 response tells you what's left" is true whatever ops sets the limit to; `30/min`
