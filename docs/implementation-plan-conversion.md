@@ -60,7 +60,7 @@ Tracked in `docs/openserv-dolphin-launch.md` W5 — all green:
   scrollback. The payer key is testnet-only; rotate before it ever holds
   real value.
 
-### WS0c — Defend the free scan path · 2–3 days
+### WS0c — Defend the free scan path · implemented locally, pending production deploy
 
 **Problem:** no rate limiting anywhere on `/scan`; the scan UI and API pass
 `serv_enabled`, and the production miner has SERV available — strangers can
@@ -80,11 +80,22 @@ so a Netlify-only limiter is trivially bypassed.
    "wait N minutes". The limit itself is the monetization trigger.
 4. Abuse logging: repeat offenders by IP hash into the metrics rollup.
 
-**Done when:** direct miner-API calls (bypassing the web app) are limited;
-429 body/headers carry the x402 hint; load test shows graceful degradation;
-SERV-enabled anonymous scans are impossible or tightly capped.
+**Implementation note (2026-11-27):** miner-edge fixed-window quotas are in
+`core/rate_limit.py` + `miner/api.py`: 30 ordinary scans/day (6/minute) and a
+separate 3 premium second-opinion scans/day (1/minute), backed by Neon table
+`scan_rate_windows` when the existing metering/canary DSN is present. The
+paid x402 scan route forwards a server-only internal token after payment
+verification and bypasses free quotas; the free browser route forwards the
+end-user IP without bypassing. 429 payloads and the scan UI both point at
+`/api/x402/scan`. Production still needs the shared
+`ELCARO_INTERNAL_PROXY_TOKEN` configured in Netlify + VPS and the miner
+redeployed.
 
-### WS0d — Durable funnel instrumentation · 1 day
+**Done when:** direct miner-API calls (bypassing the web app) are limited in
+production; 429 body/headers carry the x402 hint; load test shows graceful
+degradation; SERV-enabled anonymous scans are tightly capped.
+
+### WS0d — Durable funnel instrumentation · implemented locally, pending production deploy
 
 **Problem:** a small analytics system exists (`app/web/src/lib/analytics.ts`,
 `/api/analytics`) but is audit-scoped, writes JSONL to local disk (ephemeral on
@@ -98,8 +109,17 @@ serverless), and records raw IPs. It cannot measure the conversion redesign.
 3. Events: landing → scan start → verdict → share/copy → integrate page →
    key mint. Add these BEFORE deploying WS1/WS2 so the redesign is measurable.
 
-**Done when:** events persist across deploys; a dashboard/query can answer
-"what fraction of landing visitors reach a verdict" for a given week.
+**Implementation note (2026-11-27):** `/api/analytics` now writes validated
+events to durable Neon table `funnel_events` using the existing metering/canary
+DSN, falling back to local JSONL only when no DSN exists. Raw IP and UA are no
+longer stored; the browser sends a daily rotating random session id and only
+its HMAC persists. Funnel events are emitted for landing/scan views, scan
+start, verdict/error, share/copy, integrate view, keys view, and key mint.
+Admin aggregate rollup is `GET /api/analytics` with `ANALYTICS_ADMIN_TOKEN`.
+
+**Done when:** events persist across deploys in production; the admin rollup
+can answer "what fraction of landing visitors reach a verdict" for a given
+week.
 
 ---
 
