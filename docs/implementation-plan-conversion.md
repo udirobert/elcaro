@@ -198,6 +198,12 @@ hidden unless expanded; Lighthouse a11y ≥ 95 on `/scan`.
 
 ### WS3 — Attribution + revenue visibility · 3–5 days (NOT 1–2; precedes payment arming)
 
+**STATUS: core shipped in `2db22fe` (2025-11-26).** All six changes landed:
+migration verified on the production table (5 columns added, 99 rows
+preserved), both lanes instrumented, `/api/revenue` admin-gated rollup live.
+Remaining done-when proof: a real paid scan traceable tx → payer → settled
+row — requires an actual x402 payment, deliberately not faked.
+
 **Problem:** paid usage is weakly attributable (x402 gateway usage is encoded
 as `key_id = "x402:{payer}"` — a surrogate, not a schema). `/api/x402/scan`
 emits no usage events at all. No revenue view.
