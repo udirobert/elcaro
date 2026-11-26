@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import type { ContentType, ScanResponse } from "@/lib/types";
 import { scanContent, isError, fetchUrlAvailable, fetchUrlContent, isFetchUrlError } from "@/lib/api";
-import { CONTENT_TYPES, EXAMPLES } from "@/lib/constants";
+import { CONTENT_TYPES, EXAMPLES, type ExamplePayload } from "@/lib/constants";
 import { addToHistory, getHistory } from "@/lib/history";
 import { decodeVerdict } from "@/lib/share";
 import { useWebMcpScan } from "@/lib/use-webmcp-scan";
@@ -98,14 +98,22 @@ function getHashVerdictServer() {
   return null;
 }
 
-export function ScanForm() {
-  const [content, setContent] = useState("");
-  const [contentType, setContentType] = useState<ContentType>("email");
+export function ScanForm({
+  initialExample,
+}: {
+  initialExample?: ExamplePayload;
+}) {
+  const [content, setContent] = useState(initialExample?.content ?? "");
+  const [contentType, setContentType] = useState<ContentType>(
+    initialExample?.content_type ?? "email"
+  );
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
-  const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
+  const [dismissedOnboarding, setDismissedOnboarding] = useState(
+    Boolean(initialExample)
+  );
   const [scanStatusIndex, setScanStatusIndex] = useState(0);
   const [intentContrast, setIntentContrast] = useState<IntentContrast | null>(
     null
@@ -299,14 +307,13 @@ export function ScanForm() {
     await runScanWith(content, contentType);
   }
 
-  function applySpecimen(id: string) {
-    const example = EXAMPLES.find((ex) => ex.id === id);
-    if (!example) {
-      return {
-        ok: false as const,
-        error: `Unknown specimen id ${JSON.stringify(id)}. Call list_specimens.`,
-      };
-    }
+  // Shared specimen loader — clears verdict/error/history annotations and
+  // cancels in-flight typing before replacing the input. It never scans and
+  // never touches the reasoner toggles.
+  function setSpecimenContent(
+    example: ExamplePayload,
+    specimenContent = example.content
+  ) {
     setDismissedOnboarding(true);
     setResult(null);
     resultRef.current = null;
@@ -315,8 +322,19 @@ export function ScanForm() {
     setFetchedFrom(null);
     setFetchUrlError(null);
     cancelTyping();
-    setContent(example.content);
+    setContent(specimenContent);
     setContentType(example.content_type);
+  }
+
+  function applySpecimen(id: string) {
+    const example = EXAMPLES.find((ex) => ex.id === id);
+    if (!example) {
+      return {
+        ok: false as const,
+        error: `Unknown specimen id ${JSON.stringify(id)}. Call list_specimens.`,
+      };
+    }
+    setSpecimenContent(example);
     return {
       ok: true as const,
       label: example.label,
@@ -399,6 +417,24 @@ export function ScanForm() {
     const interval = setInterval(() => setScanStatusIndex((i) => i + 1), 700);
     return () => clearInterval(interval);
   }, [scanning]);
+
+  // Comparison specimen — the current content exactly matches a paired
+  // example's flagged OR clean variant at its document type. Suppressed
+  // while scanning; typing animation never matches (non-exact prefix).
+  const comparisonMatch =
+    hasContent && !scanning
+      ? EXAMPLES.find(
+          (ex) =>
+            ex.comparison &&
+            contentType === ex.content_type &&
+            (content === ex.content || content === ex.comparison!.content)
+        )
+      : undefined;
+  const comparisonShowingClean = Boolean(
+    comparisonMatch?.comparison &&
+      content === comparisonMatch.comparison.content &&
+      content !== comparisonMatch.content
+  );
 
   const suggestion = hasContent ? detectContentType(content) : null;
   const urlDetected = fetchUrlEnabled && hasContent && isBareUrl(content);
@@ -511,6 +547,34 @@ export function ScanForm() {
           {suggestion.label} detected — scan as{" "}
           {suggestion.label.toLowerCase()}?
         </motion.button>
+      )}
+
+      {/* Paired flagged/clean specimen — swap variants in place, then scan
+          to compare. Plain native button, no animation for the switch. */}
+      {comparisonMatch?.comparison && (
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            onClick={() =>
+              comparisonShowingClean
+                ? setSpecimenContent(comparisonMatch)
+                : setSpecimenContent(
+                    comparisonMatch,
+                    comparisonMatch.comparison!.content
+                  )
+            }
+            disabled={scanning}
+            className="text-teal font-medium hover:text-teal/80 transition-colors disabled:opacity-50"
+          >
+            {comparisonShowingClean
+              ? "Load marked note"
+              : comparisonMatch.comparison.label}
+          </button>
+          <span className="text-ink-faint">
+            {comparisonShowingClean
+              ? "— the extra instruction is gone. Scan this version to compare. No wallet is connected."
+              : `— ${comparisonMatch.comparison.hint}`}
+          </span>
+        </div>
       )}
 
       {/* Fetch page content — offered when the whole box is one bare URL.
