@@ -60,7 +60,7 @@ Tracked in `docs/openserv-dolphin-launch.md` W5 — all green:
   scrollback. The payer key is testnet-only; rotate before it ever holds
   real value.
 
-### WS0c — Defend the free scan path · implemented locally, pending production deploy
+### WS0c — Defend the free scan path · ✅ DONE 2026-11-26, verified in production (commit `991b14a`)
 
 **Problem:** no rate limiting anywhere on `/scan`; the scan UI and API pass
 `serv_enabled`, and the production miner has SERV available — strangers can
@@ -87,9 +87,16 @@ separate 3 premium second-opinion scans/day (1/minute), backed by Neon table
 paid x402 scan route forwards a server-only internal token after payment
 verification and bypasses free quotas; the free browser route forwards the
 end-user IP without bypassing. 429 payloads and the scan UI both point at
-`/api/x402/scan`. Production still needs the shared
-`ELCARO_INTERNAL_PROXY_TOKEN` configured in Netlify + VPS and the miner
-redeployed.
+`/api/x402/scan`.
+
+**Production verification (2026-11-26):** token distributed to Netlify
+production + VPS `.env`; VPS suite 614 passed then miner+gateway restarted
+via `deploy/update.sh`; Netlify deploy ready 20:07 UTC. Direct miner burst:
+scan #7 in a minute → 429 `free_scan_rate_limited` with retry-after and the
+x402 upgrade block; second anonymous `serv=1` in a minute → 429
+`free_premium_scan_rate_limited`; `rate_limited_scans` metric increments;
+`verify-live.sh` 27/27 including the token-authed SERV probe; web proxy scan
+→ 200.
 
 **Done when:** direct miner-API calls (bypassing the web app) are limited in
 production; 429 body/headers carry the x402 hint; load test shows graceful
