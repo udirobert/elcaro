@@ -13,12 +13,30 @@
  * Uses no third-party libraries — pure localStorage + fetch.
  */
 
+export type FunnelEventType =
+  | "landing.viewed"
+  | "scan.viewed"
+  | "scan.started"
+  | "scan.verdict"
+  | "scan.error"
+  | "scan.shared"
+  | "scan.copied"
+  | "integrate.viewed"
+  | "keys.viewed"
+  | "key.minted";
+
+type FunnelEvent = {
+  type: FunnelEventType;
+  [key: string]: string | number | boolean | null | undefined;
+};
+
 export type AnalyticsEvent =
   | { type: "analysis.completed"; mode: "quick" | "sandbox"; score: number; serv_available: boolean }
   | { type: "analysis.shared"; score: number; mode: "quick" | "sandbox" }
-  | { type: "analysis.upgrade_click"; from_score: number; destination: "/scan" | "/integrate" | "/evaluate" };
+  | { type: "analysis.upgrade_click"; from_score: number; destination: "/scan" | "/integrate" | "/evaluate" }
+  | FunnelEvent;
 
-type StoredEvent = AnalyticsEvent & { _ts: number };
+type StoredEvent = AnalyticsEvent & { _ts: number; _session?: string; _page?: string };
 
 const STORAGE_KEY = "elcaro_analytics_v1";
 const FLUSH_THRESHOLD = 5;
@@ -62,21 +80,59 @@ export async function flushBuffer(): Promise<void> {
   setBuffer([]); // optimistic clear
 
   try {
-    await fetch("/api/analytics", {
+    // Page-hide/unload flushes cannot rely on a fetch completing. sendBeacon
+    // is purpose-built for that path; normal interactive flushes still use
+    // fetch so non-2xx responses can restore the buffer.
+    if (typeof navigator !== "undefined" && document.visibilityState === "hidden") {
+      const beaconBody = new Blob([JSON.stringify({ events: buffer })], {
+        type: "application/json",
+      });
+      if (navigator.sendBeacon("/api/analytics", beaconBody)) return;
+    }
+    const response = await fetch("/api/analytics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ events: buffer }),
     });
+    if (!response.ok) setBuffer(buffer);
   } catch {
     // Server unreachable — keep events in buffer for next flush
     setBuffer(buffer);
   }
 }
 
+const SESSION_STORAGE_KEY = "elcaro_analytics_session_v1";
+
+/** Daily rotating pseudonymous session id. It is random client-side state,
+ * not an account identifier; the server stores only its HMAC. */
+function getSessionId(): string {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { day?: string; id?: string };
+      if (parsed.day === today && typeof parsed.id === "string") return parsed.id;
+    }
+    const id = typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ day: today, id }));
+    return id;
+  } catch {
+    return "unavailable";
+  }
+}
+
 function track(event: AnalyticsEvent): void {
   const buffer = prune(getBuffer());
-  // Attach timestamp internally (not part of the public type)
-  const enriched: StoredEvent = { ...event, _ts: Date.now() };
+  // Attach timestamp/session/page internally (not part of the public type).
+  // The server strips IP/UA entirely and stores only HMAC(session id).
+  const enriched: StoredEvent = {
+    ...event,
+    _ts: Date.now(),
+    _session: getSessionId(),
+    _page: window.location.pathname,
+  };
   buffer.push(enriched);
   setBuffer(buffer);
 
@@ -99,6 +155,13 @@ export function trackAnalysisComplete(
 
 export function trackAnalysisShare(score: number, mode: "quick" | "sandbox"): void {
   track({ type: "analysis.shared", score, mode });
+}
+
+export function trackFunnel(
+  type: FunnelEventType,
+  props: Record<string, string | number | boolean | null | undefined> = {},
+): void {
+  track({ type, ...props } as FunnelEvent);
 }
 
 export function trackUpgradeClick(destination: "/scan" | "/integrate" | "/evaluate"): void {

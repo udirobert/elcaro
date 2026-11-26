@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test:webmcp-smoke": "webmcp-evals smoke -u http://localhost:3000/scan -e evals/webmcp/evals.json -v",
     "test:webmcp-browser": "webmcp-evals browser -u http://localhost:3000/scan -e evals/webmcp/evals.json --open",
-    "test:webmcp-local": "webmcp-evals local -t evals/webmcp/schema.json -e evals/webmcp/evals.json"
+    "test:webmcp-local": "webmcp-evals local -t evals/webmcp/schema.json -e evals/webmcp/evals.json",
+    "test:analytics": "node --test src/app/api/analytics/route.test.ts",
+    "test:unit": "node --test src/app/api/analytics/route.test.ts src/lib/miner-proxy.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

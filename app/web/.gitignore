@@ -42,3 +42,6 @@ yarn-error.log*
 
 # webmcp-evals reports
 .evals
+
+# local analytics sink (dev fallback)
+/.analytics/
