@@ -90,6 +90,13 @@ decide in the prereg; every extra arm is eval cost.
   implementation per protocol. F1 + Phase 2 arm wiring done in
   `run_eval.py` — verified offline both directions (warned part drops the
   guard; clean content retains it).
+- 2026-11-27 (cont.): F2 implemented — segment-level quarantine in
+  `core/policy.py` behind `quarantine_granularity="segment"` (production
+  default unchanged). Email parts split at message boundaries, per-segment
+  scan + surgical write-back, byte-identical reassembly. Verified on L02:
+  15/21 legitimate emails survive vs 0 under whole-part. Harness arm
+  `gateway_quarantine_seg` wired. All 652 tests pass. **All three fixes are
+  now implemented.** Next: freeze-time wiring, then H2 generation.
 - Freeze-time TODO not yet done: extend `analyze.py` ARMS for the new
   names; add the `-heldout2` result-dir suffix in both `run_eval.py` and
   `analyze.py` (H2 results must not collide with the immutable H dirs);

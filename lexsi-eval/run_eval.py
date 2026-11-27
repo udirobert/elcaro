@@ -109,6 +109,7 @@ ARM_TOOLS = {
     "gateway_warn_v1": [SERV_PROMPT_GUARD],
     "gateway_warn_v2": [SERV_PROMPT_GUARD],
     "gateway_warn_v2_dedup": [SERV_PROMPT_GUARD],
+    "gateway_quarantine_seg": [SERV_PROMPT_GUARD],
 }
 PRESENTATIONS = ["labeled", "naive", "wrapped", *ARM_TOOLS]
 GATEWAY_MODES = {
@@ -117,13 +118,17 @@ GATEWAY_MODES = {
     "gateway_warn_v1": "warn",
     "gateway_warn_v2": "warn",
     "gateway_warn_v2_dedup": "warn",
+    "gateway_quarantine_seg": "quarantine",
 }
 # Which warn-prefix generation each arm uses (PREREG-phase2 §2 F3). Arms not
 # listed emit v1 — the Phase 1 behaviour.
 GATEWAY_WARN_STYLES = {
     "gateway_warn_v2": "v2",
     "gateway_warn_v2_dedup": "v2",
+    "gateway_quarantine_seg": "v2",
 }
+# F2 arms: quarantine at segment granularity (PREREG-phase2 §2).
+GATEWAY_SEGMENT_ARMS = {"gateway_quarantine_seg"}
 # F1 (PREREG-phase2 §2): these arms drop serv_prompt_guard from the request
 # when Elcaro warned or quarantined any part of it.
 GATEWAY_DEDUP_ARMS = {"gateway_warn_v2_dedup"}
@@ -199,6 +204,7 @@ def _gateway_build(task, presentation):
         Mode(GATEWAY_MODES[presentation]),
         engine=engine,
         warn_style=GATEWAY_WARN_STYLES.get(presentation, "v1"),
+        quarantine_granularity="segment" if presentation in GATEWAY_SEGMENT_ARMS else "part",
     )
     out = []
     for m in result.messages:

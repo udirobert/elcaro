@@ -430,6 +430,41 @@ def _collect_parts(
     return parts
 
 
+# ── Segmentation (F2, PREREG-phase2) ─────────────────────────────────────────
+
+# A new message-like unit starts after a blank line at one of these markers:
+# the LLMail inbox shape ("Subject of the email:"), RFC822-style header blocks
+# ("From:"/"To:"/"Date:"/"Subject:" at line start), or horizontal rules.
+_SEGMENT_BOUNDARY_RE = re.compile(
+    r"(\n\n+)(?=Subject of the email:|From:|To:|Date:|Subject:|---\s*$|===\s*$)",
+    re.MULTILINE,
+)
+
+
+def _segment_text(text: str, content_type: ContentType) -> list[str] | None:
+    """Split one retrieved part into independently-scannable message units.
+
+    Only email-family content segments: the inbox-dump shape is where
+    whole-part quarantine destroys legitimate mail alongside the attacker's
+    (Phase 1: gateway_quarantine passed 18/108 on H for exactly this reason).
+    Everything else stays a single segment — one document is one unit.
+
+    Returns None when there is nothing to segment (non-email content or no
+    boundary found) — the caller then uses the whole-part path unchanged.
+    The returned pieces alternate segment text and the exact separators
+    between them, so concatenating per-segment outcomes with the untouched
+    separators reassembles byte-identical to the input.
+    """
+    if content_type is not ContentType.EMAIL:
+        return None
+    pieces = _SEGMENT_BOUNDARY_RE.split(text)
+    # With one capture group, split returns [seg, sep, seg, sep, seg...];
+    # a single piece means no boundary matched.
+    if len(pieces) < 3:
+        return None
+    return pieces
+
+
 # ── Verdict → action ─────────────────────────────────────────────────────────
 
 
@@ -518,6 +553,51 @@ def _apply_action(
         part.target[part.target_key] = scan.safe_content
 
 
+def _scan_segments(
+    part: _Part,
+    pieces: list[str],
+    scanner: IpiDetectionEngine,
+    deep_analysis: bool,
+    warn_style: str,
+) -> ScanResponse:
+    """F2: scan each segment of an email part and write back per segment.
+
+    Even-indexed pieces are segment text, odd-indexed pieces are the exact
+    separators between them (reassembly by concatenation is byte-identical
+    when nothing acts). Dangerous segments are replaced with the quarantine
+    notice, suspicious ones get the warn prefix, clean ones pass verbatim —
+    legitimate mail in the same inbox survives the attacker's quarantine.
+
+    Returns the worst segment's scan as the part's representative verdict:
+    risk aggregation and the harness's per-part reporting both key off it.
+    """
+    out: list[str] = []
+    worst_scan: ScanResponse | None = None
+    for idx, piece in enumerate(pieces):
+        if idx % 2 == 1:  # separator — never scanned, never rewritten
+            out.append(piece)
+            continue
+        scan = scanner.scan(
+            ScanRequest(
+                content=piece,
+                content_type=part.content_type,
+                deep_analysis=deep_analysis,
+            )
+        )
+        if worst_scan is None or scan.risk_score > worst_scan.risk_score:
+            worst_scan = scan
+        if scan.quarantined:
+            out.append(scan.safe_content)
+        elif scan.risk_score >= FLAG_THRESHOLD:
+            prefix = _warn_prefix(scan) if warn_style == "v1" else _warn_prefix_v2(scan)
+            out.append(prefix + piece)
+        else:
+            out.append(piece)
+    part.target[part.target_key] = "".join(out)
+    # pieces is non-empty by construction (len >= 3), so worst_scan is set
+    return worst_scan  # type: ignore[return-value]
+
+
 # ── Engine wiring ────────────────────────────────────────────────────────────
 
 _DEFAULT_ENGINE: IpiDetectionEngine | None = None
@@ -545,6 +625,7 @@ def apply_policy(
     deep_analysis: bool = False,
     engine: IpiDetectionEngine | None = None,
     warn_style: Literal["v1", "v2"] = "v1",
+    quarantine_granularity: Literal["part", "segment"] = "part",
 ) -> PolicyResult:
     """Scan the untrusted parts of a chat request and apply the policy mode.
 
@@ -587,15 +668,24 @@ def apply_policy(
     blocked = False
     worst = RiskLevel.SAFE
     for part in parts:
-        scan = scanner.scan(
-            ScanRequest(
-                content=part.text,
-                content_type=part.content_type,
-                deep_analysis=deep_analysis,
-            )
+        pieces = (
+            _segment_text(part.text, part.content_type)
+            if mode is Mode.QUARANTINE and quarantine_granularity == "segment"
+            else None
         )
+        if pieces:
+            scan = _scan_segments(part, pieces, scanner, deep_analysis, warn_style)
+        else:
+            scan = scanner.scan(
+                ScanRequest(
+                    content=part.text,
+                    content_type=part.content_type,
+                    deep_analysis=deep_analysis,
+                )
+            )
         action = _action_for(scan, mode)
-        _apply_action(part, scan, action, warn_style)
+        if not pieces:
+            _apply_action(part, scan, action, warn_style)
         blocked = blocked or action == "blocked"
         if _RISK_ORDER[scan.risk_level] > _RISK_ORDER[worst]:
             worst = scan.risk_level

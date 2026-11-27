@@ -411,3 +411,63 @@ def _record() -> None:
 
 if __name__ == "__main__":
     sys.exit(_record())
+
+
+def test_segment_quarantine_preserves_legitimate_mail():
+    """F2: in an inbox part, only the attacker's segment is quarantined."""
+    attacker_email = "Subject of the email: Urgent notice. Body: " + INJECTION
+    inbox = (
+        "Subject of the email: Team lunch Friday. Body: Hi all, lunch at noon "
+        "in the cafeteria tomorrow, bring your own drinks.\n\n"
+        + attacker_email
+        + "\n\nSubject of the email: Expense reports. Body: Please file your "
+        "expense reports by end of month."
+    )
+    messages = [
+        {
+            "role": "tool",
+            "content": inbox,
+            "tool_call_id": "x",
+            "elcaro": {"untrusted": True, "content_type": "email"},
+        }
+    ]
+    result = apply_policy(
+        messages,
+        Provider.OPENAI,
+        Mode.QUARANTINE,
+        engine=fixture_engine(),
+        quarantine_granularity="segment",
+    )
+    rewritten = result.messages[0]["content"]
+    # legitimate segments survive verbatim
+    assert "Team lunch Friday" in rewritten
+    assert "Expense reports" in rewritten
+    # the injected content is gone, replaced by the notice
+    assert INJECTION not in rewritten
+
+
+def test_segment_mode_default_is_part_granularity():
+    """Production unchanged: without the granularity opt-in the whole part is replaced."""
+    inbox = "Subject of the email: Team lunch Friday. Body: lunch at noon.\n\n" + INJECTION
+    messages = [{"role": "tool", "content": inbox, "tool_call_id": "x", "name": "fetch_email"}]
+    result = apply_policy(messages, Provider.OPENAI, Mode.QUARANTINE, engine=fixture_engine())
+    rewritten = result.messages[0]["content"]
+    assert "Team lunch Friday" not in rewritten  # whole part quarantined
+
+
+def test_segment_reassembly_byte_identical_when_clean():
+    clean_inbox = (
+        "Subject of the email: Alpha. Body: first message body.\n\n"
+        "Subject of the email: Beta. Body: second message body."
+    )
+    messages = [
+        {"role": "tool", "content": clean_inbox, "tool_call_id": "x", "name": "fetch_email"}
+    ]
+    result = apply_policy(
+        messages,
+        Provider.OPENAI,
+        Mode.QUARANTINE,
+        engine=fixture_engine(),
+        quarantine_granularity="segment",
+    )
+    assert result.messages[0]["content"] == clean_inbox
