@@ -398,6 +398,27 @@ category error: "publish the Phase 1 benchmark — the willingness-to-pay
 unlock." There is no unpublished win: Phase 1 was **Outcome C** (attacks 15→5
 but passes 65→52, beyond tolerance). These are three separate workstreams:
 
+**Owner runbook for CWS submission (~15 min, prepped 2026-11-27):**
+
+Done for the owner already: privacy policy LIVE at
+`https://elcaro.trustfall.xyz/privacy-extension` (paste into listing),
+manifest at 1.0.0, upload zip built at `app/extension/gmail-scan.zip`,
+CWS.md checklist updated.
+
+1. **Load and test (~5 min)**: chrome://extensions → Developer mode → Load
+   unpacked → `app/extension/gmail-scan` → copy the extension ID and give it
+   to the agent — it pins `TELEGRAPH_BRIDGE_EXTENSION_IDS` in Netlify env and
+   redeploys, opening the production bridge. Then scan real emails in Gmail;
+   this also starts the non-verdict measurement. Caveat: not yet smoke-tested
+   in a live browser — static checks only; report any misbehaviour before
+   investing time in screenshots.
+2. **Screenshots (~5 min)**: 1–3 at 1280×800 — one SAFE verdict, one
+   CAUTION/BLOCK verdict, overlay framed with the email behind it.
+3. **Submit (~5 min)**: chrome.google.com/webstore/devconsole ($5 one-time
+   fee if never paid) → upload the zip → copy-paste description, permission
+   justifications, privacy URL and reviewer instructions from
+   `app/extension/gmail-scan/CWS.md` → submit. Review takes hours to days.
+
 ### WS6a — Research: Phase 2 benchmark · STARTED 2026-11-27: fix 3 (guard-safe warn prefix v2) implemented behind `warn_style` (production unchanged); full execution plan in `lexsi-eval/PLAN-phase2.md` — prereg → fixes 1–2 → blind H2 → freeze → paid eval run (owner approval needed)
 
 Implement the three hypothesized fixes from `RESULTS-phase1.md` (skip
