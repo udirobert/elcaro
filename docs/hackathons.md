@@ -1,7 +1,30 @@
 # Hackathon Participation
 
-Elcaro is competing in six hackathons. The product is the same; this page
-records the submission details for each.
+Elcaro has entered a series of hackathons. The product is the same; this page
+records the submission details and outcomes for each. Most are now concluded —
+the only open event-shaped opportunity is Telegraph Season II, conditional on
+rules that fit what already exists.
+
+**Current priority order (agreed 2026-11-27):** events are secondary to core
+product leverage. The focus sequence is: OpenServ win conversion →
+onboarding/conversion measurement → external paid usage → Gmail extension
+(CWS) → Phase 2 benchmark credibility → Telegraph Season II (conditional on
+rules). Catalog surfaces (MCP registry, Kite, PayBox, Hermes) are cheap
+opportunistic maintenance, not strategic bets. No new event entries without a
+distribution partner or clear differentiation.
+
+## Binance Agent ID Hackathon — **declined for this cycle / watchlist**
+
+- **Deadline:** December 9, 2026, 08:00 UTC
+- **Decision (2026-11-27):** not entering. Mission fit is high but novelty is
+  squeezed (TollWarden covers payment-provenance scanning; skillreg covers
+  hash-pinned evidence registries; AgentGuard/Mint Guardian/Preflight cover
+  the BNB safety-registry lane), the 30-interaction requirement is a
+  distribution problem engineering cannot solve, and the entry would displace
+  higher-EV work. Revisit only if a partner brings 20–30+ real Agent ID
+  holders or a sharper differentiation answer emerges.
+- **Full analysis:** [binance-agent-id.md](binance-agent-id.md) — retained
+  because the evidence-memory design remains the right shape if revisited.
 
 ## OpenServ Hackathon 02 — Dolphin track — **winner**
 
@@ -47,7 +70,13 @@ records the submission details for each.
   Validated clean on 0.22.7; kernel layer (session taint + action gating +
   subagent propagation) and incident response (autopsy, kill-chain window,
   persistence gate) shipped; **catalog PR open: #149503 pinned `9f6a14c`**.
-  Next: ≤90 s video + Typeform by Nov 11
+- **Outcome (winners announced Nov 20):** no placement — the top 10 went to
+  Foreman, Housemate, Plan Mode, Seedguard, Ariadne, Mandate, safe-swap,
+  Promise Keeper, Hermes Canvas, Hermes Gadget SDK. Notably, safety/control
+  plugins dominated (Foreman, Seedguard, Mandate, safe-swap, Promise Keeper),
+  validating the category even though Elcaro's entry didn't rank. The plugin
+  remains live as a distribution surface — opportunistic maintenance only
+  (catalog PR, user uptake), not a strategic bet.
 
 ## MoonPay Hackathons — PayBox Chapter 1 — Oct 16–17, 2026
 
@@ -67,6 +96,10 @@ records the submission details for each.
   https://x.com/papajimjams/status/2111607015940272471
 - **Surfaces:** `/api/x402/scan` paid lane (live, settled real payment);
   `/paybox` gauntlet page (6 scenarios, one per rubric category).
+- **Outcome (winners announced Nov 2):** no placement — 1st x429, 2nd
+  Foresyte, 3rd Ember Curve. The plugin remains privately installable in the
+  PayBox marketplace; keep it maintained cheaply as a distribution surface,
+  do not build around it.
 
 ## AI Swarm Dynamics Hackathon ("swarmchasing") — Oct 3–4, 2026
 

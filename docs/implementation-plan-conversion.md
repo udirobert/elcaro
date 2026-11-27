@@ -5,6 +5,13 @@ verification against gateway, scan, extension, and metering reality. Ordered by
 priority (P0 first), not by original leverage guess. Each workstream has scope,
 files touched, and a measurable done-when test.
 
+**This plan is the primary focus (agreed 2026-11-27).** The agreed EV order is:
+OpenServ owner actions (owner-only) → WS1+WS2 conversion batch visual audit +
+deploy + funnel measurement → external paid usage validation (WS3/WS4 tail) →
+WS5 Gmail extension to CWS → WS6a Phase 2 benchmark. Event work is deprioritized
+per [hackathons.md](hackathons.md); the Binance Agent ID opportunity was
+assessed and declined ([binance-agent-id.md](binance-agent-id.md)).
+
 ## Verified live state (2026-11-26/27) — the constraints this plan must respect
 
 | Fact | Evidence | Consequence |
