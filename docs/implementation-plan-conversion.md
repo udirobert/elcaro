@@ -152,6 +152,24 @@ write endpoint is unauthenticated by design (public beacon); payloads are
 strictly validated but there is no per-IP write throttle — revisit if
 `funnel_events` grows anomalously.
 
+**First funnel reading (2026-11-27, ~1 day of data — directional only):**
+
+| Step | Events | Sessions | Session-to-session |
+|---|---:|---:|---|
+| landing.viewed | 19 | 18 | — |
+| scan.viewed | 13 | 8 | 44% of landing sessions |
+| scan.started | 10 | 5 | — |
+| scan.verdict | 11 | 6 | verdicts exceed starts (deep-linked prefills skip `started`) |
+| integrate.viewed | 2 | 1 | ~17% of verdict sessions |
+| keys.viewed / key.minted | 1 / 1 | 1 | full-funnel completion exists |
+
+Readings: the pipeline measures end-to-end and at least one organic session
+completed the full funnel. Sample is far too small for conversion-rate
+conclusions, and includes some of our own verification traffic — re-read after
+a week of OpenServ shoutout traffic. `scan.verdict` exceeding `scan.started`
+sessions suggests the deep-linked specimen path bypasses the `started` event;
+worth checking the emission logic when the funnel is next touched.
+
 **Done when:** events persist across deploys in production; the admin rollup
 can answer "what fraction of landing visitors reach a verdict" for a given
 week.
@@ -160,7 +178,7 @@ week.
 
 ## P1 — Conversion batch
 
-### WS1 — Fix the front door · implemented locally, pending visual audit + deploy · ~0.5 day
+### WS1 — Fix the front door · deployed; visual audit DONE 2026-11-27 · ~0.5 day
 
 Implemented locally: scan is the primary CTA, the hero keeps the explicit
 gateway promise ("Use it free in the browser, or drop it in as a gateway for
@@ -168,15 +186,20 @@ your agent"), jargon moved below the fold, and the CTA deep-links to
 `/scan?example=remit-swap` so landing → verdict is two clicks
 (`app/web/src/app/page.tsx`).
 
-Remaining requirements:
-
-1. Owner visual/browser audit of desktop and mobile rendering.
-2. Deploy as one batch WITH WS2 so funnel comparison is clean.
+**Visual audit (2026-11-27, agent-browser against production):** the batch was
+already live in production. Verified: no jargon above the fold on desktop
+(1440px) and mobile (375px); the scan-first CTA is prominent; the deep link
+loads the prefilled remit-swap specimen; landing → verdict is exactly two
+clicks (CTA → Scan), verdict 0.93 dangerous in 2ms. Mobile renders cleanly —
+CTAs stack, no horizontal overflow. Minor cosmetic notes, not blocking: the
+step rail's leading arrow wraps awkwardly at 375px, and Netlify's own
+injected badge overlaps bottom-edge content on small screens (not ours to
+control). The audit did find real defects — see WS2.
 
 **Done when:** first-time visitor reaches a verdict in ≤2 clicks; funnel
 events fire at each step; no jargon above the fold in screenshot review.
 
-### WS2 — Simplify the scan form · implemented locally, pending visual audit + deploy · ~1 day
+### WS2 — Simplify the scan form · audit DONE 2026-11-27, fixes shipped · ~1 day
 
 **Problem:** `scan-form.tsx` (~892 lines) exposes SERV/Jev/Laya/JEV-VL toggles
 inline in the main action row; several are no-ops on the free path.
@@ -195,6 +218,28 @@ refine verdicts while the comparison rails are comparison-only. Mobile controls
 stack below `sm`, scan-flow microcopy is ≥12px, and `text-ink-faint` is darkened
 for AA contrast. 429 responses preserve `upgrade` and `retry_after_seconds` and
 surface the x402 paid-scan path in the error state.
+
+**Audit findings + fixes (2026-11-27, commit `2a93112`):** the axe-core
+wcag2a/aa audit the done-when called for had never actually been run — when
+run, it failed. Three real defects, all fixed and verified (0 violations on
+the fixed build):
+
+1. Specimen chips rendered at 2.37–2.45:1 contrast because `text-dangerous/70`
+   and `text-safe/70` sit on near-matching tinted backgrounds — and even the
+   full-opacity palette colors only reach 3.4–3.8:1, so removing the opacity
+   was not enough. Added `--color-dangerous-strong` (#B73420, 5.4:1) and
+   `--color-safe-strong` (#0F6B5C, 5.8:1) tokens; chips use them with a
+   border-on-hover treatment.
+2. The advanced-disclosure hint used `opacity-70` over ink-faint, effectively
+   2.63:1 — dropped the opacity (plain ink-faint passes at 4.56:1).
+3. The "⌘ Enter to scan" hint is absolutely positioned over the textarea's
+   bottom edge and collided with prefilled specimen text whenever the content
+   scrolls — now suppressed when `scrollHeight > clientHeight` (measured via
+   ResizeObserver; verified in both directions in the browser).
+
+Residual known issue outside the conversion surface: `vulnerability-analyzer.tsx`
+uses the same `text-dangerous/70` pattern in its error state — same fix applies
+when that surface is next touched.
 
 **Done when:** default path shows one input, one button, one verdict; toggles
 hidden unless expanded; Lighthouse a11y ≥ 95 on `/scan`.
