@@ -83,6 +83,20 @@ Elcaro's own warn prefix reads as an injection to it**. H is now in-sample
 `gateway_quarantine` whole-part can be dropped or kept for continuity —
 decide in the prereg; every extra arm is eval cost.
 
+## Progress log
+
+- 2026-11-27: F3 implemented (`warn_style="v2"`, production unchanged).
+  PREREG-phase2.md drafted and committed (`ff6be32`) BEFORE further
+  implementation per protocol. F1 + Phase 2 arm wiring done in
+  `run_eval.py` — verified offline both directions (warned part drops the
+  guard; clean content retains it).
+- Freeze-time TODO not yet done: extend `analyze.py` ARMS for the new
+  names; add the `-heldout2` result-dir suffix in both `run_eval.py` and
+  `analyze.py` (H2 results must not collide with the immutable H dirs);
+  implement F2 (segment quarantine) + wire `gateway_quarantine_seg`;
+  `--task-set H2` support with the `prereg-v2` tag check mirroring the
+  `prereg-v1` one. The signed tag itself is an owner action (GPG key).
+
 ## Decisions needed from the owner
 
 - **Eval spend approval** — one full run at Phase 1 scale plus a likely
