@@ -94,10 +94,13 @@ export async function flushBuffer(): Promise<void> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ events: buffer }),
     });
-    if (!response.ok) setBuffer(buffer);
+    // Restore on failure by merging, not overwriting: events tracked while
+    // this fetch was in flight sit in the live buffer, and a plain restore
+    // would silently discard them.
+    if (!response.ok) setBuffer([...buffer, ...getBuffer()]);
   } catch {
     // Server unreachable — keep events in buffer for next flush
-    setBuffer(buffer);
+    setBuffer([...buffer, ...getBuffer()]);
   }
 }
 
