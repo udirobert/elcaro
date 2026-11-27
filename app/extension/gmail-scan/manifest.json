@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Elcaro IPI Guard",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Scan the open Gmail message for indirect prompt injection via Telegraph miners, before you or your agent act on it.",
   "permissions": [
     "storage"
