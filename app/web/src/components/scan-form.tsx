@@ -189,6 +189,21 @@ export function ScanForm({
   // Don't leak the typing timer if the form unmounts mid-animation.
   useEffect(() => cancelTyping, []);
 
+  // The shortcut hint is absolutely positioned over the textarea's bottom
+  // edge — when the content scrolls, text passes underneath it and the two
+  // collide. Measure overflow directly and suppress the hint in that case.
+  const [textareaScrolls, setTextareaScrolls] = useState(false);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const check = () =>
+      setTextareaScrolls(el.scrollHeight - el.clientHeight > 4);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [content]);
+
   // Keep the mutable ref in sync with the state value. The synchronous writes in
   // event handlers are for tool call chains; this effect covers shared-verdict
   // hydration and any other state transitions.
@@ -630,7 +645,7 @@ export function ScanForm({
 
         {/* Keyboard shortcut hint — appears when content is present */}
         <AnimatePresence>
-          {hasContent && !scanning && !result && (
+          {hasContent && !scanning && !result && !textareaScrolls && (
             <motion.span
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
@@ -752,8 +767,8 @@ export function ScanForm({
                   example.is_injection
                     ? example.is_serv_demo
                       ? "text-violet bg-violet/10 hover:bg-violet/20 border border-violet/20"
-                      : "text-dangerous/70 bg-dangerous-bg hover:text-dangerous"
-                    : "text-safe/70 bg-safe-bg hover:text-safe"
+                      : "text-dangerous-strong bg-dangerous-bg border border-transparent hover:border-dangerous/40"
+                    : "text-safe-strong bg-safe-bg border border-transparent hover:border-safe/40"
                 }`}
                 whileTap={{ scale: 0.92 }}
                 transition={SPRING}
@@ -848,7 +863,7 @@ export function ScanForm({
             ▸
           </span>
           Advanced: second opinions
-          <span className="font-normal opacity-70">
+          <span className="font-normal">
             — SERV can refine verdicts; others compare only
           </span>
         </button>
