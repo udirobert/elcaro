@@ -104,9 +104,29 @@ ARM_TOOLS = {
     # SERV with the guard, as the Gateway forwards it.
     "gateway_warn": [SERV_PROMPT_GUARD],
     "gateway_quarantine": [SERV_PROMPT_GUARD],
+    # Phase 2 arms (PREREG-phase2 §5). gateway_warn_v1 is byte-identical to
+    # gateway_warn — the H2 difficulty control under the prereg name.
+    "gateway_warn_v1": [SERV_PROMPT_GUARD],
+    "gateway_warn_v2": [SERV_PROMPT_GUARD],
+    "gateway_warn_v2_dedup": [SERV_PROMPT_GUARD],
 }
 PRESENTATIONS = ["labeled", "naive", "wrapped", *ARM_TOOLS]
-GATEWAY_MODES = {"gateway_warn": "warn", "gateway_quarantine": "quarantine"}
+GATEWAY_MODES = {
+    "gateway_warn": "warn",
+    "gateway_quarantine": "quarantine",
+    "gateway_warn_v1": "warn",
+    "gateway_warn_v2": "warn",
+    "gateway_warn_v2_dedup": "warn",
+}
+# Which warn-prefix generation each arm uses (PREREG-phase2 §2 F3). Arms not
+# listed emit v1 — the Phase 1 behaviour.
+GATEWAY_WARN_STYLES = {
+    "gateway_warn_v2": "v2",
+    "gateway_warn_v2_dedup": "v2",
+}
+# F1 (PREREG-phase2 §2): these arms drop serv_prompt_guard from the request
+# when Elcaro warned or quarantined any part of it.
+GATEWAY_DEDUP_ARMS = {"gateway_warn_v2_dedup"}
 SERV_HOST = "openserv.ai"
 
 _ELCARO_ENGINE = None
@@ -173,7 +193,13 @@ def _gateway_build(task, presentation):
     from core.policy import Mode, Provider, apply_policy
 
     msgs = gateway_request_messages(task)
-    result = apply_policy(msgs, Provider.OPENAI, Mode(GATEWAY_MODES[presentation]), engine=engine)
+    result = apply_policy(
+        msgs,
+        Provider.OPENAI,
+        Mode(GATEWAY_MODES[presentation]),
+        engine=engine,
+        warn_style=GATEWAY_WARN_STYLES.get(presentation, "v1"),
+    )
     out = []
     for m in result.messages:
         content = m["content"]
@@ -336,9 +362,21 @@ def prereg_frozen():
     return out.stdout.strip() == PREREG_TAG
 
 
-def arm_extra_body(presentation, extra_body=None):
-    """Merge the arm's SERV Tools into the caller's --extra-body (tools appended)."""
+def arm_extra_body(presentation, extra_body=None, task=None):
+    """Merge the arm's SERV Tools into the caller's --extra-body (tools appended).
+
+    F1 dedup arms: when Elcaro warned or quarantined any part of this
+    request, the provider guard is dropped from the tool list — the two
+    defences cover the same surface and Phase 1 showed they interfere.
+    """
     tools = ARM_TOOLS.get(presentation, [])
+    if not tools:
+        return extra_body
+    tools = list(tools)
+    if presentation in GATEWAY_DEDUP_ARMS and task is not None:
+        _, parts = _gateway_build(task, presentation)
+        if any(p["action"] != "none" for p in parts):
+            tools = [t for t in tools if t is not SERV_PROMPT_GUARD]
     if not tools:
         return extra_body
     merged = dict(extra_body or {})
@@ -372,7 +410,7 @@ def run_one(
         except json.JSONDecodeError:
             pass  # corrupt transcript: rerun this trial
     messages = build_messages(task, presentation)
-    extra_body = arm_extra_body(presentation, extra_body)
+    extra_body = arm_extra_body(presentation, extra_body, task=task)
     # SERV rejects max_tokens for current OpenAI models (HTTP 400,
     # "Use 'max_completion_tokens' instead"); the cap value is unchanged.
     limit_field = "max_completion_tokens" if presentation in ARM_TOOLS else "max_tokens"
