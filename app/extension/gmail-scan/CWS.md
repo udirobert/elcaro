@@ -123,14 +123,14 @@ Contact. github.com/udirobert/elcaro — issues welcome.
 - [x] Icons 16/32/48/128 (violet tile, white "e")
 - [x] Minimal permissions — `storage` only
 - [x] aria-live + focus management on the overlay
-- [ ] Version bump to 1.0.0 in manifest.json **[do at submission]**
-- [ ] Privacy policy hosted at a public URL **[owner]**
+- [x] Version bump to 1.0.0 in manifest.json — DONE 2026-11-27
+- [x] Privacy policy hosted: https://elcaro.trustfall.xyz/privacy-extension — LIVE 2026-11-27
 - [ ] 1280×800 screenshots ×1–3 (scan flow: SAFE example + BLOCK example) **[owner — needs a real Gmail account]**
 - [ ] 128×128 store icon = icons/icon-128.png ✓
 - [ ] Test account / instructions for reviewers: "Open any email in Gmail,
       click Scan in the thread toolbar. A demo scan is possible on any
       message — no fixtures needed."
-- [ ] Zip the directory for upload: `cd app/extension && zip -r gmail-scan.zip gmail-scan -x '*.md'`
+- [x] Zip built: `app/extension/gmail-scan.zip` (2026-11-27, v1.0.0 — rebuild if any file changes)
       (exclude *.md docs — README/CWS are repo material, not runtime)
 
 ## Known reviewer-friction risks
