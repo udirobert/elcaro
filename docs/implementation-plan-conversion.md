@@ -389,7 +389,7 @@ category error: "publish the Phase 1 benchmark — the willingness-to-pay
 unlock." There is no unpublished win: Phase 1 was **Outcome C** (attacks 15→5
 but passes 65→52, beyond tolerance). These are three separate workstreams:
 
-### WS6a — Research: Phase 2 benchmark · research project, own timeline
+### WS6a — Research: Phase 2 benchmark · STARTED 2026-11-27: fix 3 (guard-safe warn prefix v2) implemented behind `warn_style` (production unchanged); full execution plan in `lexsi-eval/PLAN-phase2.md` — prereg → fixes 1–2 → blind H2 → freeze → paid eval run (owner approval needed)
 
 Implement the three hypothesized fixes from `RESULTS-phase1.md` (skip
 `serv_prompt_guard` on Elcaro-handled parts, segment-level quarantine, rewrite

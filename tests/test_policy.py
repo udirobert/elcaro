@@ -252,6 +252,47 @@ def test_warn_prefix_matches_lexsi_wrapped_arm():
     assert rewritten == expected_prefix + INJECTION
 
 
+def test_warn_style_defaults_to_v1():
+    """Production behaviour is unchanged: warn_style omitted means v1."""
+    messages = [{"role": "tool", "content": INJECTION}]
+    default = apply_policy(messages, Provider.OPENAI, Mode.WARN, engine=fixture_engine())
+    explicit = apply_policy(
+        messages, Provider.OPENAI, Mode.WARN, engine=fixture_engine(), warn_style="v1"
+    )
+    assert default.messages[0]["content"] == explicit.messages[0]["content"]
+    assert "[ELCARO WARNING:" in default.messages[0]["content"]
+
+
+def test_warn_prefix_v2_is_declarative_not_imperative():
+    """Phase 2 hypothesis 3: the v2 prefix carries the same risk information
+    without instruction-shaped text a downstream guard can pattern-match."""
+    messages = [{"role": "tool", "content": INJECTION}]
+    result = apply_policy(
+        messages, Provider.OPENAI, Mode.WARN, engine=fixture_engine(), warn_style="v2"
+    )
+    rewritten = result.messages[0]["content"]
+    scan = result.parts[0].scan
+
+    # content preserved verbatim after the prefix
+    assert rewritten.endswith(INJECTION)
+
+    # same protective information as v1: score, level, techniques, summary
+    prefix = rewritten[: -len(INJECTION)]
+    assert f"risk_score={scan.risk_score:.2f}" in prefix
+    assert f"risk_level={scan.risk_level.value}" in prefix
+    for t in scan.flagged_techniques:
+        assert t.value in prefix
+    assert scan.human_summary in prefix
+
+    # nothing imperative or assistant-addressed — the v1 failure shape
+    lowered = prefix.lower()
+    for shape in ("tell your user", "review before", "you must", "you should", "do not"):
+        assert shape not in lowered
+    # no authority markers or override vocabulary either
+    for shape in ("system:", "ignore previous", "ignore all", "<system"):
+        assert shape not in lowered
+
+
 def test_marker_content_type_override():
     messages = [
         {
