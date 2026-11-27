@@ -248,6 +248,15 @@ hidden unless expanded; Lighthouse a11y ≥ 95 on `/scan`.
 
 ## P1/P2 — Measurement, then money
 
+<!-- x402 external validation attempt 2026-11-27: preflight confirmed the lane
+live and correct ($0.01 USDC/scan, Base mainnet eip155:8453 + Sepolia
+eip155:84532, proper 402 accepts payload). Plan: act as an external paying
+agent via Kite Passport x402-execute. BLOCKED on Kite infrastructure: both
+login init and signup init return server-side "internal error" consistently
+(after CLI upgrade to 6.13.10). User email for the account is confirmed.
+RETRY: kpass login init --client agent --no-interactive, then request-session
+(per-tx $0.01, 2-3 scans), then POST /api/x402/scan and verify the
+tx -> payer -> settled-row trace in Neon. -->
 ### WS3 — Attribution + revenue visibility · 3–5 days (NOT 1–2; precedes payment arming)
 
 **STATUS: core shipped in `2db22fe` (2025-11-26).** All six changes landed:
