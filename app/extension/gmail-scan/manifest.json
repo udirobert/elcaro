@@ -3,10 +3,15 @@
   "name": "Elcaro IPI Guard",
   "version": "0.3.0",
   "description": "Scan the open Gmail message for indirect prompt injection via Telegraph miners, before you or your agent act on it.",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": [
+    "storage"
+  ],
   "commands": {
     "scan-current": {
-      "suggested_key": { "default": "Alt+S", "mac": "Command+Shift+S" },
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Command+Shift+S"
+      },
       "description": "Scan the open Gmail message"
     }
   },
@@ -16,14 +21,32 @@
   ],
   "action": {
     "default_title": "Scan this message (Elcaro)",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
-  "background": { "service_worker": "background.js" },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://mail.google.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
 }

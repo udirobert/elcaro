@@ -127,8 +127,13 @@ function renderHistory(summary) {
   }
 
   $("todayFoot").hidden = !(summary && summary.stored);
+  const signals = summary && summary.engineSignals ? summary.engineSignals : 0;
+  const routed = summary && summary.engineScans ? summary.engineScans : 0;
   $("todayStored").textContent = summary && summary.stored
-    ? `${summary.stored} kept locally`
+    ? `${summary.stored} kept locally` +
+      (signals
+        ? ` · ${signals} of ${routed} routed answers weren't verdicts`
+        : "")
     : "";
 }
 

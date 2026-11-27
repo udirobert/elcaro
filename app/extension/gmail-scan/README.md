@@ -285,3 +285,45 @@ testing from a non-browser client — browser fetches always send an `Origin`.
 - [ ] Publish (CWS) — then pin `TELEGRAPH_BRIDGE_EXTENSION_IDS` to the
       published id, and track installs / weekly actives / scans. Organic only;
       scripted traffic is explicitly not counted by Telegraph
+
+## Routing investigation (2026-11-27, devnode probes)
+
+Why scans sometimes come back as SIGNAL instead of a verdict — the data:
+
+1. **Elcaro (registration 406) declares only `CONTENT_MODERATION_GENERAL` and
+   `TEXT_CLASSIFICATION_GENERAL`.** Email-security questions do not match
+   those intents specifically.
+2. **TxLens (9002) declares 123 intents including `EMAIL_SECURITY_GENERAL`** —
+   the exact intent an "is this email a prompt-injection attempt" query maps
+   to. The router prefers the specific match, so email scans land on TxLens,
+   which answers with domain reputation rather than injection analysis. Six+
+   miners (a1-preflight, chainsight-oracle, referenceforge-numeric,
+   telegraph-verity-intelligence, txlens…) crowd every content intent, so even
+   generic matches are a lottery.
+3. **Elcaro's registration carries schema warnings**: "`/scan` has no field
+   for required param(s) `text`" for both declared intents. Whether warnings
+   affect routing rank is unverified, but they signal the request builder
+   cannot construct a schema-correct call unprompted.
+4. Elcaro does not appear in the `/api/miners` directory listing at all
+   (status of the registration itself is `active` — the directory may filter
+   or paginate; unverified).
+
+**The fix shape is clear, the cost is on-chain**: declaring
+`EMAIL_SECURITY_GENERAL` in `telegraph.yaml` would make email-scan queries
+route to Elcaro. But the on-chain registration pins the YAML hash, so the
+change requires `updateMiner()` (new registration id) in the same window as
+the deploy — see the compatibility notes in `docs/hackathons.md`. That is an
+owner decision (wallet signature), not an agent one.
+
+**The non-verdict rate measurement is now instrumented**: every scan records
+`verdict`, `miner`, `intent`, and `rail` in local history, and the popup
+footer surfaces "N of M routed answers weren't verdicts" when non-zero. Once
+the extension is loaded and used, the data answers how often routing misses
+before anyone commits to the on-chain fix.
+
+**Alternative worth considering**: for the CWS product, routing through
+Telegraph at all is a hackathon-shaped decision, not a product-shaped one. A
+product-shaped path is scanning via Elcaro's own API directly (the same
+`/scan` the web uses, or the x402 lane), which always returns Elcaro verdicts.
+The tradeoff: no counted miner volume — which only matters if Telegraph
+Season II happens and rules reward it. Defer until Season II rules exist.

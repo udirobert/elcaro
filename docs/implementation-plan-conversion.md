@@ -338,7 +338,21 @@ upstream cost with margin.
 
 ## P2 — Distribution surface
 
-### WS5 — Gmail extension · 1–2 days cleanup + open investigation + external CWS review
+### WS5 — Gmail extension · cleanup batch DONE 2026-11-27; routing decision + CWS submission remain
+
+**Shipped 2026-11-27:** real icon set (16/32/48/128 violet tile), permissions
+reduced to `storage` only (`scripting`/`activeTab` were unused), overlay a11y
+(aria-live status for scanning, role=dialog + focus trap + focus restoration
+for results, decorative glyphs aria-hidden), non-verdict measurement
+instrumented (verdict/miner/intent/rail per scan in local history + popup
+footer surfacing), CWS.md with listing copy, privacy policy draft, and
+permission justifications. Routing investigation findings in the extension
+README: TxLens covers 123 intents incl. EMAIL_SECURITY_GENERAL while Elcaro
+declares only generic CONTENT_MODERATION/TEXT_CLASSIFICATION — the specific-
+intent match is why email scans route away. Fix requires YAML intent change +
+on-chain updateMiner() — owner decision, deferred. Product-shaped alternative
+(scan Elcaro's own API directly, skip Telegraph) documented for the Season II
+rules decision.
 
 **Problem:** the original plan said "pin routing to miner 8848 by default" —
 **technically and economically flawed**. The direct `ask/8848` rail is a dev

@@ -332,12 +332,21 @@ async function historySummary() {
   const today = history.filter((h) => isToday(h.at));
   const tally = { safe: 0, caution: 0, block: 0, unknown: 0 };
   for (const h of today) tally[String(h.band || "unknown").toLowerCase()] += 1;
+  // Non-verdict rate across everything stored, not just today: the engine
+  // rail auto-routes, and how often the answer is not an injection verdict at
+  // all decides whether routing or the ask needs fixing. Entries predate the
+  // verdict flag count as verdicts — they were recorded before the
+  // distinction existed and banding already reflects them.
+  const engineScans = history.filter((h) => h.rail !== "direct");
+  const engineSignals = engineScans.filter((h) => h.verdict === false);
   return {
     today: today.length,
     tally,
     blockedToday: tally.block,
     recent: history.slice(0, 4),
     stored: history.length,
+    engineScans: engineScans.length,
+    engineSignals: engineSignals.length,
   };
 }
 
@@ -436,6 +445,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       await recordScan({
         at: new Date().toISOString(),
         band: result.band,
+        verdict: result.verdict !== false,
+        miner: result.miner || null,
+        intent: result.intent || null,
         riskScore: result.riskScore,
         techniques: result.techniques.slice(0, 3),
         rail,

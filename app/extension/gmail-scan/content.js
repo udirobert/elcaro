@@ -28,6 +28,7 @@
   let button = null;
   let lastScan = null; // re-runnable by the overlay's Try again button
   let autoDismissTimer = null;
+  let previousFocus = null; // restored when the overlay dismisses
 
   const TEXT = {
     SAFE: {
@@ -130,20 +131,73 @@
     const old = document.getElementById(OVERLAY_ID);
     if (old) old.remove();
     document.removeEventListener("keydown", onKeydown, true);
+    // Return focus where the user was — usually the Scan button. If that node
+    // is gone (e.g. they re-scanned from inside the overlay), fall back to the
+    // toolbar button, else leave focus where the browser puts it.
+    const target =
+      previousFocus && document.contains(previousFocus) ? previousFocus : button;
+    if (target && document.contains(target) && typeof target.focus === "function") {
+      target.focus();
+    }
+  }
+
+  function focusableIn(root) {
+    return Array.from(
+      root.querySelectorAll("button, summary, [tabindex]"),
+    ).filter((n) => !n.disabled && n.tabIndex !== -1);
   }
 
   function onKeydown(e) {
-    if (e.key === "Escape") dismissOverlay();
+    if (e.key === "Escape") {
+      dismissOverlay();
+      return;
+    }
+    // Dialog overlays trap Tab: the overlay is small and transient, and the
+    // alternative is focus escaping into Gmail's DOM behind it.
+    if (e.key !== "Tab") return;
+    const ov = document.getElementById(OVERLAY_ID);
+    if (!ov || ov.getAttribute("role") !== "dialog") return;
+    const items = focusableIn(ov);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   // --- overlay shells -------------------------------------------------------
 
-  function newOverlay() {
+  function newOverlay(opts) {
+    const dialog = Boolean(opts && opts.dialog);
+    // Capture whatever the user was focused on (usually the Scan button) —
+    // unless it lives inside the overlay being replaced, which is about to
+    // be removed and can never receive focus again.
+    const priorOverlay = document.getElementById(OVERLAY_ID);
+    const active = document.activeElement;
+    if (
+      active &&
+      active !== document.body &&
+      !(priorOverlay && priorOverlay.contains(active))
+    ) {
+      previousFocus = active;
+    }
     dismissOverlay();
     ensureStyles();
     const ov = el("div", null);
     ov.id = OVERLAY_ID;
-    ov.setAttribute("role", "status");
+    if (dialog) {
+      ov.setAttribute("role", "dialog");
+      ov.setAttribute("aria-modal", "false");
+      if (opts.label) ov.setAttribute("aria-label", opts.label);
+    } else {
+      ov.setAttribute("role", "status");
+      ov.setAttribute("aria-live", "polite");
+    }
     ov.style.cssText = [
       "position:fixed",
       "top:16px",
@@ -169,7 +223,9 @@
         bg +
         ";display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.03em",
     );
-    head.appendChild(el("span", "font-size:14px;line-height:1", glyph));
+    const glyphSpan = el("span", "font-size:14px;line-height:1", glyph);
+    glyphSpan.setAttribute("aria-hidden", "true");
+    head.appendChild(glyphSpan);
     head.appendChild(el("span", null, label));
     if (right) {
       const meta = el("span", "margin-left:auto;font-weight:400;font-size:11px;opacity:.9", right);
@@ -234,7 +290,14 @@
   }
 
   function showVerdict(state) {
-    const ov = newOverlay();
+    const s = bandStyle(state.band);
+    const ov = newOverlay({
+      dialog: true,
+      label:
+        state.verdict === false
+          ? "Scan result: signal, not a verdict"
+          : "Scan result: " + s.label,
+    });
 
     // The engine rail auto-routes, so the miner that answers may not be
     // answering the question we asked. When it isn't an injection verdict we
@@ -244,7 +307,6 @@
       return;
     }
 
-    const s = bandStyle(state.band);
     header(ov, s, railLabel(state) + (state.cached ? " · cached" : ""));
 
     const body = el("div", "padding:12px 14px 6px;color:#1a1a2e");
@@ -324,7 +386,7 @@
   }
 
   function showError(state) {
-    const ov = newOverlay();
+    const ov = newOverlay({ dialog: true, label: "Scan unavailable" });
     const ui = state.ui || {
       headline: "Scan failed",
       detail: "Something went wrong.",
@@ -373,6 +435,13 @@
     close.addEventListener("click", dismissOverlay);
     row.appendChild(close);
     ov.appendChild(row);
+
+    // The user asked for this result, so hand it focus: keyboard and screen
+    // reader users land on the verdict's actions instead of hunting for them.
+    // Scan again is the primary action when present; Dismiss otherwise.
+    if (ov.getAttribute("role") === "dialog") {
+      (row.querySelector(".elcaro-btn-primary") || close).focus();
+    }
   }
 
   // --- scan flow ------------------------------------------------------------
